@@ -70,7 +70,7 @@ unless the decisions log (section 1) says otherwise.
 | **Capability** | Something an agent can ask the phone to do, for example take a photo or read the location. |
 | **Master switch** | The on/off switch for a capability. In v2 it applies to all agents. |
 | **Interaction** | Something an agent sends to Rahul: a one-way **notice**, or a **question** that waits for his answer. Never called "prompt" or "query" in the product. |
-| **Grant** | A time-limited approval Rahul gives on the phone, for example "screenshots for 1 hour". |
+| **Grant** | A time-limited approval Rahul gives on the phone, for example "screen sharing for 1 hour" (used only as the screenshot fallback, 8.10). |
 | **Listener** | Bridget's always-on HTTP server, which runs inside a foreground service. |
 | **Tailnet** | Rahul's private Tailscale network. Bridget is reachable only from it. |
 | **Audit log** | The record of every request, setting change and event. Readable by agents through the log API. |
@@ -93,13 +93,14 @@ should treat these as settled unless a serious problem is found.
 | D7 | 26 Oct 2026 | Fast "last image" endpoint, sized for AI vision: long edge **1568 px, JPEG quality 85**, optional raw JPEG body. | Decided |
 | D8 | 26 Oct 2026 | Agents reach Rahul through **interactions**: a **notice** (one-way) or a **question** (needs an answer). Either may be **spoken aloud**. | Decided |
 | D9 | 26 Oct 2026 | "Controls" idea #7 is narrowed to the **flashlight** first. Other controls are listed in this spec as Proposed. | Decided |
-| D10 | 26 Oct 2026 | Screenshots need an on-phone approval: **Allow once / Allow for 1 hour / Allow for 16 hours / Deny**. | Decided |
+| D10 | 26 Oct 2026 | Screenshots need an on-phone approval: **Allow once / Allow for 1 hour / Allow for 16 hours / Deny**. Superseded by D17 except as the fallback. | Superseded |
 | D11 | 27 Oct 2026 | **Per-agent permissions are deferred.** In v2 all switches are global. The data model keeps room for them (section 15). | Decided |
 | D12 | 27 Oct 2026 | **Logging is available programmatically to every agent** (section 10). | Decided |
 | D13 | 27 Oct 2026 | Adding an agent produces a **setup prompt** containing the key that can be pasted into any agent for immediate access (section 6). | Decided |
 | D14 | 27 Oct 2026 | Bug reports and feature requests copy the **Spotka** apps' reporter (sponic repo), adapted to Bridget (section 11). | Decided |
 | D15 | 27 Oct 2026 | Screens use **native Kotlin Android Views with Material 3 components**, with a "techie but friendly" look (section 12). | Decided |
 | D16 | 27 Oct 2026 | Spec **"maximum capabilities"**: describe everything Android allows that's useful to a personal agent, phased (section 16). | Decided |
+| D17 | 27 Oct 2026 | **Screenshots use an Accessibility service**, with no per-screenshot approval (replaces D10's approve-each-time design). Default mode: a private in-memory copy; optional mode: Android's normal screenshot, saved to the gallery. The screen-share grant flow (once / 1 h / 16 h) stays only as the fallback when Accessibility is off. | Decided |
 
 ## 2. Changes from spec v1.0
 
@@ -135,8 +136,9 @@ are the deliberate departures. Anything not listed still applies.
 
 - **PRD-03 [Decided] Request-driven.** Bridget does nothing with a sensor
   until an authenticated request arrives, and stops as soon as the request
-  completes. The only standing exceptions are time-limited grants Rahul
-  approves on the phone (screenshots).
+  completes. The only standing exceptions are the Accessibility screenshot
+  service (enabled once by Rahul, used only per request, D17) and
+  time-limited screen-share grants used as its fallback.
 - **PRD-04 [Decided] Visible by design.** Every camera, microphone,
   location and screen capture is announced on the phone: a notification
   naming the agent, Android's own privacy indicator, and the log.
@@ -169,6 +171,8 @@ are the deliberate departures. Anything not listed still applies.
   doesn't try.
 - **PRD-11 [Decided]** Nothing is done invisibly. Bridget never suppresses
   Android's camera, microphone, location or screen-share indicators.
+  Accessibility screenshots have no Android indicator, so Bridget shows its
+  own notification for every one (CAP-25).
 - **PRD-12 [Decided]** No public internet exposure. Bridget listens only on
   the Tailscale interface.
 
@@ -324,8 +328,10 @@ Agent ◀── long-poll / webhook ── Relay ◀─────────�
   hashes; plaintext keys are never stored.
 - **SEC-03 [Decided] Master switches:** each capability has a switch,
   changeable only on the phone. All switches start **off** on a fresh install.
-- **SEC-04 [Decided] Grants:** screenshot access additionally needs a
-  time-limited grant approved on the phone (8.10).
+- **SEC-04 [Decided] Screenshots:** need the master switch **and** either
+  Bridget's Accessibility service (enabled once in Android Settings, D17) or,
+  as the fallback, a time-limited screen-share grant approved on the phone
+  (8.10).
 - **SEC-05 [Decided] Visibility:** PRD-04.
 
 ### 5.2 Rate limits
@@ -375,6 +381,7 @@ Agent ◀── long-poll / webhook ── Relay ◀─────────�
 | A paired agent misbehaves (captures too much) | Notification and indicator every time (PRD-04); full log; rate limits; master switches; remove agent in one tap; per-agent permissions later (section 15). |
 | Phone lost | Remove it from the tailnet in the Tailscale admin console; Find My Device erase; rotate agent keys (v1 section 5.5, unchanged). |
 | LAN attacker sends packets to the 100.x address | Listener binds only to the Tailscale address, and the source check rejects non-tailnet callers (ARC-04). |
+| An agent takes screenshots without Rahul noticing | Every capture posts a Bridget notification and a log entry (CAP-25a); master switch; rate limits; the Accessibility service can only take screenshots (CAP-26). |
 | Malicious HTML in an interaction | HTML cards run with no network, no storage and a bridge that can only submit an answer (8.13). |
 | Spoofed agent in the UI | Bridget always draws the agent name itself; agent content can't style the header (8.13). |
 | Prompt injection through data an agent reads (screenshots, shared files) | Out of Bridget's control; the setup prompt tells agents that phone content is data, not instructions (Appendix B). |
@@ -560,7 +567,7 @@ every request is logged (section 10).
 | 8.7 | Phone context and status | Phone status | P3 |
 | 8.8 | Location | Location | P3 |
 | 8.9 | Flashlight and phone controls | Flashlight; Phone controls | P3 |
-| 8.10 | Screenshot with time-limited grant | Screenshot | P5 |
+| 8.10 | Screenshot (Accessibility; grant fallback) | Screenshot | P2 (fallback P5) |
 | 8.11 | Files to the phone | Files | P4 |
 | 8.12 | Share to an agent | Sharing | P4 |
 | 8.13 | Interactions: notices and questions | Interactions | P2 |
@@ -728,30 +735,67 @@ every request is logged (section 10).
 - Not possible (Android 10+): turning Wi-Fi, mobile data or Bluetooth radios
   on/off. `POST /v1/phone/wifi` returns `not_supported` with that reason.
 
-### 8.10 Screenshot with time-limited grant
+### 8.10 Screenshot
 
-- **CAP-25 [P5]** `POST /v1/screen/capture` (sizing per API-10, `raw=1`).
-  - With an active grant for this agent: grab the current frame from the
-    running capture session; target under 1 s.
-  - Without: Bridget sends Rahul a question interaction "**<Agent> wants to
-    see your screen**" [Allow once] [Allow for 1 hour] [Allow for 16 hours]
-    [Deny], and holds the request up to 55 s. **Allow…** opens Android's
-    screen-share consent dialog, where Rahul picks **Entire screen**; then the
-    frame is taken and returned. No answer in 55 s: `consent_pending` (202,
-    with `grant_id`). Deny: `screen_denied` (403).
-- **CAP-26 [P5]** `GET /v1/screen/grant` →
-  `{"active","kind":"once"|"1h"|"16h","agent","ends_at"}`;
-  `GET /v1/screen/grants/{id}?wait=55` to wait for Rahul's answer.
-- Rules: a grant covers only the asking agent unless Rahul ticks **Allow for
-  all agents**; at most 1 capture per 5 s and 300 per grant; no capture while
-  locked (`device_locked`); **Stop now** in the notification, removing or
-  rotating the agent, or turning the master switch off ends the grant.
-  Frames are never stored.
-- Android: MediaProjection consent per session; `mediaProjection` FGS type
-  during the grant; the status-bar screen-share chip shows throughout.
-  Secure windows (banking, password managers) come out black, and Bridget
-  never works around that. [Verify] whether Android 17 ends the projection
-  on screen lock; if so, a grant effectively lasts until the phone locks.
+Decision D17: screenshots go through a Bridget **Accessibility service**, so
+agents get them on request with no approval each time, like `shotpix` over
+ADB. Rahul turns the service on once (**Settings → Accessibility → Bridget →
+On**, one tap from the Access screen).
+
+- **CAP-25 [P2]** `POST /v1/screen/capture` with sizing (API-10; default
+  `size=agent`, 1568 px, q85) and `raw=1`. Optional
+  `"mode": "private" | "system"`; default from Settings (**private**):
+  - **private**: `AccessibilityService.takeScreenshot(displayId, …)`
+    (Android 11+) returns the frame in memory. Bridget encodes it, returns it
+    and discards it. Nothing is saved, and there's no shutter flash.
+  - **system**: `performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)` takes
+    a normal Android screenshot (flash, preview thumbnail, saved to
+    `Pictures/Screenshots`). Bridget waits up to 5 s for the new MediaStore
+    item and returns it exactly as `GET /v1/image/last?type=screenshot`
+    would, plus `gallery_id`. These stay in Rahul's gallery: Bridget can't
+    delete them without his confirmation.
+  - Response: `captured_at, width_px, height_px, format, size_bytes, mode,
+    data_base64` (or raw bytes with `X-Bridget-*` headers), and `gallery_id`
+    in system mode.
+- **CAP-25a [P2] Visibility.** Accessibility captures show no Android
+  indicator, so every capture posts a Bridget notification on the `capture`
+  channel: "**Grok took a screenshot**" (auto-dismissed after 10 s, kept in
+  the log). While the service is enabled, the ongoing listener notification
+  says "Screenshots on". Every capture is logged with agent, mode and size.
+- **CAP-25b [P2] Limits.** Android throttles `takeScreenshot` (about one
+  per second, [Verify] the exact interval on API 37); Bridget allows 1
+  capture per 2 s per agent and 60 per hour per agent, then `rate_limited`.
+  No capture while the phone is locked (`device_locked`: the lock screen is
+  all there is to see).
+- **CAP-25c [P2] Secure windows.** Apps that block screenshots (banking,
+  password managers, Bridget's own setup prompt) come out black or are
+  refused by Android. Bridget returns what Android gives and never works
+  around it; the response says `"secure_content": true` when Android
+  reports it ([Verify] how `takeScreenshot` signals secure layers).
+- **CAP-26 [P2] The service does only this.** Bridget's Accessibility
+  service declares `canTakeScreenshot="true"` and **no** event types, no
+  window-content retrieval, no gesture dispatch, and no key filtering. It
+  can't read or tap the screen. Any later use (for example reading screen
+  text) needs its own spec change and owner decision. [Verify] that
+  `takeScreenshot` works with `canRetrieveWindowContent="false"`.
+- **CAP-26a [P2] Errors.** Service off: `access_needed`
+  (`"setting":"accessibility_screenshot"`), plus a notice to Rahul with a
+  one-tap **Turn on** (UI-28). Master switch off: `capability_disabled`.
+- **CAP-26b [P5] Fallback when Accessibility is off: screen-share grants.**
+  If Rahul prefers not to enable Accessibility, `POST /v1/screen/capture`
+  instead sends him a question "**<Agent> wants to see your screen**"
+  [Allow once] [Allow for 1 hour] [Allow for 16 hours] [Deny] and uses
+  MediaProjection (Android's screen-share dialog, **Entire screen**):
+  `consent_pending` (202, with `grant_id`) if he hasn't answered within 55 s,
+  `screen_denied` (403) on Deny. `GET /v1/screen/grant` and
+  `GET /v1/screen/grants/{id}?wait=55` report the grant. Grants cover only
+  the asking agent; the status-bar screen-share chip shows throughout;
+  **Stop now** ends them. [Verify] whether Android 17 ends projections on
+  screen lock.
+- **CAP-26c [Decided] Restricted settings.** For an APK installed from a
+  downloaded file, Android 13+ blocks enabling Accessibility until Rahul
+  allows restricted settings (UI-27). Bridget installed over ADB isn't
+  affected.
 
 ### 8.11 Files to the phone
 
@@ -1342,6 +1386,8 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 - **UI-19 [P1]** Sections:
   - **Listener**: Always on (switch), Port (default 8734), Bind address
     (read-only), Allow internet callbacks (off), Relay mode (P2+, off).
+  - **Screenshots**: Mode for agents: Private copy (default) / Android
+    screenshot saved to gallery; Accessibility service status with **Turn on**.
   - **Privacy**: Agents can read the log: all entries / only their own;
     Show question text on the lock screen (off); Log precise locations (off);
     Address lookup (off).
@@ -1414,7 +1460,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 | NFR-01 | `GET /v1/health` latency over a direct tailnet path | p50 < 150 ms |
 | NFR-02 | `GET /v1/image/last` (agent size) | p50 < 1 s, p95 < 2 s |
 | NFR-03 | Camera snapshot (1024-2048 px) | p50 < 3 s |
-| NFR-04 | Screenshot with an active grant | p50 < 1 s |
+| NFR-04 | Screenshot via Accessibility (private mode, agent size) | p50 < 1 s |
 | NFR-05 | App cold start to Home | < 1 s on the Pixel |
 | NFR-06 | Listener idle battery cost | < 2 % per day ([Verify] with Android's battery usage screen over 3 days) |
 | NFR-07 | APK size | < 30 MB (1.2.0 is 17 MB; ML Kit adds about 4 MB) |
@@ -1478,10 +1524,10 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 |---|---|---|---|
 | Built | 1.0-1.2 | Listener, keys, camera photo, mic clip, gallery, last image, audit log, four agents | Done 26 Oct 2026 |
 | **P1** | 2.0 | New UI (12.1-12.5, 12.7-12.13), setup prompt flow (6), `brg_` keys, `/v1/guide`, `/v1/openapi.json`, `/v1/tools/bridget`, log store and API (10), feedback (11), Access screen, size presets, `raw=1` for snapshots, `image/last?wait` | TST-03 passes; Rahul adds a new agent from the prompt in under 1 minute |
-| **P2** | 2.1 | Interactions (8.13) + Inbox (12.6) + events and callbacks (9), open link (8.20), Quick Settings tile | A no-webhook agent gets an answer within 1 s of the tap |
+| **P2** | 2.1 | Interactions (8.13) + Inbox (12.6) + events and callbacks (9), open link (8.20), Quick Settings tile, **Accessibility screenshots** (8.10) | A no-webhook agent gets an answer within 1 s of the tap; an agent gets a screenshot in under 1 s with no prompt |
 | **P3** | 2.2 | Phone status and context (8.7), sensors (8.21), location (8.8), flashlight and controls (8.9), find my phone (8.14), gallery filters, videos and downloads (8.5) | Each endpoint's acceptance test on the Pixel |
 | **P4** | 2.3 | Files to phone (8.11), share to agent (8.12) | Share-to-Grok round trip |
-| **P5** | 2.4 | Screenshot grants (8.10), video clip (8.3), text recognition (8.15), mic transcription (CAP-08) | Grant once / 1 h / 16 h tests |
+| **P5** | 2.4 | Screen-share grant fallback (CAP-26b), video clip (8.3), text recognition (8.15), mic transcription (CAP-08) | Grant once / 1 h / 16 h tests |
 | **P6** | 2.5 | App usage (8.16), Health Connect (8.17), notification reading (8.18), clipboard (8.19) | Acceptance tests |
 | **P7** | 3.0 | Per-agent permissions (15) | `spec-per-agent-permissions.md` tests |
 | Relay | 2.x, after owner OK | Relay mode (4.4) | A non-tailnet agent takes a photo with Tailscale off |
@@ -1503,7 +1549,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 | Q9 | For relay wake-up: Firebase Cloud Messaging (best delivery, adds Firebase) or UnifiedPush/ntfy (no Google, weaker in Doze)? | FCM |
 | Q10 | Build relay mode at all (changes v1 "no cloud relay")? | Not until the owner says yes |
 | Q11 | Later: let the listener sleep and wake by push to save battery? | No; revisit if NFR-06 fails |
-| Q12 | Screenshot grant lengths: 1 h and 16 h, or "until midnight"? | 1 h and 16 h |
+| Q12 | Screenshot fallback grant lengths: 1 h and 16 h, or "until midnight"? | 1 h and 16 h |
 | Q13 | Default retention for the log: 20,000 entries / 30 days? | Yes |
 | Q14 | Turn on location history and places (CAP-20a), with geofence events for agents? | Off; not scheduled until the owner says yes |
 
@@ -1660,7 +1706,7 @@ RULES
 | BLUETOOTH_CONNECT | 8.7 | Runtime pop-up |
 | ACTIVITY_RECOGNITION | 8.7, 8.21 | Runtime pop-up |
 | Health Connect read permissions | 8.17 | Health Connect screen |
-| FOREGROUND_SERVICE + _SPECIAL_USE, _CAMERA, _MICROPHONE, _LOCATION, _MEDIA_PROJECTION | ARC-02 | Manifest |
+| FOREGROUND_SERVICE + _SPECIAL_USE, _CAMERA, _MICROPHONE, _LOCATION, _MEDIA_PROJECTION (fallback only) | ARC-02 | Manifest |
 | INTERNET, ACCESS_NETWORK_STATE | listener, callbacks | Manifest |
 | REQUEST_IGNORE_BATTERY_OPTIMIZATIONS | listener | Pop-up |
 | PACKAGE_USAGE_STATS | 8.16 | Special access (Appendix E) |
@@ -1669,7 +1715,8 @@ RULES
 | Notification listener (service) | 8.18, now playing | Special access |
 | FLASHLIGHT (normal) | 8.9 | Manifest |
 | VIBRATE | 8.14 | Manifest |
-| Not requested, ever | MANAGE_EXTERNAL_STORAGE, accessibility service, device admin, SMS/call permissions (unless Q1) | — |
+| Accessibility service (screenshots only, CAP-26) | 8.10 | Special access (Appendix E) |
+| Not requested, ever | MANAGE_EXTERNAL_STORAGE, device admin, SMS/call permissions (unless Q1) | — |
 
 ## Appendix E. Settings deep links (verified on the Pixel, 26 Oct 2026)
 
@@ -1679,6 +1726,7 @@ RULES
 | Do Not Disturb access | `android.settings.NOTIFICATION_POLICY_ACCESS_DETAIL_SETTINGS` + package | Bridget's own switch (`ZenAccessDetailSettingsActivity`); fallback `NOTIFICATION_POLICY_ACCESS_SETTINGS` (list) |
 | Modify system settings | `android.settings.action.MANAGE_WRITE_SETTINGS` + package | Bridget's own switch (`AppWriteSettingsActivity`) |
 | Notification access | `android.settings.NOTIFICATION_LISTENER_DETAIL_SETTINGS` + component extra | Bridget's own switch (`NotificationAccessDetailsActivity`) |
+| Accessibility (screenshots) | `android.settings.ACCESSIBILITY_DETAILS_SETTINGS` + `android.intent.extra.COMPONENT_NAME` = Bridget's service | Bridget's own Accessibility page (`AccessibilityDetailsSettingsActivity`); fallback `ACCESSIBILITY_SETTINGS` (list) |
 | Battery exemption | `android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` + package | Allow/Deny pop-up |
 | App info (restricted settings, permissions) | `android.settings.APPLICATION_DETAILS_SETTINGS` + package | Bridget's App info |
 | Notification channels | `android.settings.APP_NOTIFICATION_SETTINGS` + `EXTRA_APP_PACKAGE` | Bridget's notification settings |
