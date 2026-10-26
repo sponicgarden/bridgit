@@ -162,7 +162,8 @@ are the deliberate departures. Anything not listed still applies.
 ### 3.4 Not in scope
 
 - **PRD-09 [Decided]** No continuous or scheduled capture, live streaming,
-  call recording, always-on listening, or location history/tracking.
+  call recording or always-on listening. Location history/tracking is off
+  by default and only possible as the owner-enabled option CAP-20a (Q14).
 - **PRD-10 [Decided]** No access to other apps' private data (messages
   inside WhatsApp, banking apps and so on). Android forbids it, and Bridget
   doesn't try.
@@ -691,8 +692,25 @@ every request is logged (section 10).
   reported as `precision: "approximate"`); `location` FGS type while in use.
   ACCESS_BACKGROUND_LOCATION optional (Open Q5). Indicator: location icon.
   Notification: "<Agent> checked your location".
-- **CAP-20 [Decided]** No history, no tracking, no geofences in v2
+- **CAP-20 [Decided]** By default: no history, no tracking, no geofences
   (PRD-09). Every fix is one request.
+- **CAP-20a [Open]** Optional **Location history and places** (Open Q14).
+  The v1 exclusion was the owner's own design rule, not an Android or legal
+  limit: tracking your own phone with your own agents is allowed (Android:
+  "Allow all the time" background location). If turned on:
+  - Bridget records a fix every 5-15 minutes while moving (fused provider,
+    balanced power), stored **only on the phone**, kept 30 days (setting).
+  - `GET /v1/location/history?since=&until=` (points, simplified),
+    `GET /v1/places` / `POST /v1/places {"name":"Home","lat","lon","radius_m"}`,
+    and events `place.entered` / `place.left` (9.1), for example "tell Grok
+    when I get home".
+  - Needs ACCESS_BACKGROUND_LOCATION; Android shows periodic reminders that
+    Bridget uses location in the background.
+  - Privacy trade-off to state in the UI: an agent hosted by a company
+    (for example Grok) stores whatever history it reads on that company's
+    servers. Bridget never sends history anywhere on its own.
+  - Tracking anyone else's phone is out of scope (single owner, single
+    device; consent law varies).
 
 ### 8.9 Flashlight and phone controls
 
@@ -1486,6 +1504,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 | Q11 | Later: let the listener sleep and wake by push to save battery? | No; revisit if NFR-06 fails |
 | Q12 | Screenshot grant lengths: 1 h and 16 h, or "until midnight"? | 1 h and 16 h |
 | Q13 | Default retention for the log: 20,000 entries / 30 days? | Yes |
+| Q14 | Turn on location history and places (CAP-20a), with geofence events for agents? | Off; not scheduled until the owner says yes |
 
 ---
 
@@ -1513,6 +1532,8 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 | GET | `/v1/phone/context` | Phone status | P3 | key |
 | GET | `/v1/sensors` | Phone status | P3 | key |
 | GET | `/v1/location` | Location | P3 | key |
+| GET | `/v1/location/history` | Location history (optional, Q14) | — | key |
+| GET/POST | `/v1/places` | Location history (optional, Q14) | — | key |
 | GET/POST | `/v1/flashlight` | Flashlight | P3 | key |
 | POST | `/v1/phone/dnd` | Phone controls | P3 | key |
 | POST | `/v1/phone/sound` | Phone controls | P3 | key |
