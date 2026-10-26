@@ -529,3 +529,344 @@ under a minute, with nothing typed except the name.
   `max_width_px` and `quality`.
 - **API-11 [Decided]** Results over 12 MB of base64 are refused with
   `payload_too_large`. `raw=1` raises the cap to 40 MB.
+
+---
+
+## 8. Capabilities
+
+Each capability below uses the same template. **Phase** refers to the
+roadmap (section 16): **Built** means it's in 1.2.0 and tested on the Pixel.
+Every capability has a master switch, off on a fresh install (SEC-03), and
+every request is logged (section 10).
+
+| # | Capability | Master switch | Phase |
+|---|---|---|---|
+| 8.1 | Status and self-description | always on | Built / P1 |
+| 8.2 | Camera photo | Camera | Built |
+| 8.3 | Camera video clip | Video | P5 |
+| 8.4 | Microphone clip | Microphone | Built |
+| 8.5 | Gallery (images, videos, downloads) | Gallery | Built / P3 |
+| 8.6 | Last image | Gallery | Built |
+| 8.7 | Phone context and status | Phone status | P3 |
+| 8.8 | Location | Location | P3 |
+| 8.9 | Flashlight and phone controls | Flashlight; Phone controls | P3 |
+| 8.10 | Screenshot with time-limited grant | Screenshot | P5 |
+| 8.11 | Files to the phone | Files | P4 |
+| 8.12 | Share to an agent | Sharing | P4 |
+| 8.13 | Interactions: notices and questions | Interactions | P2 |
+| 8.14 | Find my phone (ring and vibrate) | Phone controls | P3 |
+| 8.15 | On-device text recognition | Text recognition | P5 |
+| 8.16 | App usage | App usage | P6 |
+| 8.17 | Health Connect | Health | P6 |
+| 8.18 | Notification reading | Notifications | P6 (optional) |
+| 8.19 | Clipboard write | Clipboard | P6 |
+| 8.20 | Open a link or app (via Rahul's tap) | Interactions | P2 |
+| 8.21 | Sensor snapshot | Phone status | P3 |
+| 8.22 | Communications (SMS, contacts, calendar, calls) | — | Not scheduled |
+
+### 8.1 Status and self-description
+
+- **CAP-01 [Built]** `GET /v1/health`: `status`, `app`, `app_version`,
+  calling `agent`, `listener_uptime_seconds`, `battery_level`, `charging`,
+  `bind_address`, `port`.
+- **CAP-02 [Built → P1 extended]** `GET /v1/capabilities` (API-09 shape).
+- **CAP-03 [P1]** `GET /v1/guide`, `GET /v1/openapi.json`,
+  `GET /v1/tools/bridget` (API-09, AGT-11).
+
+### 8.2 Camera photo
+
+- **CAP-04 [Built]** `POST /v1/camera/snapshot`
+  `{"camera":"rear"|"front","flash":false,"max_width_px":2048|null}` (null =
+  full size), plus API-10 presets and `raw=1` **[P1]**. Returns
+  `captured_at, width_px, height_px, format, size_bytes, data_base64`.
+- **CAP-05 [P1]** Optional `"lens":"wide"|"ultrawide"|"tele"` where the
+  device has it (CameraX camera info), `"zoom": 1.0-10.0`, and
+  `"focus":"auto"|"near"`. Unknown values return `invalid_parameter`.
+- Android: CAMERA permission; `camera` FGS type active (ARC-02). Indicator:
+  green camera dot. Notification: "<Agent> is taking a photo".
+- Errors: `device_locked` (phone locked; [Verify] whether capture with the
+  screen off but unlocked is reliable on the Pixel), `sensor_busy`,
+  `capture_timeout`, `service_start_blocked`.
+- Measured: 1024 px rear photo in 2.2 s over the tailnet (1.2.0).
+
+### 8.3 Camera video clip
+
+- **CAP-06 [P5]** `POST /v1/camera/video`
+  `{"camera":"rear","duration_seconds":1-30,"audio":true,"resolution":"720p"|"1080p"}`.
+  Returns MP4 (H.264/AAC) as `raw=1` by default (base64 allowed under 12 MB).
+- Android: CAMERA (+ RECORD_AUDIO if audio); `camera` (+ `microphone`) FGS
+  types. Same indicators and notification as photos ("recording video, 20 s").
+- Limits: 3 clips per minute; 720p default to keep files small (about 4 MB
+  per 10 s, [Verify]).
+
+### 8.4 Microphone clip
+
+- **CAP-07 [Built]** `POST /v1/mic/record {"duration_seconds": 1-120}`
+  (whole numbers; out of range is `invalid_parameter`, never clamped).
+  Returns M4A (AAC, 44.1 kHz mono, 96 kbps).
+- **CAP-08 [P5]** Optional `"transcribe": true` returns `transcript` using
+  Android's on-device speech recognizer where available
+  (`SpeechRecognizer.createOnDeviceSpeechRecognizer`, [Verify] on API 37);
+  audio is still returned unless `"return_audio": false`.
+- Android: RECORD_AUDIO; `microphone` FGS type. Indicator: green mic dot.
+- Measured: 5 s clip returned in 5.9 s (1.2.0).
+
+### 8.5 Gallery
+
+- **CAP-09 [Built]** `GET /v1/gallery/recent?limit=1-100`: newest-added
+  first; metadata only (`id, taken_at, width_px, height_px, size_bytes,
+  mime, album`) and `access_mode` (`full` | `selected`).
+- **CAP-10 [Built]** `GET /v1/gallery/photo/{id}` with sizing (API-10).
+- **CAP-11 [P3]** Filters on `recent`: `type=photo|screenshot|any` (same
+  rules as 8.6), `album=`, `since=`, `until=`.
+- **CAP-12 [P3]** `GET /v1/gallery/videos/recent` and
+  `GET /v1/gallery/video/{id}` (raw MP4, or `frame_at_s=` to get a still as
+  JPEG). Needs READ_MEDIA_VIDEO.
+- **CAP-13 [P3]** `GET /v1/downloads/recent` and `/v1/downloads/{id}` for
+  files in Downloads (PDF, images, documents), via MediaStore Downloads.
+  [Verify] what a non-owner app can read there on API 37 without
+  MANAGE_EXTERNAL_STORAGE (which Bridget will not request).
+- Read-only always: Bridget never deletes or edits gallery items.
+
+### 8.6 Last image
+
+- **CAP-14 [Built]** `GET /v1/image/last?type=any|screenshot|photo`: the
+  single most recently added image of that type. `screenshot` = any
+  `Screenshots` folder; `photo` = `DCIM/Camera`; `any` = all images. Default
+  size `agent` (1568 px, q85), always re-encoded to JPEG. `raw=1` returns the
+  bytes with `X-Bridget-Id, -Type, -Taken-At, -Added-At, -Width, -Height,
+  -Album`.
+- **CAP-15 [P1]** `since=<ISO or id>&wait=55`: wait for the next new image
+  of that type (for example "tell me when Rahul takes a screenshot").
+- Measured: 0.44-0.77 s, 94-255 KB (1.2.0).
+
+### 8.7 Phone context and status
+
+- **CAP-16 [P3]** `GET /v1/phone/status` returns, each block only if
+  available:
+  - `battery`: level, charging, plugged type, temperature_c, health,
+    time_to_full_s;
+  - `device`: model, android_version, security_patch, uptime_s;
+  - `screen`: on, locked, brightness (0-255), auto_brightness;
+  - `sound`: ringer_mode (normal | vibrate | silent), dnd (off | priority |
+    alarms | none), volumes {ring, media, alarm, call} (0-100),
+    headphones_connected;
+  - `network`: type (wifi | cellular | none), wifi_ssid (needs location
+    permission; else null), signal_level (0-4), data_saver, roaming,
+    tailscale_ip;
+  - `storage`: free_bytes, total_bytes;
+  - `bluetooth`: connected devices (name, type), needs BLUETOOTH_CONNECT;
+  - `activity`: still | walking | running | cycling | in_vehicle | unknown,
+    needs ACTIVITY_RECOGNITION ([Verify] the transition API without Google
+    Play services, otherwise `unknown`);
+  - `media`: now playing (app, title, artist, playing), needs notification
+    listener access (8.18); otherwise omitted.
+- **CAP-17 [P3]** `GET /v1/phone/context`: a short summary for agents
+  deciding whether to interrupt: `{"likely": "driving" | "in_pocket" |
+  "on_table" | "in_use" | "sleeping_hours" | "unknown", "screen_on",
+  "locked", "dnd", "ringer_mode", "headphones", "car_bluetooth"}`, with the
+  rule that produced it.
+
+### 8.8 Location
+
+- **CAP-18 [P3]** `GET /v1/location?fresh=true|false&accuracy=high|balanced`:
+  `latitude, longitude, accuracy_m, altitude_m, speed_mps, bearing_deg,
+  fix_time, provider, age_s`. `fresh=false` returns the last known fix
+  instantly; `fresh=true` (default) gets a new fix (timeout 15 s, then
+  `capture_timeout` with the last known fix attached).
+- **CAP-19 [P3]** Optional `address=true` adds a reverse-geocoded address
+  using Android's `Geocoder`, which calls Google. It's behind its own setting,
+  **Address lookup**, off by default (SEC-16).
+- Android: ACCESS_FINE_LOCATION (or COARSE if Rahul picks approximate:
+  reported as `precision: "approximate"`); `location` FGS type while in use.
+  ACCESS_BACKGROUND_LOCATION optional (Open Q5). Indicator: location icon.
+  Notification: "<Agent> checked your location".
+- **CAP-20 [Decided]** No history, no tracking, no geofences in v2
+  (PRD-09). Every fix is one request.
+
+### 8.9 Flashlight and phone controls
+
+- **CAP-21 [P3]** `POST /v1/flashlight {"on":true,"auto_off_seconds":1-600}`
+  (default 60) and `GET /v1/flashlight`. Uses
+  `CameraManager.setTorchMode`; doesn't open the camera. Always auto-off.
+  Notification while lit: "<Agent> turned on the flashlight" [Turn off].
+- **CAP-22 [P3]** `POST /v1/phone/dnd {"mode":"off"|"priority"|"alarms"|"none","duration_minutes":null|1-1440}`.
+  Needs Do Not Disturb access (special access, 12.12).
+- **CAP-23 [P3]** `POST /v1/phone/sound {"ringer_mode":"normal"|"vibrate"|"silent"}`
+  and `{"volume":{"media":0-100,"ring":0-100,"alarm":0-100}}`. Silent mode
+  may also need DND access ([Verify]).
+- **CAP-24 [P3]** `POST /v1/phone/brightness {"level":0-255}` or
+  `{"auto":true}`. Needs Modify system settings (special access).
+- Not possible (Android 10+): turning Wi-Fi, mobile data or Bluetooth radios
+  on/off. `POST /v1/phone/wifi` returns `not_supported` with that reason.
+
+### 8.10 Screenshot with time-limited grant
+
+- **CAP-25 [P5]** `POST /v1/screen/capture` (sizing per API-10, `raw=1`).
+  - With an active grant for this agent: grab the current frame from the
+    running capture session; target under 1 s.
+  - Without: Bridget sends Rahul a question interaction "**<Agent> wants to
+    see your screen**" [Allow once] [Allow for 1 hour] [Allow for 16 hours]
+    [Deny], and holds the request up to 55 s. **Allow…** opens Android's
+    screen-share consent dialog, where Rahul picks **Entire screen**; then the
+    frame is taken and returned. No answer in 55 s: `consent_pending` (202,
+    with `grant_id`). Deny: `screen_denied` (403).
+- **CAP-26 [P5]** `GET /v1/screen/grant` →
+  `{"active","kind":"once"|"1h"|"16h","agent","ends_at"}`;
+  `GET /v1/screen/grants/{id}?wait=55` to wait for Rahul's answer.
+- Rules: a grant covers only the asking agent unless Rahul ticks **Allow for
+  all agents**; at most 1 capture per 5 s and 300 per grant; no capture while
+  locked (`device_locked`); **Stop now** in the notification, removing or
+  rotating the agent, or turning the master switch off ends the grant.
+  Frames are never stored.
+- Android: MediaProjection consent per session; `mediaProjection` FGS type
+  during the grant; the status-bar screen-share chip shows throughout.
+  Secure windows (banking, password managers) come out black, and Bridget
+  never works around that. [Verify] whether Android 17 ends the projection
+  on screen lock; if so, a grant effectively lasts until the phone locks.
+
+### 8.11 Files to the phone
+
+- **CAP-27 [P4]** `POST /v1/files {"name","mime","data_base64","note","save_to_downloads":false}`
+  or a raw body with `?name=&mime=`. Max 25 MB. Allowed: PDF, images, text,
+  CSV, JSON, audio, video, ZIP. APKs and other executables are refused
+  (`invalid_parameter`).
+- Files land in the Inbox (12.6), stored privately. Rahul can open, share, or
+  **Save to Downloads** (`Downloads/Bridget/<Agent>/`). With
+  `save_to_downloads: true` the copy is made immediately.
+- **CAP-28 [P4]** `GET /v1/files/{id}` → `{opened_at, saved_at, deleted}`;
+  `GET /v1/files?mine=true` lists what this agent sent.
+- Notification: "<Agent> sent <name>". Limit: 50 files per agent per day.
+
+### 8.12 Share to an agent
+
+- **CAP-29 [P4]** Bridget is a share target for images, PDFs, text and
+  links. Android Sharing Shortcuts list each agent directly ("Grok",
+  "Claude"…), so sharing is two taps; plain "Bridget" asks which agent. Rahul
+  can add a note.
+- **CAP-30 [P4]** Agents collect shares with `GET /v1/shares?wait=55`
+  (newest uncollected items for this agent) and `GET /v1/shares/{id}`
+  (content; images sized per API-10, `agent` by default), then
+  `POST /v1/shares/{id}/ack`. Agents with an approved callback also get an
+  event (9.3).
+- The Inbox shows "Picked up by Grok at 14:02". Uncollected shares expire
+  after 7 days.
+
+### 8.13 Interactions: notices and questions
+
+- **CAP-31 [P2]** `POST /v1/interactions`:
+
+```json
+{
+  "kind": "notice" | "question",
+  "title": "Pay this invoice?",
+  "text": "Hostinger, $11.99, due Oct 30.",
+  "image": {"gallery_id": "87567"} | {"data_base64": "...", "mime": "image/jpeg"},
+  "controls": [
+    {"type": "button", "id": "yes", "label": "Pay", "style": "primary"},
+    {"type": "button", "id": "no", "label": "Not now"},
+    {"type": "text", "id": "note", "label": "Reply", "placeholder": "Anything to add?"},
+    {"type": "choice", "id": "when", "label": "When", "options": ["Today", "This week"]},
+    {"type": "link", "id": "open", "label": "Open invoice", "url": "https://..."}
+  ],
+  "priority": "normal" | "urgent",
+  "speak": false,
+  "expires_in_seconds": 3600,
+  "callback": false
+}
+```
+
+  → `201 {"interaction_id","status":"pending","expires_at"}`.
+  - `title` required (80 chars); `text` 2,000 chars; image 2 MB; notice:
+    no controls except `link`; question: 1-6 controls.
+  - `speak: true` reads "<Agent> says: <title>. <text>" with Android
+    text-to-speech; skipped in silent mode, DND or a call unless `urgent` and
+    allowed in Settings.
+- **CAP-32 [P2]** `GET /v1/interactions/{id}?wait=55` →
+  `{"kind","status":"pending"|"seen"|"answered"|"dismissed"|"expired"|"cancelled",
+  "answer":{"button","values":{…}},"answered_at"}`. `seen` is for notices
+  (Got it, or opened). `DELETE /v1/interactions/{id}` cancels.
+- **CAP-33 [P2]** On the phone: notification "**<Agent> asks:** <title>"
+  (notice: "**<Agent>:** <title>"); the first three buttons are notification
+  actions, a text control becomes inline reply, and tapping opens the full
+  card. Lock screen shows only "<Agent> has a question" unless Rahul allows
+  full text on the lock screen.
+- **CAP-34 [P2 → later] HTML cards.** `"html": "<…>"` instead of
+  text/controls, rendered in a WebView with JavaScript limited to
+  `Bridget.respond({...})` (answer up to 16 KB, returned as `answer.data`);
+  no network (all loads except inline `data:` blocked), no storage, 256 KB
+  cap. Bridget always draws the header "From <Agent> - custom card", so
+  pages can't impersonate.
+- Limits: 5 open questions and 30 notices per hour per agent
+  (`too_many_open`).
+
+### 8.14 Find my phone
+
+- **CAP-35 [P3]** `POST /v1/phone/ring {"seconds":5-60}`: plays the alarm
+  sound at full alarm volume and vibrates, even in silent mode (alarm
+  stream). Full-screen notification "<Agent> is ringing your phone" [Stop].
+  1 per minute.
+
+### 8.15 On-device text recognition
+
+- **CAP-36 [P5]** `POST /v1/ocr {"source":"last_image"|"gallery_id"|"camera","type":"screenshot"|"photo"|"any","id":"…"}`
+  returns `{"text","blocks":[{"text","bbox"}],"source_id"}`. The image never
+  leaves the phone; only text is returned.
+- Uses Google ML Kit text recognition, bundled model (offline, about 4 MB
+  per script; Latin by default). Allowed exception to "no third-party SDKs":
+  no network, no analytics ([Verify] that the bundled variant makes no
+  network calls, by blocking it in a test).
+- Logged with character count, never the text.
+
+### 8.16 App usage
+
+- **CAP-37 [P6]** `GET /v1/usage/today` (per app: package, label,
+  foreground_minutes, last_used) and `GET /v1/usage/now` (foreground app
+  package and label). `GET /v1/usage/range?since=&until=`.
+- Android: Usage access (special access, 12.12).
+
+### 8.17 Health Connect
+
+- **CAP-38 [P6]** `GET /v1/health-data/summary?date=YYYY-MM-DD`: steps,
+  distance, active calories, sleep sessions (start, end, stages if present),
+  resting and average heart rate, exercise sessions. Read-only.
+- Android: Health Connect permissions per record type, granted on Health
+  Connect's own screen; Bridget must declare a privacy-policy activity
+  (required by Health Connect, [Verify] for sideloaded apps).
+
+### 8.18 Notification reading (optional)
+
+- **CAP-39 [P6, optional]** `GET /v1/notifications/active` and
+  `GET /v1/notifications/recent?since=&wait=55` (app, title, text, time).
+  Needs notification listener access, which for a downloaded APK may be a
+  "restricted setting" (12.12). Hidden by default because the Muse app
+  already reads notifications.
+
+### 8.19 Clipboard write
+
+- **CAP-40 [P6]** `POST /v1/clipboard {"text": "...", "sensitive": false}`
+  puts text on the clipboard (Android allows background writes; it blocks
+  background reads, so there's no read endpoint). Notification: "<Agent>
+  copied text to your clipboard". Text up to 10 KB.
+
+### 8.20 Open a link or app
+
+- **CAP-41 [P2]** Android blocks apps from opening screens from the
+  background, so "open" is always Rahul's tap: an interaction `link` control
+  (8.13) opens a URL, a deep link (`geo:`, `tel:` shows the dialer without
+  calling, `mailto:`), or an installed app by package name.
+
+### 8.21 Sensor snapshot
+
+- **CAP-42 [P3]** `GET /v1/sensors?which=light,pressure,proximity,steps,orientation,motion`
+  returns one reading each (motion: 1 s average of accelerometer and
+  gyroscope). Steps are the count since the last reboot. No permissions
+  except ACTIVITY_RECOGNITION for steps.
+
+### 8.22 Communications (not scheduled)
+
+- **CAP-43 [Open]** SMS read/send, contacts, calendar, call log. v1 excluded
+  these because the Muse app covers them. If Bridget is to replace Muse's
+  device access, these could come later, with every **send** (SMS, calendar
+  invite) requiring a question interaction that Rahul approves on the phone.
+  Owner decision: Open Q1.
