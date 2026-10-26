@@ -173,6 +173,7 @@ real 5-second mic clip** (AAC, 5.9 s), and `image/last` for all three types
 ## Next (specs, not built)
 
 - `docs/spec-per-agent-permissions.md`: separate switches per agent.
-- `docs/spec-agent-inbox.md`: agents ask Rahul questions, send files to the
-  phone, receive things Rahul shares, all in a new Inbox screen. Works for
+- `docs/spec-agent-inbox.md`: interactions (one-way notices and questions,
+  optionally spoken aloud), files sent to the phone, and things Rahul shares
+  to an agent, all in a new Inbox screen. Works for
   agents without webhooks (long polling).

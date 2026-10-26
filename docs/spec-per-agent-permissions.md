@@ -13,7 +13,7 @@ the microphone.
 
 - Tapping an agent in the **Agents** list opens its own screen with one switch
   per capability: **Camera**, **Microphone**, **Gallery**, plus later ones
-  (**Prompts**, **Send files**, **Shared items**).
+  (**Notices**, **Questions**, **Speak aloud**, **Send files**, **Shared items**).
 - The existing switches stay as **master switches**. A capability works for an
   agent only when the master switch **and** that agent's switch are both on.
   Turning a master switch off stops it for everyone immediately.
@@ -43,8 +43,8 @@ the microphone.
 
 ## Storage and audit
 
-- Each agent record gains `caps` (camera, mic, gallery, prompts, files,
-  shares), `gallery_scope`, `mic_max_seconds` and `captures_per_minute`.
+- Each agent record gains `caps` (camera, mic, gallery, notices, questions,
+  speak, files, shares), `gallery_scope`, `mic_max_seconds` and `captures_per_minute`.
 - Every permission change is audit-logged as `app:permissions` with the agent
   and the before/after values.
 
