@@ -16,7 +16,7 @@ Settings come from ~/.config/bridget/env (or environment variables):
   BRIDGET_PORT=8734                optional
   TAILSCALE_BIN, TAILSCALE_SOCKET  optional, for userspace tailscaled
 """
-import base64, json, os, shutil, socket, subprocess, sys
+import base64, json, os, select, shutil, socket, subprocess, sys, time
 
 
 def load_env():
@@ -52,12 +52,34 @@ def send(cfg, req, host, port):
                              stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         p.stdin.write(req)
         p.stdin.flush()
+        # Keep stdin open: `tailscale nc` drops the connection as soon as its
+        # input closes, before the phone has answered. Read until the phone
+        # closes the connection (we send Connection: close), then clean up.
+        chunks, deadline = [], time.monotonic() + 170
+        fd = p.stdout.fileno()
+        while True:
+            left = deadline - time.monotonic()
+            if left <= 0:
+                p.kill()
+                raise TimeoutError("timed out")
+            ready, _, _ = select.select([fd], [], [], min(left, 5))
+            if not ready:
+                if p.poll() is not None:
+                    break
+                continue
+            c = os.read(fd, 65536)
+            if not c:
+                break
+            chunks.append(c)
         try:
-            raw, _ = p.communicate(timeout=170)  # stdin stays open until the phone closes
+            p.stdin.close()
+        except OSError:
+            pass
+        try:
+            p.wait(timeout=5)
         except subprocess.TimeoutExpired:
             p.kill()
-            raise TimeoutError("timed out")
-        return raw
+        return b"".join(chunks)
     s = socket.create_connection((host, int(port)), timeout=170)
     s.sendall(req)
     chunks = []
