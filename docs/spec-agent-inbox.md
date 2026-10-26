@@ -136,7 +136,7 @@ POST /v1/files
   which agent.
 - Each share becomes an item in that agent's **outbox**, with an optional
   note Rahul types ("what is this rash?").
-- The agent collects it the same two ways as prompts:
+- The agent collects it the same two ways as interactions:
   `GET /v1/shares?wait=55` (long poll) returns the next items, and
   `GET /v1/shares/{id}` returns the content (images resized like
   `image/last`). Agents with an approved callback also get a POST.
