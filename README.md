@@ -19,7 +19,7 @@ written as "Almusca Device Bridge"), with these changes:
 ## Install
 
 1. Download the APK from the private GitHub release (`rahuliofam/finleg`,
-   tag `bridget-v1.1.0`), or build it (below).
+   tag `bridget-v1.2.0`), or build it (below).
 2. Open it on the Pixel and allow installs from that source. Let Play Protect scan.
 3. Open **Bridget**. The listener and all three capabilities start **off**.
 
@@ -42,8 +42,10 @@ Each agent row has **Rotate key** (the old key stops working at once and a new
 pairing window opens) and **Remove** (deletes that agent's key; removing the
 last agent stops the listener). The toggles apply to all agents.
 
-Keys in Bitwarden: **"Bridget — Muse agent key"** and **"Bridget — Grok agent
-key"** (login username = agent name, password = key, URL = base URL).
+Paired agents (26 Oct 2026): **Muse, Grok, Claude, Codex**. Keys in Bitwarden:
+**"Bridget — Muse agent key"**, **"Bridget — Grok agent key"**, **"Bridget —
+Claude agent key"**, **"Bridget — Codex agent key"** (login username = agent
+name, password = key, URL = base URL).
 
 **After a reboot, or if Android stops the app, open it once.** Android only
 lets a foreground service use the camera and microphone if it was started
@@ -68,7 +70,31 @@ API is tied to a particular agent; any HTTP client works.
 | `POST /mic/record` | `{"duration_seconds":1-120}` (whole numbers only) | M4A (AAC, 44.1 kHz mono) as `data_base64` |
 | `GET /gallery/recent?limit=20` | limit 1-100 | photo metadata, newest first, plus `access_mode` |
 | `GET /gallery/photo/{id}?max_width_px=1600` | optional downscale | same envelope as snapshot, `source: "gallery"` |
+| `GET /image/last?type=any\|screenshot\|photo` | optional `max_edge_px` (default 1568), `quality` (default 85), `raw=1` | the single newest image of that type, resized for an agent to read |
 | `GET /audit?limit=50` | limit 1-1000 | newest audit entries (all agents) |
+
+### Fastest image: `GET /v1/image/last`
+
+One call returns the newest image. `type=screenshot` means anything in a
+Screenshots folder, `type=photo` means camera photos (`DCIM/Camera`), and
+`type=any` (default) means any image, including WhatsApp and downloads.
+"Newest" means most recently added to the phone.
+
+It's sized for AI vision by default: long edge 1568 px (what Claude-class
+models read at full detail), JPEG quality 85. Small text stays legible; a
+screenshot comes to about 100 KB and a photo about 250 KB. Measured on the
+Pixel over Tailscale: 0.4-0.8 s per call.
+
+With `raw=1` the body is the JPEG itself (no base64, about 25% smaller) and
+the details come in headers: `X-Bridget-Id`, `-Type`, `-Taken-At`,
+`-Added-At`, `-Width`, `-Height`, `-Album`. Without it, the JSON envelope
+matches the gallery photo response plus `type`, `added_at`,
+`original_width_px` and `original_height_px`.
+
+```bash
+curl -H "Authorization: Bearer $KEY" -o last.jpg \
+  "http://pixel-10-pro-xl.tail9c9221.ts.net:8734/v1/image/last?type=screenshot&raw=1"
+```
 
 Errors: `{"error","message","request_id"}` with the spec's codes:
 `unauthorized` 401, `capability_disabled` / `permission_denied` 403,
@@ -134,13 +160,19 @@ tapping the screen. Release builds don't contain it.
 
 ## Tests on the Pixel
 
-26 Oct 2026, phone locked, over Tailscale from the Mac. Passed: health,
-capabilities, 401 for missing and wrong keys (logged), one-time pairing, two
-agents with separate keys and per-agent audit names, gallery list with full
-access, photo fetch with downscale (800 px JPEG) and full size,
-`photo_not_found`, `invalid_parameter` (121 s, 2.5 s, unknown camera),
-`capability_disabled`, both rate limits, audit read, and connection refused
-on the Wi-Fi address.
+26 Oct 2026, over Tailscale from the Mac. Passed: health, capabilities, 401
+for missing and wrong keys (logged), one-time pairing, four agents with
+separate keys (each checked via the MagicDNS name) and per-agent audit names,
+gallery list with full access, photo fetch with downscale and full size,
+`photo_not_found`, `invalid_parameter` (121 s, 2.5 s, unknown camera, bad
+type), `capability_disabled`, both rate limits, audit read, connection refused
+on the Wi-Fi address, **a real rear-camera snapshot** (1024 px, 2.2 s), **a
+real 5-second mic clip** (AAC, 5.9 s), and `image/last` for all three types
+(newest item matches MediaStore).
 
-Not tested yet: a real camera snapshot and mic clip. Both need the phone
-unlocked and the app opened once.
+## Next (specs, not built)
+
+- `docs/spec-per-agent-permissions.md`: separate switches per agent.
+- `docs/spec-agent-inbox.md`: agents ask Rahul questions, send files to the
+  phone, receive things Rahul shares, all in a new Inbox screen. Works for
+  agents without webhooks (long polling).

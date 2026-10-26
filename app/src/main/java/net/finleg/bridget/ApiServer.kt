@@ -15,6 +15,7 @@ import io.ktor.server.engine.embeddedServer
 import io.ktor.server.request.httpMethod
 import io.ktor.server.request.path
 import io.ktor.server.request.receiveText
+import io.ktor.server.response.respondBytes
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
@@ -54,6 +55,7 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
                     get("/gallery/recent") { handle(call, "gallery/recent") { _ -> recent(call) } }
                     get("/gallery/photo/{id}") { handle(call, "gallery/photo") { _ -> photo(call) } }
                     get("/audit") { handle(call, "audit") { _ -> auditRead(call) } }
+                    get("/image/last") { lastImage(call) }
                 }
             }
         }.start(wait = false)
@@ -72,6 +74,7 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
 
     private suspend fun handle(
         call: ApplicationCall, endpoint: String, capture: Boolean = false,
+        respond: (() -> Pair<Encoded, Map<String, String>>?)? = null,
         block: suspend Ctx.(JSONObject) -> JSONObject
     ) {
         val ctx = Ctx(newRequestId())
@@ -98,10 +101,16 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
             val body = if (call.request.httpMethod.value == "POST") parseBody(call) else JSONObject()
             body.keys().forEach { k -> ctx.params.put(k, body.get(k)) }
             val result = ctx.block(body)
-            result.put("request_id", ctx.requestId)
-            val text = result.toString()
             entry.put("http", 200).put("result", "ok").put("bytes", ctx.bytes)
-            call.respondText(text, ContentType.Application.Json, HttpStatusCode.OK)
+            val rawOut = respond?.invoke()
+            if (rawOut != null) {
+                rawOut.second.forEach { (k, v) -> call.response.headers.append(k, v) }
+                call.response.headers.append("X-Request-Id", ctx.requestId)
+                call.respondBytes(rawOut.first.bytes, ContentType.Image.JPEG, HttpStatusCode.OK)
+            } else {
+                result.put("request_id", ctx.requestId)
+                call.respondText(result.toString(), ContentType.Application.Json, HttpStatusCode.OK)
+            }
         } catch (e: ApiError) {
             entry.put("http", e.http).put("result", e.code).put("bytes", 0)
             respondError(call, ctx.requestId, e)
@@ -240,6 +249,45 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
             .put("source", "gallery").put("id", idStr).put("access_mode", mode)
     }
 
+    /**
+     * Fastest path to one image: the newest of a type, resized for an AI agent to read
+     * (long edge 1568 px, JPEG q85). raw=1 returns the JPEG bytes with metadata in headers.
+     */
+    private suspend fun lastImage(call: ApplicationCall) {
+        val raw = call.request.queryParameters["raw"].let { it == "1" || it == "true" }
+        var rawResult: Pair<Encoded, Map<String, String>>? = null
+        handle(call, "image/last", respond = { if (raw) rawResult else null }) { _ ->
+            val mode = requireGallery()
+            val type = call.request.queryParameters["type"] ?: "any"
+            val kind = when (type) {
+                "any" -> Gallery.Kind.ANY; "screenshot" -> Gallery.Kind.SCREENSHOT; "photo" -> Gallery.Kind.PHOTO
+                else -> throw ApiError(422, "invalid_parameter", "type must be any, screenshot or photo")
+            }
+            val edge = intParam(call, "max_edge_px", AGENT_EDGE, 256, 8192)
+            val quality = intParam(call, "quality", 85, 40, 100)
+            val (item, path) = gallery.latest(kind) ?: throw ApiError(404, "photo_not_found",
+                "No ${if (type == "any") "" else "$type "}images found" + if (mode == "selected") " in the selected set" else "")
+            val bytesIn = gallery.read(item.id) ?: throw ApiError(404, "photo_not_found", "Image could not be opened")
+            val img = ImageUtil.prepare(bytesIn, item.mime, null, edge, forceJpeg = true, quality = quality)
+            val kindName = gallery.kindOf(path)
+            if (raw) {
+                bytes = img.bytes.size.toLong()
+                rawResult = img to mapOf(
+                    "X-Bridget-Id" to item.id.toString(), "X-Bridget-Type" to kindName,
+                    "X-Bridget-Taken-At" to isoAt(item.takenAt), "X-Bridget-Added-At" to isoAt(item.addedAt),
+                    "X-Bridget-Width" to img.width.toString(), "X-Bridget-Height" to img.height.toString(),
+                    "X-Bridget-Album" to (item.album ?: ""))
+                JSONObject()
+            } else {
+                mediaEnvelope(img, isoAt(item.takenAt), "taken_at", item.id.toString())
+                    .put("source", "gallery").put("id", item.id.toString()).put("type", kindName)
+                    .put("added_at", isoAt(item.addedAt)).put("album", item.album ?: JSONObject.NULL)
+                    .put("original_width_px", item.width).put("original_height_px", item.height)
+                    .put("access_mode", mode)
+            }
+        }
+    }
+
     private fun Ctx.auditRead(call: ApplicationCall): JSONObject {
         val limit = intParam(call, "limit", 50, 1, AuditLog.MAX_ENTRIES)
         return JSONObject().put("entries", JSONArray(audit.recent(limit)))
@@ -313,6 +361,8 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
 
     companion object {
         const val MAX_PAYLOAD = 12 * 1024 * 1024
+        /** Long edge for agent-readable images: what Claude-class vision models read at full detail. */
+        const val AGENT_EDGE = 1568
 
         /** True for addresses in Tailscale's CGNAT range 100.64.0.0/10. */
         fun isTailnet(ip: String): Boolean {

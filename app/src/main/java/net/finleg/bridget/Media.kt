@@ -52,7 +52,8 @@ object ImageUtil {
      * Applies EXIF rotation and downscales to [maxWidth] if needed. Returns the
      * original bytes untouched when nothing needs to change.
      */
-    fun prepare(original: ByteArray, mime: String, maxWidth: Int?): Encoded {
+    fun prepare(original: ByteArray, mime: String, maxWidth: Int?, maxEdge: Int? = null,
+                forceJpeg: Boolean = false, quality: Int = 90): Encoded {
         val exif = runCatching { ExifInterface(original.inputStream()) }.getOrNull()
         val rotation = exif?.rotationDegrees ?: 0
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -61,9 +62,13 @@ object ImageUtil {
         val rawH = bounds.outHeight
         val (w, h) = if (rotation % 180 != 0) rawH to rawW else rawW to rawH
         if (rawW <= 0) throw ApiError(500, "capture_failed", "Could not decode image")
-        if ((maxWidth == null || w <= maxWidth) && rotation == 0) return Encoded(original, w, h, mime)
+        // Target width: the smaller of the max-width and max-long-edge limits.
+        var target = w
+        if (maxWidth != null && w > maxWidth) target = maxWidth
+        if (maxEdge != null && maxOf(w, h) > maxEdge) target = minOf(target, w * maxEdge / maxOf(w, h))
+        val needsJpeg = forceJpeg && mime != "image/jpeg"
+        if (target == w && rotation == 0 && !needsJpeg) return Encoded(original, w, h, mime)
 
-        val target = if (maxWidth != null && w > maxWidth) maxWidth else w
         var sample = 1
         while (w / (sample * 2) >= target) sample *= 2
         val bmp = BitmapFactory.decodeByteArray(original, 0, original.size,
@@ -76,7 +81,7 @@ object ImageUtil {
         if (scale < 1f) m.postScale(scale, scale)
         val out = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
         val bos = ByteArrayOutputStream()
-        out.compress(Bitmap.CompressFormat.JPEG, 90, bos)
+        out.compress(Bitmap.CompressFormat.JPEG, quality, bos)
         val res = Encoded(bos.toByteArray(), out.width, out.height, "image/jpeg")
         if (out !== bmp) out.recycle()
         bmp.recycle()
@@ -109,12 +114,10 @@ class CameraCapture(private val context: Context, private val owner: LifecycleOw
                 throw ApiError(409, "sensor_busy", "Camera unavailable: ${e.message}")
             }
             try {
-                val err = withTimeoutOrNull(20_000) { take(capture, file) }
+                // take() yields Result: success, or the capture error. null here means timeout.
+                val outcome = withTimeoutOrNull(20_000) { take(capture, file) }
                     ?: throw ApiError(504, "capture_timeout", "Camera did not produce a photo in time")
-                if (err != null) {
-                    val code = if (err.imageCaptureError == ImageCapture.ERROR_CAMERA_CLOSED) "sensor_busy" else "sensor_busy"
-                    throw ApiError(409, code, "Capture failed: ${err.message}")
-                }
+                outcome.exceptionOrNull()?.let { throw ApiError(409, "sensor_busy", "Capture failed: ${it.message}") }
             } finally {
                 withContext(Dispatchers.Main) { provider.unbind(capture) }
             }
@@ -124,15 +127,14 @@ class CameraCapture(private val context: Context, private val owner: LifecycleOw
         }
     }
 
-    /** Returns null on success, the exception on failure. */
-    private suspend fun take(capture: ImageCapture, file: File): ImageCaptureException? =
+    private suspend fun take(capture: ImageCapture, file: File): Result<Unit> =
         suspendCancellableCoroutine { cont ->
             capture.takePicture(
                 ImageCapture.OutputFileOptions.Builder(file).build(),
                 ContextCompat.getMainExecutor(context),
                 object : ImageCapture.OnImageSavedCallback {
-                    override fun onImageSaved(r: ImageCapture.OutputFileResults) { if (cont.isActive) cont.resume(null) }
-                    override fun onError(e: ImageCaptureException) { if (cont.isActive) cont.resume(e) }
+                    override fun onImageSaved(r: ImageCapture.OutputFileResults) { if (cont.isActive) cont.resume(Result.success(Unit)) }
+                    override fun onError(e: ImageCaptureException) { if (cont.isActive) cont.resume(Result.failure(e)) }
                 })
         }
 
@@ -189,18 +191,52 @@ class Gallery(private val context: Context) {
     }
 
     class Item(val id: Long, val takenAt: Long, val width: Int, val height: Int,
-               val size: Long, val mime: String, val album: String?)
+               val size: Long, val mime: String, val album: String?,
+               val addedAt: Long = 0, val relativePath: String? = null)
 
     @SuppressLint("Range")
     fun recent(limit: Int): List<Item> {
         val args = Bundle().apply {
-            putStringArray(android.content.ContentResolver.QUERY_ARG_SORT_COLUMNS,
-                arrayOf(MediaStore.Images.Media.DATE_TAKEN, MediaStore.Images.Media.DATE_ADDED))
-            putInt(android.content.ContentResolver.QUERY_ARG_SORT_DIRECTION,
-                android.content.ContentResolver.QUERY_SORT_DIRECTION_DESCENDING)
-            putInt(android.content.ContentResolver.QUERY_ARG_LIMIT, limit)
+            // MediaStore ignores QUERY_ARG_SORT_COLUMNS here; the SQL sort string is honoured.
+            // Newest-added first: received images (WhatsApp) often have no DATE_TAKEN.
+            putString(android.content.ContentResolver.QUERY_ARG_SQL_SORT_ORDER, NEWEST_FIRST)
+            putString(android.content.ContentResolver.QUERY_ARG_SQL_LIMIT, limit.toString())
         }
         return query(args)
+    }
+
+    enum class Kind { ANY, SCREENSHOT, PHOTO }
+
+    private companion object {
+        const val NEWEST_FIRST = "${MediaStore.Images.Media.DATE_ADDED} DESC, ${MediaStore.Images.Media._ID} DESC"
+    }
+
+    /** Classifies by folder: Pixel saves screenshots under .../Screenshots/, camera photos under DCIM/Camera/. */
+    fun kindOf(relativePath: String?): String = when {
+        relativePath == null -> "other"
+        relativePath.contains("Screenshots", ignoreCase = true) -> "screenshot"
+        relativePath.startsWith("DCIM/Camera", ignoreCase = true) -> "photo"
+        else -> "other"
+    }
+
+    /** The most recently added image of [kind], or null. */
+    fun latest(kind: Kind): Pair<Item, String?>? {
+        val args = Bundle().apply {
+            when (kind) {
+                Kind.SCREENSHOT -> {
+                    putString(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION, "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?")
+                    putStringArray(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, arrayOf("%Screenshots%"))
+                }
+                Kind.PHOTO -> {
+                    putString(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION, "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?")
+                    putStringArray(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, arrayOf("DCIM/Camera%"))
+                }
+                Kind.ANY -> {}
+            }
+            putString(android.content.ContentResolver.QUERY_ARG_SQL_SORT_ORDER, NEWEST_FIRST)
+            putString(android.content.ContentResolver.QUERY_ARG_SQL_LIMIT, "1")
+        }
+        return query(args).firstOrNull()?.let { it to it.relativePath }
     }
 
     fun find(id: Long): Item? {
@@ -221,7 +257,7 @@ class Gallery(private val context: Context) {
             MediaStore.Images.Media._ID, MediaStore.Images.Media.DATE_TAKEN, MediaStore.Images.Media.DATE_ADDED,
             MediaStore.Images.Media.WIDTH, MediaStore.Images.Media.HEIGHT, MediaStore.Images.Media.SIZE,
             MediaStore.Images.Media.MIME_TYPE, MediaStore.Images.Media.ORIENTATION,
-            MediaStore.Images.Media.BUCKET_DISPLAY_NAME
+            MediaStore.Images.Media.BUCKET_DISPLAY_NAME, MediaStore.Images.Media.RELATIVE_PATH
         )
         val out = mutableListOf<Item>()
         context.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, proj, args, null)?.use { c ->
@@ -229,7 +265,8 @@ class Gallery(private val context: Context) {
                 val taken = c.getLong(1).takeIf { it > 0 } ?: (c.getLong(2) * 1000)
                 var w = c.getInt(3); var h = c.getInt(4)
                 if (c.getInt(7) % 180 != 0) { val t = w; w = h; h = t }
-                out += Item(c.getLong(0), taken, w, h, c.getLong(5), c.getString(6) ?: "image/jpeg", c.getString(8))
+                out += Item(c.getLong(0), taken, w, h, c.getLong(5), c.getString(6) ?: "image/jpeg", c.getString(8),
+                    c.getLong(2) * 1000, c.getString(9))
             }
         }
         return out
