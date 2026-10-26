@@ -1,4 +1,4 @@
-package com.almusca.devicebridge
+package net.finleg.bridget
 
 import android.Manifest
 import android.app.Notification
@@ -21,7 +21,7 @@ import java.net.Inet4Address
 import java.net.NetworkInterface
 
 /**
- * The always-on listener. One long-lived foreground service that both runs the
+ * Bridget's always-on listener. One long-lived foreground service that both runs the
  * HTTP listener and owns camera/microphone access. It must be started by a tap
  * while the app is on screen: Android only grants camera/microphone access to a
  * foreground service that started while the app was visible.
@@ -114,8 +114,8 @@ class BridgeService : LifecycleService() {
         refreshNotification()
     }
 
-    fun onPaired() {
-        app.audit.event("pairing", "agent fetched the token")
+    fun onPaired(agent: String) {
+        app.audit.event("pairing", "$agent fetched its token")
         notifyUi()
     }
 
@@ -132,7 +132,7 @@ class BridgeService : LifecycleService() {
             ?: "Waiting for Tailscale - not reachable"
         return NotificationCompat.Builder(this, BridgeApp.CHANNEL)
             .setSmallIcon(R.drawable.ic_notif)
-            .setContentTitle(if (captureNote != null) "Device Bridge - capturing" else "Device Bridge")
+            .setContentTitle(if (captureNote != null) "Bridget - capturing" else "Bridget")
             .setContentText(text)
             .setOngoing(true)
             .setOnlyAlertOnce(captureNote == null)
@@ -165,8 +165,8 @@ class BridgeService : LifecycleService() {
     companion object {
         private const val TAG = "BridgeService"
         const val NOTIF_ID = 1
-        const val ACTION_STOP = "com.almusca.devicebridge.STOP"
-        const val ACTION_STATE = "com.almusca.devicebridge.STATE"
+        const val ACTION_STOP = "net.finleg.bridget.STOP"
+        const val ACTION_STATE = "net.finleg.bridget.STATE"
 
         @Volatile var running: BridgeService? = null; private set
 

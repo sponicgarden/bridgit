@@ -13,15 +13,15 @@ val keystoreProps = Properties().apply {
 }
 
 android {
-    namespace = "com.almusca.devicebridge"
+    namespace = "net.finleg.bridget"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.almusca.devicebridge"
+        applicationId = "net.finleg.bridget"
         minSdk = 34
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.1.0"
     }
 
     signingConfigs {

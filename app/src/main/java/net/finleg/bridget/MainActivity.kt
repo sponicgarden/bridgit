@@ -1,4 +1,4 @@
-package com.almusca.devicebridge
+package net.finleg.bridget
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -46,9 +46,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var settingsButton: Button
     private lateinit var batteryStatus: TextView
     private lateinit var batteryButton: Button
-    private lateinit var pairButton: Button
-    private lateinit var rotateButton: Button
-    private lateinit var unpairButton: Button
+    private lateinit var agentsBox: LinearLayout
+    private var agentsSig = ""
+    private lateinit var pairTitle: TextView
     private lateinit var pairPanel: LinearLayout
     private lateinit var pairCode: TextView
     private lateinit var pairToken: TextView
@@ -104,8 +104,8 @@ class MainActivity : AppCompatActivity() {
     // ---- actions ---------------------------------------------------------
 
     private fun setListener(on: Boolean) {
-        if (on && !policy.isPaired) {
-            toastDialog("Pair the agent first", "Tap \"Pair agent\". Pairing turns the listener on.")
+        if (on && !policy.hasAgents) {
+            toastDialog("Add an agent first", "Tap \"Add agent\". Adding one turns the listener on.")
             refresh(); return
         }
         policy.listenerEnabled = on
@@ -121,24 +121,65 @@ class MainActivity : AppCompatActivity() {
         refresh()
     }
 
-    private fun startPairing(rotate: Boolean) {
-        val token = policy.issueToken()
-        app.pairing.open(token)
-        app.audit.event("pairing", if (rotate) "token rotated; old token invalid" else "new pairing; token issued")
+    private fun addAgent() {
+        val input = android.widget.EditText(this).apply {
+            hint = "Name, e.g. Muse or Grok"; isSingleLine = true
+        }
+        val box = LinearLayout(this).apply {
+            val pad = (20 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad / 2, pad, 0); addView(input)
+        }
+        val dlg = AlertDialog.Builder(this)
+            .setTitle("Add agent")
+            .setMessage("Each agent gets its own key, so you can see who asked and remove one without affecting the others.")
+            .setView(box)
+            .setPositiveButton("Add", null)
+            .setNegativeButton("Cancel", null)
+            .create()
+        dlg.setOnShowListener {
+            dlg.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val name = input.text.toString().trim()
+                val err = policy.checkName(name)
+                if (err != null) { input.error = err; return@setOnClickListener }
+                val (agent, token) = policy.addAgent(name)
+                app.audit.event("pairing", "added agent ${agent.name}; key issued")
+                openPairing(agent, token)
+                dlg.dismiss()
+            }
+        }
+        dlg.show()
+    }
+
+    private fun openPairing(agent: Policy.Agent, token: String) {
+        app.pairing.open(agent.id, agent.name, token)
         policy.listenerEnabled = true
         BridgeService.start(this)
         refresh()
     }
 
-    private fun unpair() {
+    private fun rotateAgent(a: Policy.Agent) {
+        AlertDialog.Builder(this).setTitle("New key for ${a.name}?")
+            .setMessage("${a.name}'s current key stops working immediately. A pairing window opens so ${a.name} can fetch the new one. Other agents are not affected.")
+            .setPositiveButton("Rotate") { _, _ ->
+                val (agent, token) = policy.rotate(a.id)
+                app.audit.event("pairing", "rotated key for ${a.name}; old key invalid")
+                openPairing(agent, token)
+            }
+            .setNegativeButton("Cancel", null).show()
+    }
+
+    private fun removeAgent(a: Policy.Agent) {
         AlertDialog.Builder(this)
-            .setTitle("Unpair the agent?")
-            .setMessage("Deletes the token and stops the listener. No request can succeed until you pair again here on the phone.")
-            .setPositiveButton("Unpair") { _, _ ->
-                policy.unpair(); app.pairing.close()
-                policy.listenerEnabled = false
-                BridgeService.stop(this)
-                app.audit.event("pairing", "unpaired; token deleted")
+            .setTitle("Remove ${a.name}?")
+            .setMessage("Deletes ${a.name}'s key. Removing the last agent also stops the listener.")
+            .setPositiveButton("Remove") { _, _ ->
+                policy.remove(a.id)
+                if (app.pairing.window?.agentId == a.id) app.pairing.close()
+                app.audit.event("pairing", "removed agent ${a.name}; key deleted")
+                if (!policy.hasAgents) {
+                    policy.listenerEnabled = false
+                    BridgeService.stop(this)
+                }
                 refresh()
             }
             .setNegativeButton("Cancel", null).show()
@@ -172,7 +213,7 @@ class MainActivity : AppCompatActivity() {
                 else -> "on, waiting for Tailscale"
             })
             append("\nTailscale: ${ts ?: "not running"}")
-            append("\nPaired: ${if (policy.isPaired) "yes" else "no"}")
+            append("\nAgents: ${policy.agents().size}")
             if (svc != null) {
                 append("\nCamera access in service: ${if (svc.cameraReady) "yes" else "no"}")
                 append("\nMicrophone access in service: ${if (svc.micReady) "yes" else "no"}")
@@ -201,24 +242,24 @@ class MainActivity : AppCompatActivity() {
         batteryStatus.text = "Battery optimisation: ${if (exempt) "exempt (listener stays reachable)" else "on (Android may pause the listener)"}"
         batteryButton.visibility = if (exempt) View.GONE else View.VISIBLE
 
-        pairButton.visibility = if (policy.isPaired) View.GONE else View.VISIBLE
-        rotateButton.visibility = if (policy.isPaired) View.VISIBLE else View.GONE
-        unpairButton.visibility = if (policy.isPaired) View.VISIBLE else View.GONE
+        renderAgents()
 
         val w = app.pairing.window
         if (w != null && app.pairing.isOpen()) {
             pairPanel.visibility = View.VISIBLE
             window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            pairTitle.text = "Pairing code for ${w.agentName}"
             pairCode.text = w.code
             if (pairToken.text.toString() != w.token) {
                 pairToken.text = w.token
-                val payload = JSONObject().put("base_url", "http://${addr ?: ts ?: "?"}:${policy.port}/v1")
+                val payload = JSONObject().put("app", "bridget").put("agent", w.agentName)
+                    .put("base_url", "http://${addr ?: ts ?: "?"}:${policy.port}/v1")
                     .put("token", w.token).toString()
                 pairQr.setImageBitmap(qr(payload))
             }
             val left = ((w.expiresAt - System.currentTimeMillis()) / 1000).coerceAtLeast(0)
             pairCountdown.text = "Pairing window closes in ${left / 60}:${"%02d".format(left % 60)}. " +
-                "The agent calls POST /v1/pair with this code, or scan the QR / copy the token."
+                "${w.agentName} calls POST /v1/pair with this code, or scan the QR / copy the token."
         } else {
             if (pairPanel.visibility == View.VISIBLE) {
                 app.pairing.close()
@@ -265,8 +306,8 @@ class MainActivity : AppCompatActivity() {
             setOnCheckedChangeListener { _, on -> if (!binding) onChange(on) }
         }.also { root.addView(it, LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(4) }) }
 
-        root.addView(TextView(this).apply { text = "Almusca Device Bridge"; textSize = 24f; setTypeface(typeface, Typeface.BOLD) })
-        body("Lets your agent take a photo, record a short clip or fetch a gallery photo over Tailscale. " +
+        root.addView(TextView(this).apply { text = "Bridget"; textSize = 28f; setTypeface(typeface, Typeface.BOLD) })
+        body("Lets your AI agents take a photo, record a short clip or fetch a gallery photo over Tailscale. " +
             "Every capture shows a notification and Android's green indicator, and is logged below.")
 
         heading("Status")
@@ -292,21 +333,18 @@ class MainActivity : AppCompatActivity() {
         batteryStatus = body()
         batteryButton = button("Allow listener to run in background") { requestBatteryExemption() }
 
-        heading("Pairing")
-        pairButton = button("Pair agent") { startPairing(rotate = false) }
-        rotateButton = button("Rotate token") {
-            AlertDialog.Builder(this).setTitle("Rotate the token?")
-                .setMessage("The current token stops working immediately. A new pairing window opens so the agent can fetch the new one.")
-                .setPositiveButton("Rotate") { _, _ -> startPairing(rotate = true) }
-                .setNegativeButton("Cancel", null).show()
-        }
-        unpairButton = button("Unpair") { unpair() }
+        heading("Agents")
+        body("Each agent has its own key. Every request is logged with the agent's name.")
+        agentsBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        root.addView(agentsBox)
+        button("Add agent") { addAgent() }
         pairPanel = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.parseColor("#1A0F5F57"))
             setPadding(px(16), px(16), px(16), px(16))
         }
-        pairPanel.addView(TextView(this).apply { text = "Pairing code"; textSize = 14f })
+        pairTitle = TextView(this).apply { text = "Pairing code"; textSize = 14f }
+        pairPanel.addView(pairTitle)
         pairCode = TextView(this).apply { textSize = 40f; typeface = Typeface.MONOSPACE; letterSpacing = 0.15f }
         pairPanel.addView(pairCode)
         pairPanel.addView(TextView(this).apply { text = "Token (shown once)"; textSize = 14f; setPadding(0, px(12), 0, 0) })
@@ -330,6 +368,38 @@ class MainActivity : AppCompatActivity() {
             v.setPadding(0, bars.top, 0, bars.bottom); insets
         }
         return scroll
+    }
+
+    private fun renderAgents() {
+        val list = policy.agents()
+        val sig = list.joinToString { "${it.id}:${it.lastUsedAt / 60000}" }
+        if (sig == agentsSig) return
+        agentsSig = sig
+        agentsBox.removeAllViews()
+        val dp = resources.displayMetrics.density
+        if (list.isEmpty()) {
+            agentsBox.addView(TextView(this).apply { text = "No agents yet."; textSize = 14f })
+            return
+        }
+        val fmt = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
+        for (a in list) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+                setPadding(0, (8 * dp).toInt(), 0, (8 * dp).toInt())
+            }
+            val label = TextView(this).apply {
+                textSize = 15f
+                text = "${a.name}\n" + (if (a.lastUsedAt > 0) "last used ${fmt.format(java.util.Date(a.lastUsedAt))}" else "not used yet")
+            }
+            row.addView(label, LinearLayout.LayoutParams(0, -2, 1f))
+            row.addView(MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                text = "Rotate key"; setOnClickListener { rotateAgent(a) }
+            })
+            row.addView(MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                text = "Remove"; setOnClickListener { removeAgent(a) }
+            }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = (6 * dp).toInt() })
+            agentsBox.addView(row)
+        }
     }
 
     private fun qr(text: String): Bitmap {

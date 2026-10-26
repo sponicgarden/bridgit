@@ -1,4 +1,4 @@
-package com.almusca.devicebridge
+package net.finleg.bridget
 
 import android.Manifest
 import android.content.Intent
@@ -66,7 +66,9 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
 
     // ---- request pipeline -------------------------------------------------
 
-    private class Ctx(val requestId: String, val params: JSONObject = JSONObject(), var bytes: Long = 0)
+    private class Ctx(val requestId: String, val params: JSONObject = JSONObject(), var bytes: Long = 0) {
+        var agent: String = "agent"
+    }
 
     private suspend fun handle(
         call: ApplicationCall, endpoint: String, capture: Boolean = false,
@@ -83,10 +85,14 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
             if (limiter.authBlocked(source)) throw ApiError(429, "rate_limited", "Too many failed sign-ins; wait a minute")
             val auth = call.request.headers["Authorization"]
             val token = auth?.takeIf { it.startsWith("Bearer ") }?.removePrefix("Bearer ")?.trim()
-            if (!policy.verifyToken(token)) {
+            val agent = policy.authenticate(token)
+            if (agent == null) {
                 limiter.recordAuthFailure(source)
                 throw ApiError(401, "unauthorized", "Missing or invalid token")
             }
+            ctx.agent = agent.name
+            entry.put("agent", agent.name)
+            policy.touch(agent.id)
             if (capture && !limiter.allowCapture(source))
                 throw ApiError(429, "rate_limited", "At most 10 capture requests per minute")
             val body = if (call.request.httpMethod.value == "POST") parseBody(call) else JSONObject()
@@ -125,14 +131,15 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
             if (limiter.authBlocked(source)) throw ApiError(429, "rate_limited", "Too many failed attempts; wait a minute")
             if (!app.pairing.isOpen()) throw ApiError(403, "pairing_closed", "No pairing window is open on the phone")
             val code = parseBody(call).optString("code", "")
-            val token = app.pairing.redeem(code)
-            if (token == null) {
+            val w = app.pairing.redeem(code)
+            if (w == null) {
                 limiter.recordAuthFailure(source)
                 throw ApiError(401, "unauthorized", "Wrong pairing code")
             }
-            entry.put("http", 200).put("result", "ok")
-            service.onPaired()
-            call.respondText(JSONObject().put("token", token).put("request_id", ctx.requestId).toString(),
+            entry.put("http", 200).put("result", "ok").put("agent", w.agentName)
+            service.onPaired(w.agentName)
+            call.respondText(JSONObject().put("token", w.token).put("agent", w.agentName)
+                .put("base_url", "http://$host:$port/v1").put("request_id", ctx.requestId).toString(),
                 ContentType.Application.Json)
         } catch (e: ApiError) {
             entry.put("http", e.http).put("result", e.code)
@@ -144,7 +151,7 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
 
     // ---- endpoints ----------------------------------------------------------
 
-    private fun health(): JSONObject {
+    private fun Ctx.health(): JSONObject {
         val bat = service.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
         val level = bat?.let {
             val l = it.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
@@ -152,7 +159,7 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
             if (l >= 0) l * 100 / s else null
         }
         val plugged = (bat?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0
-        return JSONObject().put("status", "ok")
+        return JSONObject().put("status", "ok").put("app", "Bridget").put("agent", agent)
             .put("app_version", BuildConfigInfo.versionName(service))
             .put("listener_uptime_seconds", (System.currentTimeMillis() - service.startedAt) / 1000)
             .put("battery_level", level ?: JSONObject.NULL)
@@ -185,7 +192,7 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
             ?: throw ApiError(422, "invalid_parameter", "flash must be true or false") else false
         val maxW = maxWidth(b.has("max_width_px"), b.opt("max_width_px"), 2048)
         require(Policy.Capability.CAMERA, Manifest.permission.CAMERA, service.cameraReady)
-        val img = withSensor("Agent is taking a photo") { camera.snapshot(which == "rear", flash, maxW) }
+        val img = withSensor("$agent is taking a photo") { camera.snapshot(which == "rear", flash, maxW) }
         return mediaEnvelope(img, isoAt(System.currentTimeMillis()), "captured_at", null)
             .put("source", "camera").put("camera", which)
     }
@@ -197,7 +204,7 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
             throw ApiError(422, "invalid_parameter", "duration_seconds must be a whole number from 1 to 120")
         require(Policy.Capability.MIC, Manifest.permission.RECORD_AUDIO, service.micReady)
         val started = System.currentTimeMillis()
-        val clip = withSensor("Agent is recording audio (${secs}s)") { mic.record(secs) }
+        val clip = withSensor("$agent is recording audio (${secs}s)") { mic.record(secs) }
         val b64 = Base64.encodeToString(clip.bytes, Base64.NO_WRAP)
         if (b64.length > MAX_PAYLOAD) throw ApiError(413, "payload_too_large", "Clip exceeds transfer cap")
         bytes = clip.bytes.size.toLong()
@@ -257,7 +264,7 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
         if (!service.granted(perm)) throw ApiError(403, "permission_denied", "Grant $perm on the phone",
             mapOf("permission" to perm))
         if (!ready) throw ApiError(503, "service_start_blocked",
-            "Android has not allowed ${c.key} access for the listener yet. Open the Device Bridge app once on the phone.")
+            "Android has not allowed ${c.key} access for the listener yet. Open the Bridget app once on the phone.")
     }
 
     private fun requireGallery(): String {

@@ -1,4 +1,4 @@
-package com.almusca.devicebridge
+package net.finleg.bridget
 
 import android.Manifest
 import android.annotation.SuppressLint

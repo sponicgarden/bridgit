@@ -1,65 +1,74 @@
-# Almusca Device Bridge (Android)
+# Bridget (Android)
 
-A small sideloaded app for Rahul's Pixel 10 Pro XL. It lets the agent Almusca
-take a photo, record a short audio clip, or fetch a gallery photo, over
-Tailscale only, with a token, and with every request logged on the phone.
-It implements `android-companion-app-spec.pdf` v1.0 (26 Oct 2026).
+A small sideloaded app for Rahul's Pixel 10 Pro XL. It lets any AI agent you
+pair with it (Muse, Grok, or others) take a photo, record a short audio clip,
+or fetch a gallery photo. It answers only over Tailscale, each agent has its
+own key, and every request is logged on the phone with the agent's name.
 
-Decisions on the spec's open questions (26 Oct 2026):
+Package `net.finleg.bridget`. Built from `docs/spec-v1.0.pdf` (26 Oct 2026,
+written as "Almusca Device Bridge"), with these changes:
 
-| Question | Decision |
+| Topic | Decision |
 |---|---|
-| 1. Listener availability | **Always on**: one foreground service with a permanent notification |
-| 2. Gallery access | **Full** photo access (selected-photos mode still works and is reported) |
-| 3-7 | Spec defaults: snapshots not saved to the gallery, 120 s mic cap, rear camera at 2048 px, 1,000-entry log kept on the phone |
+| Name | **Bridget** (26 Oct 2026) |
+| Agents | **Any number of named agents** (max 8), each with its own key, instead of one agent |
+| Listener availability | **Always on**: one foreground service with a permanent notification |
+| Gallery access | **Full** photo access (selected-photos mode still works and is reported) |
+| Spec questions 3-7 | Spec defaults: snapshots not saved to the gallery, 120 s mic cap, rear camera at 2048 px, 1,000-entry log kept on the phone |
 
 ## Install
 
-1. Download `almusca-device-bridge-1.0.0.apk` from the private GitHub release
-   (`rahuliofam/finleg`, tag `device-bridge-v1.0.0`), or build it (below).
+1. Download the APK from the private GitHub release (`rahuliofam/finleg`,
+   tag `bridget-v1.1.0`), or build it (below).
 2. Open it on the Pixel and allow installs from that source. Let Play Protect scan.
-3. Open **Device Bridge**. The listener and all three capabilities start **off**.
+3. Open **Bridget**. The listener and all three capabilities start **off**.
 
 Updates install over the top as long as they are signed with the same key.
 
-## Pairing (once, with the phone in hand)
+## Adding an agent (phone unlocked, in hand)
 
-1. Tailscale on, phone unlocked, open Device Bridge.
-2. **Grant permissions**: notifications, camera, microphone, photos.
-3. **Pair agent**: the app shows a 6-digit code, the token, and a QR code for
-   5 minutes. The listener turns on.
-4. The agent fetches its token with the code (only works during that window,
-   5 wrong codes close it):
-   `curl -X POST http://<phone-tailscale-ip>:8734/v1/pair -d '{"code":"123456"}'`
-   and stores the token in its credential store. Don't paste the token into chat.
-5. Switch on the capabilities you want. Optionally tap
-   **Allow listener to run in background** (battery exemption).
-6. Smoke test: one snapshot, one 5-second clip, one gallery fetch. Check the
-   three audit entries on the phone.
+1. Tailscale on, open Bridget, tap **Grant permissions** (notifications,
+   camera, microphone, photos).
+2. Tap **Add agent**, type its name (for example `Muse`). The app shows a
+   6-digit code, the key and a QR code for 5 minutes, and the listener turns on.
+3. The agent fetches its key with the code. This only works during that
+   window, and 5 wrong codes close it:
+   `curl -X POST http://pixel-10-pro-xl.tail9c9221.ts.net:8734/v1/pair -d '{"code":"123456"}'`
+   returns `{"token","agent","base_url"}`. Store the key in Bitwarden, never in chat.
+4. Switch on the capabilities you want, and optionally tap **Allow listener to
+   run in background**.
+
+Each agent row has **Rotate key** (the old key stops working at once and a new
+pairing window opens) and **Remove** (deletes that agent's key; removing the
+last agent stops the listener). The toggles apply to all agents.
+
+Keys in Bitwarden: **"Bridget — Muse agent key"** and **"Bridget — Grok agent
+key"** (login username = agent name, password = key, URL = base URL).
 
 **After a reboot, or if Android stops the app, open it once.** Android only
-lets a foreground service use the camera and microphone if it was started while
-the app was on screen, so nothing can start the listener with camera/mic access
-in the background. If the listener restarts itself in the background, gallery
-and health keep working and camera/mic return `service_start_blocked` until the
-app is opened.
+lets a foreground service use the camera and microphone if it was started
+while the app was on screen. If the listener restarts itself in the
+background, gallery and health keep working, and camera/mic return
+`service_start_blocked` until the app is opened.
 
-## API
+## API (for agent builders)
 
-Base URL `http://<phone-tailscale-ip>:8734/v1`. Every call except `/pair` needs
-`Authorization: Bearer <token>`. Every response has a `request_id` that matches
-an audit entry. Client timeout: 30 s (mic: duration + 30 s).
+Base URL `http://pixel-10-pro-xl.tail9c9221.ts.net:8734/v1` (the phone's
+Tailscale name; the IP is 100.94.27.79). Every call except `/pair` needs
+`Authorization: Bearer <key>`. Every response has a `request_id` that matches
+an audit entry. Client timeout: 30 s (mic: duration + 30 s). Nothing in the
+API is tied to a particular agent; any HTTP client works.
 
 | Endpoint | Body / query | Returns |
 |---|---|---|
-| `POST /pair` | `{"code":"123456"}` | `{"token"}`, once per pairing window |
-| `GET /health` | | version, uptime, battery, charging, bind address |
+| `POST /pair` | `{"code":"123456"}` | `{"token","agent","base_url"}`, once per pairing window |
+| `GET /health` | | app, calling agent, version, uptime, battery, charging, bind address |
 | `GET /capabilities` | | per capability: toggle, permission, `service_ready`; gallery `access_mode` |
 | `POST /camera/snapshot` | `{"camera":"rear"\|"front","flash":false,"max_width_px":2048}` (`null` = full size) | JPEG as `data_base64` + size, dimensions |
 | `POST /mic/record` | `{"duration_seconds":1-120}` (whole numbers only) | M4A (AAC, 44.1 kHz mono) as `data_base64` |
 | `GET /gallery/recent?limit=20` | limit 1-100 | photo metadata, newest first, plus `access_mode` |
 | `GET /gallery/photo/{id}?max_width_px=1600` | optional downscale | same envelope as snapshot, `source: "gallery"` |
-| `GET /audit?limit=50` | limit 1-1000 | newest audit entries |
+| `GET /audit?limit=50` | limit 1-1000 | newest audit entries (all agents) |
 
 Errors: `{"error","message","request_id"}` with the spec's codes:
 `unauthorized` 401, `capability_disabled` / `permission_denied` 403,
@@ -70,22 +79,20 @@ Also `forbidden_source` 403 (caller not in 100.64.0.0/10) and
 `pairing_closed` 403.
 
 Limits: 10 capture requests per minute and 5 failed sign-ins per minute per
-caller, then 429. Responses over 12 MB of base64 are refused.
+calling device, then 429. Responses over 12 MB of base64 are refused.
 
 ## Security model
 
 - Listens only on the phone's Tailscale address (100.64.0.0/10), rebinding
   when it changes, and rejects callers outside that range. If Tailscale is off,
   nothing listens.
-- Token: 256-bit random, stored only as a salted SHA-256 hash. **Rotate token**
-  invalidates the old one at once and opens a new pairing window. **Unpair**
-  deletes it and stops the listener.
+- Keys: 256-bit random, one per agent, stored only as salted SHA-256 hashes.
 - Toggles can only be changed on the phone. All start off.
-- Captures run in the foreground service: the notification changes to
-  "capturing" and Android's green indicator shows. Temporary files are deleted
-  after every request. Agent photos never go into the gallery.
+- Captures run in the foreground service. The notification names the agent
+  ("Grok is taking a photo") and Android's green indicator shows. Temporary
+  files are deleted after every request. Agent photos never go into the gallery.
 - No analytics, no third-party SDKs other than Ktor (HTTP), CameraX and ZXing (QR).
-- App backup is disabled, so the token hash and log never leave the phone.
+- App backup is disabled, so key hashes and the log never leave the phone.
 
 Permissions beyond the spec's list: `READ_MEDIA_VISUAL_USER_SELECTED` (to see
 the "selected photos" grant), `FOREGROUND_SERVICE_SPECIAL_USE` (keeps the
@@ -113,22 +120,27 @@ keyAlias=devicebridge
 Signing certificate SHA-256:
 `6bbd482d18efdc58ca28de8358405602ebb0405b479cabd36b37ff8242042f61`.
 Backup: Bitwarden item **"Almusca Device Bridge — Android release keystore"**
-(password in the notes, `release.jks` attached; verified 26 Oct 2026). Without
-that key, an update means uninstalling, which wipes pairing and the audit log.
+(password in the notes, `release.jks` attached; verified 26 Oct 2026). That
+key signs Bridget; the folder and item keep the original name. Without it, an
+update means uninstalling, which wipes the agents and the audit log.
 
-Debug builds install alongside as `com.almusca.devicebridge.debug` and include
-an ADB-only test hook (`DebugSetupReceiver`, protected by the `DUMP`
-permission only the ADB shell holds) that sets toggles and opens a pairing
-window without tapping the screen. Release builds don't contain it.
+Icon: adaptive vector (`res/drawable/ic_launcher_*`), a bridge with a beacon,
+plus a monochrome layer for themed icons.
 
-## Tested on the Pixel (26 Oct 2026, phone locked)
+Debug builds install alongside as `net.finleg.bridget.debug` and include an
+ADB-only test hook (`DebugSetupReceiver`, protected by the `DUMP` permission
+only the ADB shell holds) that sets toggles and adds a test agent without
+tapping the screen. Release builds don't contain it.
 
-Passed over Tailscale from the Mac: health, capabilities, 401 for missing and
-wrong tokens (logged), one-time pairing, gallery list with full access, photo
-fetch with downscale (800 px JPEG) and full size, `photo_not_found`,
-`invalid_parameter` (121 s, 2.5 s, unknown camera), `capability_disabled`,
-both rate limits, audit read, and connection refused on the Wi-Fi address.
+## Tests on the Pixel
 
-Not yet tested: a real camera snapshot and mic clip. Both need the phone
-unlocked and the app opened once (spec milestones M3/M4); that's part of the
-pairing session above.
+26 Oct 2026, phone locked, over Tailscale from the Mac. Passed: health,
+capabilities, 401 for missing and wrong keys (logged), one-time pairing, two
+agents with separate keys and per-agent audit names, gallery list with full
+access, photo fetch with downscale (800 px JPEG) and full size,
+`photo_not_found`, `invalid_parameter` (121 s, 2.5 s, unknown camera),
+`capability_disabled`, both rate limits, audit read, and connection refused
+on the Wi-Fi address.
+
+Not tested yet: a real camera snapshot and mic clip. Both need the phone
+unlocked and the app opened once.
