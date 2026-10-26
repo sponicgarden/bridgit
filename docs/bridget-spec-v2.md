@@ -919,7 +919,8 @@ opened) is delivered **both** ways below.
   `image.new` (new screenshot or photo, only if the agent subscribed with
   `types=image.new`), `capability.changed` (a master switch flipped),
   `agent.key_rotated` (sent to the old key's holder just before it stops
-  working), `listener.restarted`.
+  working), `listener.restarted`, and, only if CAP-20a is on,
+  `place.entered` / `place.left`.
 - **EVT-03 [P2]** Events are kept 7 days or 1,000 per agent.
 
 ### 9.2 Waiting on one thing
