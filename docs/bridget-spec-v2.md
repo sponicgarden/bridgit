@@ -870,3 +870,238 @@ every request is logged (section 10).
   device access, these could come later, with every **send** (SMS, calendar
   invite) requiring a question interaction that Rahul approves on the phone.
   Owner decision: Open Q1.
+
+---
+
+## 9. Events and delivery
+
+Many agents can't receive incoming calls. Every "something happened for this
+agent" (a question answered, a share for it, a grant approved, a file
+opened) is delivered **both** ways below.
+
+### 9.1 Event stream (works for every agent)
+
+- **EVT-01 [P2]** `GET /v1/events?since=<cursor>&wait=55&types=…` returns
+  events for the calling agent, oldest first, after `since`:
+  `{"events":[{"id","type","at","data"}],"next_cursor"}`. With no new events
+  it holds up to `wait` seconds. Without `since` it returns the last 50.
+- **EVT-02 [P2]** Event types: `interaction.seen`, `interaction.answered`,
+  `interaction.dismissed`, `interaction.expired`, `share.new`,
+  `file.opened`, `file.saved`, `grant.started`, `grant.ended`,
+  `image.new` (new screenshot or photo, only if the agent subscribed with
+  `types=image.new`), `capability.changed` (a master switch flipped),
+  `agent.key_rotated` (sent to the old key's holder just before it stops
+  working), `listener.restarted`.
+- **EVT-03 [P2]** Events are kept 7 days or 1,000 per agent.
+
+### 9.2 Waiting on one thing
+
+- **EVT-04 [P2]** Resource endpoints that support `wait` (interactions,
+  grants, shares, `image/last` with `since`) are shortcuts for waiting on
+  one event. They follow API-06.
+
+### 9.3 Callbacks (for agents with a webhook)
+
+- **EVT-05 [P2]** In agent detail, Rahul can set **Callback URL**. The phone
+  shows a confirmation with the full URL before saving. By default only
+  tailnet addresses are allowed (`100.64.0.0/10` or `*.ts.net`); a public
+  HTTPS URL needs the extra switch **Allow internet callbacks** (off).
+- **EVT-06 [P2]** When an event for that agent occurs, Bridget POSTs
+  `{"event": {...}, "agent": "<name>"}` to the URL with
+  `X-Bridget-Signature: sha256=<hex HMAC of the body>` using a **callback
+  secret** shown once when the URL is saved (and included in a refreshed
+  setup prompt). Timeout 10 s; retries at 10 s, 60 s, 5 min, then gives up
+  (the event is still in the stream). Every callback attempt is logged.
+- **EVT-07 [P2]** Grok can use callbacks; Codex, Claude Code and agents
+  behind NAT use the stream. Relay-mode agents get both through the relay.
+
+---
+
+## 10. Logging
+
+Decision D12: every agent can read the log programmatically. Until per-agent
+permissions ship (section 15), **every agent can read every other agent's
+entries, including their parameters** (never media, keys or full texts,
+SEC-14). The setting **Agents can read: all entries | only their own**
+(default: all entries) lets Rahul narrow that now.
+
+### 10.1 Channels
+
+| Channel | Contains | Written by |
+|---|---|---|
+| `audit` | Every API request (success or failure), every setting, switch, agent, grant and pairing change | Bridget |
+| `diagnostic` | Service starts/stops, bind changes, Tailscale up/down, FGS type changes, crashes (stack trace hash + first frame), slow requests, battery-optimisation state | Bridget |
+| `agent` | Notes agents choose to write ("checked fridge photo, milk low") | Agents, via `POST /v1/log` |
+
+### 10.2 Entry schema
+
+- **LOG-01 [P1]** Every entry:
+
+```json
+{
+  "id": 48213,                         // monotonic, never reused
+  "ts": "2026-10-27T00:12:03+01:00",
+  "channel": "audit" | "diagnostic" | "agent",
+  "level": "debug" | "info" | "warn" | "error",
+  "kind": "request" | "setting" | "agent" | "grant" | "pairing" | "interaction" | "share" | "file" | "service" | "crash" | "note" | "feedback",
+  "agent": "Grok", "agent_id": "a1b2c3d4e5f6",     // null for Bridget's own entries
+  "source_ip": "100.110.68.46",
+  "method": "POST", "endpoint": "/v1/camera/snapshot",
+  "params": {"camera": "rear", "max_width_px": 1024},   // redacted, strings ≤200 chars
+  "http": 200, "result": "ok" | "<error code>",
+  "bytes_in": 41, "bytes_out": 112157, "duration_ms": 2140,
+  "request_id": "e4a75367d9c4",
+  "message": "human-readable one-liner",
+  "data": {}                                         // kind-specific, ≤4 KB
+}
+```
+
+- **LOG-02 [P1]** Never logged: keys, callback secrets, media bytes,
+  interaction texts and answers beyond 200 characters, file contents, OCR
+  text, clipboard text, location coordinates beyond 3 decimals (about 100 m)
+  unless the setting **Log precise locations** is on.
+
+### 10.3 Storage and retention
+
+- **LOG-03 [P1]** SQLite table `log` with indexes on `(id)`, `(ts)`,
+  `(agent_id, id)`, `(channel, id)`, `(result, id)`. Writes are async on a
+  single writer thread; a request never waits on a log write.
+- **LOG-04 [Proposed]** Retention: audit and agent channels 20,000 entries
+  or 30 days, whichever is first; diagnostic 5,000 entries. Changeable in
+  Settings (1,000-100,000; 7-365 days). Migration from 1.x imports
+  `audit.jsonl`.
+- **LOG-05 [P1]** **Clear log** deletes the audit and agent channels and
+  writes one entry recording the clear (who, how many entries). Diagnostic
+  entries are kept.
+
+### 10.4 Log API
+
+- **LOG-06 [P1]** `GET /v1/log` with query parameters:
+  `channel` (comma list), `agent` (name or id; `me` for the caller),
+  `kind`, `endpoint` (prefix), `result` (`ok`, `error`, or a code),
+  `level` (minimum), `since` / `until` (id or ISO time), `q` (substring of
+  message/endpoint), `limit` (1-500, default 100), `order` (`desc` default,
+  `asc`), `cursor`, and `wait` (tail mode, below).
+  Response: `{"entries":[…],"next_cursor","latest_id"}`.
+- **LOG-07 [P1] Tail mode:** `order=asc&since=<id>&wait=55` returns as soon
+  as at least one newer matching entry exists, or empty after 55 s. Agents
+  loop on it to follow the log live.
+- **LOG-08 [P1]** `GET /v1/log/{id}` returns one entry.
+- **LOG-09 [P1]** `GET /v1/log/stats?since=` →
+  per agent and per endpoint: count, errors, p50/p95 duration, bytes out.
+- **LOG-10 [P1]** `GET /v1/log/export?format=jsonl|csv&…filters` streams the
+  matching entries.
+- **LOG-11 [P1]** `POST /v1/log {"level":"info","message":"…","data":{}}`
+  writes an `agent` channel note (message 1 KB, data 4 KB, 60 per minute per
+  agent).
+- **LOG-12 [Built]** `GET /v1/audit?limit=` stays as an alias of
+  `GET /v1/log?channel=audit&limit=` (deprecated, removed in v3).
+
+### 10.5 Log in the app
+
+The **Activity** screen (12.7) shows the same store with filters, live
+updates and export.
+
+---
+
+## 11. Bug reports and feature requests
+
+Copied from the Spotka apps' reporter (sponic repo: Android
+`ReportBugScreen.kt`, `BugReportClient.kt`, edge function `bug-report`,
+pattern doc `docs/dev/mobileappbugreporter.html`), adapted for Bridget: there
+is no Bridget backend or user account, so reports are **stored on the phone
+first** and are readable by developer agents through the API. Uploading
+somewhere is optional (11.6).
+
+### 11.1 Entry points
+
+- **FBK-01 [P1]** **More → Report a bug** and **More → Request a feature**;
+  also the overflow menu (⋮) on every screen, and **Settings → Help &
+  feedback**. No shake gesture (Spotka has none).
+- **FBK-02 [P1] Auto "last screen".** Before the form opens, Bridget
+  captures the screen Rahul was on, from inside the app (`PixelCopy` of the
+  Activity window, no MediaProjection needed). It waits for the menu to close,
+  retries once, and rejects a blank image (Spotka `LastScreenCapture`). If
+  capture fails, the form opens anyway. Screens with `FLAG_SECURE` (the setup
+  prompt) are never captured; the toggle is hidden there.
+
+### 11.2 The form (one screen, two kinds)
+
+- **FBK-03 [P1]** One form with a **Type** selector (Bug | Feature). Top
+  bar: title "Report a bug" / "Request a feature", **Cancel**, **Submit**
+  (shows a spinner and "Sending…"; disabled while the description is empty
+  or images are importing).
+- **FBK-04 [P1]** Fields, in order:
+  1. Error banner (form scrolls to it when shown).
+  2. Intro. Bug: "Describe what went wrong. A screenshot helps if you have
+     one." Feature: "What would make Bridget more useful? Sketches and
+     screenshots welcome."
+  3. Label "What happened?" / "What would you like to see?", with a
+     **Don't auto-fix** checkbox (default off; hint when ticked: "Leave this
+     for a person to look at. Nothing gets fixed automatically.").
+     Features are always held for review, whatever the box says.
+  4. **Description** (required): multiline, 5-12 lines, placeholder "Steps
+     to reproduce, what you expected, what you saw…". Empty submit: "Please
+     describe the problem before sending."
+  5. **Include last screen** (shown only if FBK-02 worked; default on), with
+     a thumbnail.
+  6. **Add screenshot / Add another**: Android photo picker, multi-select,
+     up to 5 images in total ("Up to 5 screenshots per report.").
+     Thumbnails with remove buttons.
+  7. **Include recent log** (Bridget addition; default on): the last 50
+     audit and diagnostic entries, redacted per LOG-02, shown as "50 log
+     entries" with a **Preview** link.
+  8. **Type**: Bug | Feature. Switching keeps a separate draft per type.
+  9. **Send updates to** (optional email, lightly validated, remembered
+     after a successful send).
+  10. Caption: "App version, device info and the screen you were on are
+      included automatically."
+- **FBK-05 [P1] Drafts:** saved on every keystroke per type, in private
+  storage; screenshots aren't restored with drafts (Spotka behaviour).
+
+### 11.3 Attached automatically
+
+- **FBK-06 [P1]** `app_version`, `version_code`, `git_commit` (from
+  BuildConfig), `dirty_build`, device model, Android version, security patch,
+  locale, current screen name, `screen_context` (≤500 characters: for
+  example the selected agent or log filter), listener state, Tailscale state,
+  master switch states, count of agents (no names unless the user is on an
+  agent screen), and `capture_source` (`form` | `agent`).
+- **FBK-07 [P1]** Images are downscaled to 1600 px on the long edge and
+  re-encoded as JPEG ≤ 1 MB (Spotka `ImageDownscale`).
+
+### 11.4 After submitting
+
+- **FBK-08 [P1]** Dialog "Report saved" (or "Report sent" if uploaded):
+  "Thanks. It's report #0007. Developer agents can pick it up from Bridget's
+  API." In debug builds, the dialog links to the report in the Feedback list.
+- **FBK-09 [P1]** **More → My reports** lists every report with kind, first
+  line, date, status (`new`, `seen by agent`, `in progress`, `fixed`,
+  `won't fix`, `duplicate`) and the agent that last updated it.
+
+### 11.5 Feedback API (for developer agents)
+
+- **FBK-10 [P1]** `GET /v1/feedback?status=&kind=&since=&wait=55` lists
+  reports; `GET /v1/feedback/{id}` returns the full report with images
+  (`size=agent` by default) and the attached log entries.
+- **FBK-11 [P1]** `POST /v1/feedback/{id}/status {"status":"in_progress","note":"Fix in PR #412"}`
+  lets an agent update the status shown in My reports. Rahul sees a
+  notification when a report changes to `fixed` and can tap **Confirm
+  fixed** or **Still broken** (Spotka's verify step), which reopens it.
+- **FBK-12 [P1]** `POST /v1/feedback {"kind":"bug","description":"…","images":[…]}`
+  lets an agent file a report too (for example when it hits a Bridget
+  error), with `capture_source: "agent"`.
+- **FBK-13 [P1]** Limits: 10 reports per hour per kind from the form
+  (Spotka's limit), 5 per hour per agent from the API.
+
+### 11.6 Optional upload
+
+- **FBK-14 [Open]** **Settings → Feedback → Also send reports to:** Off
+  (default) | finleg intranet tasks | GitHub issue in `rahuliofam/finleg`.
+  Proposed default target if turned on: a new finleg Supabase edge function
+  `bridget-feedback` that writes a `tasks` row labelled `bridget bug report`
+  or `bridget feature request`, with screenshots in storage, authenticated by
+  a per-install feedback key (not an agent key). Uploads queue offline and
+  retry. Open Q6 decides the target. Spotka's server-side extras (AI clarity
+  check, duplicate folding, acknowledgement email, Slack post) are
+  explicitly **out of scope** for Bridget unless the target already does them.
