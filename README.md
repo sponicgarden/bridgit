@@ -112,8 +112,9 @@ keyAlias=devicebridge
 
 Signing certificate SHA-256:
 `6bbd482d18efdc58ca28de8358405602ebb0405b479cabd36b37ff8242042f61`.
-**Back up `release.jks` and its password** (Bitwarden). Without that key, an
-update means uninstalling, which wipes pairing and the audit log.
+Backup: Bitwarden item **"Almusca Device Bridge — Android release keystore"**
+(password in the notes, `release.jks` attached; verified 26 Oct 2026). Without
+that key, an update means uninstalling, which wipes pairing and the audit log.
 
 Debug builds install alongside as `com.almusca.devicebridge.debug` and include
 an ADB-only test hook (`DebugSetupReceiver`, protected by the `DUMP`
