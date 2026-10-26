@@ -174,6 +174,8 @@ real 5-second mic clip** (AAC, 5.9 s), and `image/last` for all three types
 
 - `docs/spec-per-agent-permissions.md`: separate switches per agent.
 - `docs/spec-flashlight.md`: agents can turn the flashlight on (auto-off).
+- `docs/spec-screenshot.md`: screenshot on request, approved on the phone
+  once, for 1 hour or for 16 hours.
 - `docs/spec-agent-inbox.md`: interactions (one-way notices and questions,
   optionally spoken aloud), files sent to the phone, and things Rahul shares
   to an agent, all in a new Inbox screen. Works for
