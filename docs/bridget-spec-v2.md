@@ -472,8 +472,11 @@ under a minute, with nothing typed except the name.
 | `relay` | Not on the tailnet | Relay base URL, end-to-end encryption via the helper or library (ARC-15) |
 
 - **AGT-11 [Proposed]** `GET /v1/tools/bridget` returns the helper script
-  (text/x-python), so an agent can install it with nothing but the prompt.
-  Unauthenticated: it contains no secrets.
+  (text/x-python), unauthenticated because it contains no secrets, for
+  direct-mode hosts that want the helper. Userspace hosts can't reach the
+  phone with plain HTTP, so their prompt fetches the helper from GitHub
+  (or, with no GitHub access, through `tailscale nc` as in the helper's own
+  docstring).
 
 ### 6.6 Managing agents
 
@@ -1529,6 +1532,8 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 | GET | `/v1/audit` | Log (alias) | Built | key |
 | GET/POST | `/v1/feedback`, `/v1/feedback/{id}` | Feedback | P1 | key |
 | POST | `/v1/feedback/{id}/status` | Feedback | P1 | key |
+| any | `https://<relay>/functions/v1/bridget-relay/v1/…` | Relay mode: same paths as above | Relay | key |
+| GET | `https://<relay>/functions/v1/bridget-relay/jobs/{id}` | Relay job status | Relay | key |
 
 ## Appendix B. Setup prompt template
 
@@ -1547,8 +1552,7 @@ CONNECTION
 
 HOW TO CALL
 [[direct]]   curl -s -m 30 -H "Authorization: Bearer <key>" http://{magicdns_name}:{port}/v1/health
-[[userspace]] Your host runs Tailscale in userspace mode; plain curl will time out. Install the helper:
-             curl is not needed - fetch it through the helper's own fallback, or from GitHub:
+[[userspace]] Your host runs Tailscale in userspace mode; plain curl will time out. Install the helper from GitHub:
              gh api repos/rahuliofam/finleg/contents/android/tools/bridget -H "Accept: application/vnd.github.raw" > ~/bin/bridget && chmod +x ~/bin/bridget
              umask 077; mkdir -p ~/.config/bridget
              printf 'BRIDGET_HOST={tailscale_ip}\nBRIDGET_KEY=%s\n' '<key>' > ~/.config/bridget/env

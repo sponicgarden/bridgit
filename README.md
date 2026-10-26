@@ -172,6 +172,8 @@ real 5-second mic clip** (AAC, 5.9 s), and `image/last` for all three types
 
 ## Next (specs, not built)
 
+**Master spec: [`docs/bridget-spec-v2.md`](docs/bridget-spec-v2.md)** (27 Oct 2026) covers everything below and more, with requirement IDs, API shapes, screens, roadmap and open questions. The files below are kept for history.
+
 - `docs/spec-per-agent-permissions.md`: separate switches per agent.
 - `docs/spec-flashlight.md`: agents can turn the flashlight on (auto-off).
 - `docs/spec-screenshot.md`: screenshot on request, approved on the phone

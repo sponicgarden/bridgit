@@ -1,5 +1,7 @@
 # Spec: Interactions, send to phone, and the Inbox screen (Bridget 1.4)
 
+> **Superseded by [bridget-spec-v2.md](bridget-spec-v2.md)** (27 Oct 2026). Kept for history; v2 is the source of truth.
+
 Status: proposed, 26 Oct 2026. Not built. Covers feature ideas #2 and #6
 (agents reach Rahul with an **interaction**: a one-way **notice**, or a
 **question** that waits for his answer, either of which can be spoken aloud),

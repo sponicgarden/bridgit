@@ -1,5 +1,7 @@
 # Spec: screenshot on request, with time-limited approval (Bridget 1.5)
 
+> **Superseded by [bridget-spec-v2.md](bridget-spec-v2.md)** (27 Oct 2026). Kept for history; v2 is the source of truth.
+
 Status: proposed, 26 Oct 2026. Not built. Feature idea #8.
 
 ## What Rahul gets
