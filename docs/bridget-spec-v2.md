@@ -104,6 +104,7 @@ should treat these as settled unless a serious problem is found.
 | D15 | 27 Oct 2026 | Screens use **native Kotlin Android Views with Material 3 components**, with a "techie but friendly" look (section 12). | Decided |
 | D16 | 27 Oct 2026 | Spec **"maximum capabilities"**: describe everything Android allows that's useful to a personal agent, phased (section 16). | Decided |
 | D17 | 27 Oct 2026 | **Screenshots use an Accessibility service**, with no per-screenshot approval (replaces D10's approve-each-time design). Default mode: a private in-memory copy; optional mode: Android's normal screenshot, saved to the gallery. The screen-share grant flow (once / 1 h / 16 h) stays only as the fallback when Accessibility is off. | Decided |
+| D20 | 27 Oct 2026 | No production users before P1a; no migration from 1.2; old 64-hex keys and 1.2 field names are not kept. P1a is installed fresh (uninstall 1.2.0 first) and every agent is paired again with a new `brg_` key. Appendix F (MIG-01..05) is dropped. | Decided |
 
 ## 2. Changes from spec v1.0
 
@@ -119,8 +120,8 @@ are the deliberate departures. Anything not listed still applies.
 | "No third-party SDKs" | Still none for analytics or ads. Allowed: Ktor, CameraX, ZXing, AndroidX, Material, and Google ML Kit's **bundled, offline** text recognition (if OCR is built) | 8.15 |
 | No access to messages, contacts, other apps' data | Unchanged for v2. Communications is listed as a possible later module, **not scheduled** (8.22) | Owner decision pending, Open Q1 |
 | "Version 1 accepts Android stopping the listener" | Same, plus the always-on service (D1) and battery exemption on the Access screen | D1 |
-| Audit log: 1,000 entries, read via `/v1/audit` | Structured log store with query, tail and agent notes; 20,000 entries / 30 days; `/v1/audit` kept as an alias | D12 |
-| Token: 64 hex characters | New keys `brg_` + 43 base64url characters. Existing 64-hex keys keep working. | 5.3 |
+| Audit log: 1,000 entries, read via `/v1/audit` | Structured log store with query, tail and agent notes; 20,000 entries / 30 days; `/v1/audit` kept as an alias in the new entry shape | D12, D20 |
+| Token: 64 hex characters | Keys are `brg_` + 43 base64url characters. Old 64-hex keys stop working (no migration). | 5.3, D20 |
 
 ---
 
@@ -427,8 +428,8 @@ Agent ◀── long-poll / webhook ── Relay ◀─────────�
 
 - **SEC-09 [Proposed]** New keys are `brg_` + 43 base64url characters (256
   random bits). The prefix lets secret scanners (gitleaks custom rule, GitHub
-  push protection custom pattern) catch leaked keys. Existing 64-hex keys
-  keep working until rotated.
+  push protection custom pattern) catch leaked keys. Old 64-hex keys from
+  1.2 are not accepted (D20).
 - **SEC-10 [Decided]** A key is shown exactly once, inside the setup prompt
   (6.4). Afterwards it can't be shown again; **Rotate key** issues a new one
   and a new prompt, and the old key stops working immediately.
@@ -1288,8 +1289,8 @@ developer agents (AGT-15) always see all entries.
   single writer thread; a request never waits on a log write.
 - **LOG-04 [Proposed]** Retention: audit and agent channels 20,000 entries
   or 30 days, whichever is first; diagnostic 5,000 entries. Changeable in
-  Settings (1,000-100,000; 7-365 days). Migration from 1.x imports
-  `audit.jsonl`.
+  Settings (1,000-100,000; 7-365 days). The 1.2 `audit.jsonl` is not
+  imported (D20).
 - **LOG-05 [P1]** **Clear log** deletes the audit and agent channels and
   writes one entry recording the clear (who, how many entries). Diagnostic
   entries are kept.
@@ -1314,8 +1315,10 @@ developer agents (AGT-15) always see all entries.
 - **LOG-11 [P1]** `POST /v1/log {"level":"info","message":"…","data":{}}`
   writes an `agent` channel note (message 1 KB, data 4 KB, 60 per minute per
   agent).
-- **LOG-12 [Built]** `GET /v1/audit?limit=` stays as an alias of
-  `GET /v1/log?channel=audit&limit=` (deprecated, removed in v3).
+- **LOG-12 [P1]** `GET /v1/audit?limit=` stays as an alias of
+  `GET /v1/log?channel=audit&limit=` and returns the same LOG-01 entries
+  (the 1.2 field names `source`, `bytes`, `detail` are not kept, D20).
+  Deprecated, removed in v3.
 
 ### 10.5 Log in the app
 
@@ -1773,7 +1776,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 - **TST-05 [Decided]** Release: `./gradlew assembleRelease` with the
   keystore in Bitwarden ("Almusca Device Bridge — Android release
   keystore"). **That keystore is Bridget's signing key, despite the old
-  name: never create a second one**, or updates stop installing (MIG-01).
+  name: never create a second one**, or updates stop installing (NFR-12).
   APK attached to a private GitHub release `bridget-vX.Y.Z`; installed over
   ADB (`adb install -r`). versionCode increments every release.
 - **TST-05a [P1]** Once per major release, install a release candidate the
@@ -1810,7 +1813,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 | Phase | App version | Contents | Done when |
 |---|---|---|---|
 | Built | 1.0-1.2 | Listener, keys, camera photo, mic clip, gallery, last image, audit log, four agents | Done 26 Oct 2026 |
-| **P1a** | 2.0 | New UI shell (12.1-12.5, 12.7-12.9, 12.11-12.13), setup prompt flow (6) with AGT-05a, `brg_` keys, Developer switch, `/v1/guide`, `/v1/openapi.json`, `/v1/tools/bridget`, log store and API with the visibility setting (10), Access screen, boot receiver, network callbacks, cleartext config, size presets, `raw=1` for snapshots, `image/last?wait`, idempotency and pending schema | TST-03 passes; Rahul adds a new agent from the prompt in under 1 minute |
+| **P1a** | 1.3.0 (owner, 27 Oct 2026) | New UI shell (12.1-12.5, 12.7-12.9, 12.11-12.13), setup prompt flow (6) with AGT-05a, `brg_` keys, Developer switch, `/v1/guide`, `/v1/openapi.json`, `/v1/tools/bridget`, log store and API with the visibility setting (10), Access screen, boot receiver, network callbacks, cleartext config, size presets, `raw=1` for snapshots, `image/last?wait`, idempotency and pending schema | TST-03 passes; Rahul adds a new agent from the prompt in under 1 minute |
 | **P1b** | 2.0.x | Bug reports and feature requests on the phone (11.1-11.5, 12.10); upload (11.6) only after Q6 | A report filed on the phone is read and moved to `fixed` by a developer agent |
 | Gate | before P3 | Battery measurement (NFR-06) over 3 days with the always-on service; Downloads spike (CAP-13) | Both written up in `docs/reviews/` |
 | **P2** | 2.1 | Interactions (8.13) + Inbox (12.6) + events and callbacks (9), open link (8.20), Quick Settings tile, **Accessibility screenshots** (8.10) | A no-webhook agent gets an answer within 1 s of the tap; an agent gets a screenshot in under 1 s with no prompt |
@@ -2123,14 +2126,22 @@ Several of these per-app actions are undocumented and can move between
 Android releases, so every row keeps a list-page fallback, and the table is
 re-checked (`cmd package resolve-activity`) after each major OS update.
 
-## Appendix F. Migration from 1.2
+## Appendix F. Migration from 1.2 (dropped)
 
-- **MIG-01** Same package and signing key: 2.0 installs over 1.2.
-- **MIG-02** Agents, keys (64-hex), master switches and the port are kept.
-  `caps` is added as `null`.
-- **MIG-03** `audit.jsonl` is imported into the SQLite log, then renamed
-  `audit.jsonl.imported`.
-- **MIG-04** `/v1/audit` keeps working (LOG-12). Every 1.2 endpoint keeps
-  its request and response shape; new fields are additive.
-- **MIG-05** First launch after the upgrade shows a one-screen "What's new
-  in Bridget 2.0" instead of first-run onboarding.
+Dropped by **D20** (27 Oct 2026): Bridget had no production users before
+P1a, so nothing is migrated. MIG-01 to MIG-05 below are kept only as a
+record and are **not built**.
+
+- ~~**MIG-01** Same package and signing key: 2.0 installs over 1.2.~~ The
+  signing key stays the same (TST-05), but P1a is installed after
+  uninstalling 1.2.0.
+- ~~**MIG-02** Agents, keys (64-hex), master switches and the port are kept.
+  `caps` is added as `null`.~~ Agents are paired again with `brg_` keys.
+- ~~**MIG-03** `audit.jsonl` is imported into the SQLite log, then renamed
+  `audit.jsonl.imported`.~~
+- ~~**MIG-04** `/v1/audit` keeps working (LOG-12). Every 1.2 endpoint keeps
+  its request and response shape; new fields are additive.~~ `/v1/audit`
+  stays, in the new shape (LOG-12).
+- ~~**MIG-05** First launch after the upgrade shows a one-screen "What's new
+  in Bridget 2.0" instead of first-run onboarding.~~ A fresh install shows
+  first run (UI-08).
