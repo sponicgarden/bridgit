@@ -1,7 +1,6 @@
 package net.finleg.bridget.ui.more
 
 import android.Manifest
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
@@ -69,17 +68,17 @@ class AccessFragment : Fragment() {
     )
 
     private var lastStatus: Map<String, Status> = emptyMap()
-    private var askedBefore = false
-    private var rationaleBefore = false
     private var permFallback: (() -> Unit)? = null
+    private var requestedAt = 0L
 
     private val permLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         val ctx = context ?: return@registerForActivityResult
         val granted = result.values.any { it }
         if (!granted && result.isNotEmpty()) {
-            // Android answered without asking: the permission is denied for good, so open the page where it can be changed.
-            val noRationale = result.keys.none { shouldShowRequestPermissionRationale(it) }
-            if (askedBefore && !rationaleBefore && noRationale) (permFallback ?: { openAppInfo() }).invoke()
+            // No rationale after a denial means Android didn't ask (denied for good), so open the page where it can be changed.
+            // The quick answer rules out a dismissed or just-denied dialog.
+            val noDialog = android.os.SystemClock.elapsedRealtime() - requestedAt < NO_DIALOG_MS
+            if (noDialog && result.keys.none { shouldShowRequestPermissionRationale(it) }) (permFallback ?: { openAppInfo() }).invoke()
         }
         if ((result[Manifest.permission.CAMERA] == true || result[Manifest.permission.RECORD_AUDIO] == true) &&
             app.settings.listenerEnabled) runCatching { BridgeService.start(ctx) }
@@ -234,11 +233,8 @@ class AccessFragment : Fragment() {
      * opens the settings page instead (App info by default).
      */
     private fun request(perms: Array<String>, fallback: (() -> Unit)? = null) {
-        val prefs = requireContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        askedBefore = perms.any { prefs.getBoolean(it, false) }
-        rationaleBefore = perms.any { shouldShowRequestPermissionRationale(it) }
         permFallback = fallback
-        prefs.edit().apply { perms.forEach { putBoolean(it, true) } }.apply()
+        requestedAt = android.os.SystemClock.elapsedRealtime()
         permLauncher.launch(perms)
     }
 
@@ -298,7 +294,7 @@ class AccessFragment : Fragment() {
     }
 
     companion object {
-        /** Which permissions Bridget has asked for, to tell "denied for good" from "never asked". */
-        private const val PREFS = "access_ui"
+        /** A denial faster than this came without a dialog. */
+        private const val NO_DIALOG_MS = 600L
     }
 }

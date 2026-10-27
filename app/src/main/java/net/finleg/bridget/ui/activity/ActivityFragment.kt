@@ -132,7 +132,9 @@ class ActivityFragment : Fragment() {
         }
         // P1b: "Report a bug" and "Request a feature" (FBK-01) are added to this overflow.
 
-        val rows = LogRowAdapter(app.agents) { e -> EntrySheet.newInstance(e.id).show(childFragmentManager, "entry") }
+        val rows = LogRowAdapter(app.agents) { e ->
+            if (childFragmentManager.findFragmentByTag("entry") == null) EntrySheet.newInstance(e.id).show(childFragmentManager, "entry")
+        }
         adapter = rows
         val lm = LinearLayoutManager(requireContext())
         b.list.layoutManager = lm
@@ -145,13 +147,7 @@ class ActivityFragment : Fragment() {
         b.list.addItemDecoration(deco)
         // TalkBack can't see the drawn day headers, so the first row of each day says its day.
         b.list.addOnChildAttachStateChangeListener(object : RecyclerView.OnChildAttachStateChangeListener {
-            override fun onChildViewAttachedToWindow(v: View) {
-                val pos = b.list.getChildAdapterPosition(v)
-                val e = rows.currentList.getOrNull(pos) ?: return
-                val cd = v.contentDescription?.toString() ?: return
-                val day = Fmt.day(e.ts)
-                if (deco.isFirstOfDay(pos) && !cd.startsWith("$day. ")) v.contentDescription = "$day. $cd"
-            }
+            override fun onChildViewAttachedToWindow(v: View) { dayPrefix(v) }
             override fun onChildViewDetachedFromWindow(v: View) {}
         })
         b.list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
@@ -259,7 +255,7 @@ class ActivityFragment : Fragment() {
             topId = maxOf(latest, page.firstOrNull()?.id ?: 0L)
             loadingMore = false; hasMore = page.size >= PAGE; loaded = true
             b.loading.visibility = View.INVISIBLE
-            rows.submitList(page) { _b?.list?.scrollToPosition(0) }
+            rows.submitList(page) { afterSubmit(); _b?.list?.scrollToPosition(0) }
             updateEmpty(page.isEmpty())
             if (live) checkNew(app.log.latestId.value)
         }
@@ -278,7 +274,7 @@ class ActivityFragment : Fragment() {
             if (gen != generation || _b == null) return@launch
             loadingMore = false; hasMore = page.size >= PAGE
             footer?.showing = false
-            rows.submitList(rows.currentList + page)
+            rows.submitList(rows.currentList + page) { afterSubmit() }
         }
     }
 
@@ -297,7 +293,12 @@ class ActivityFragment : Fragment() {
                 if (liveAgain) { liveAgain = false; view?.post { if (live && _b != null) checkNew(app.log.latestId.value) } }
             }
             if (gen != generation || _b == null || topId != since) return@launch
-            topId = maxOf(latest, fresh.lastOrNull()?.id ?: 0L)
+            if (fresh.size >= LogQuery.MAX_LIMIT) {
+                // More than one batch arrived: take the rest on the next round.
+                topId = fresh.last().id
+                liveAgain = true
+                view?.post { if (live && _b != null && liveAgain) { liveAgain = false; checkNew(app.log.latestId.value) } }
+            } else topId = maxOf(latest, fresh.lastOrNull()?.id ?: 0L)
             if (fresh.isEmpty()) return@launch
             val known = rows.currentList.firstOrNull()?.id ?: 0L
             val add = fresh.filter { it.id > known }.asReversed()
@@ -305,7 +306,7 @@ class ActivityFragment : Fragment() {
             val lm = b.list.layoutManager as LinearLayoutManager
             val atTop = lm.findFirstVisibleItemPosition() <= 0
             // Keep the existing instances so DiffUtil only inserts (JSONObject has identity equals).
-            rows.submitList(add + rows.currentList) { if (atTop) _b?.list?.scrollToPosition(0) }
+            rows.submitList(add + rows.currentList) { afterSubmit(); if (atTop) _b?.list?.scrollToPosition(0) }
             updateEmpty(false)
             if (!atTop) {
                 pendingNew += add.size
@@ -318,6 +319,26 @@ class ActivityFragment : Fragment() {
                 b.list.announceForAccessibility(resources.getQuantityString(R.plurals.activity_new_entries, add.size, add.size))
             }
         }
+    }
+
+    /** First row of a day says its day to TalkBack ("Today. 14:02, Grok fetched …"); other rows don't. */
+    private fun dayPrefix(v: View) {
+        val bb = _b ?: return
+        val rows = adapter ?: return
+        val deco = decoration ?: return
+        val pos = bb.list.getChildAdapterPosition(v)
+        val e = rows.currentList.getOrNull(pos) ?: return
+        val cd = v.contentDescription?.toString() ?: return
+        val prefix = Fmt.day(e.ts) + ". "
+        val base = cd.removePrefix(prefix)
+        v.contentDescription = if (deco.isFirstOfDay(pos)) prefix + base else base
+    }
+
+    /** After the list changes: day-header space and the TalkBack day prefix follow the new first rows. */
+    private fun afterSubmit() {
+        val list = _b?.list ?: return
+        list.invalidateItemDecorations()
+        for (i in 0 until list.childCount) dayPrefix(list.getChildAt(i))
     }
 
     private fun hidePill() {
@@ -375,7 +396,7 @@ class ActivityFragment : Fragment() {
     private fun agentLabel(id: String?): String? = when (id) {
         null -> null
         "" -> getString(R.string.activity_bridget_system)
-        else -> app.agents.get(id)?.name ?: id
+        else -> app.agents.get(id)?.name
     }
 
     private fun renderChips() {
