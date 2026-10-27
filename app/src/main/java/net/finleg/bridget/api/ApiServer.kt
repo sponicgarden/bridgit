@@ -45,6 +45,7 @@ class Req(val call: ApplicationCall, val spec: EndpointSpec, val agent: Agent?, 
      * it must move or delete the file. Files nobody took are deleted when the request ends.
      */
     fun takeRawFile(): java.io.File? = rawFile.also { rawFile = null }
+    fun hasRawFile(): Boolean = rawFile != null
     internal fun leftoverRawFile(): java.io.File? = rawFile
     /** What goes into the log entry's params (redacted before storing). */
     val params = JSONObject()

@@ -489,13 +489,14 @@ class SpeakerModule(app: BridgeApp) : Capability(app) {
             var file: File? = null
             var owned = false
             try {
+                val ctype = call.request.headers["Content-Type"] ?: ""
+                // Checked before taking the upload, so the pipeline still deletes a refused one.
+                if (hasRawFile() && !ctype.startsWith("audio/")) throw ErrorCatalog.error("invalid_parameter", "Send audio/* bytes as the body, or a JSON {\"url\"}.")
                 val upload = takeRawFile()
                 if (upload != null) {
-                    val ctype = call.request.headers["Content-Type"] ?: ""
-                    if (!ctype.startsWith("audio/")) throw ErrorCatalog.error("invalid_parameter", "Send audio/* bytes as the body, or a JSON {\"url\"}.")
                     val ext = ctype.substringAfter('/').substringBefore(';').filter { it.isLetterOrDigit() }.take(8).ifEmpty { "bin" }
                     file = app.speaker.newFile(ext)
-                    if (!upload.renameTo(file)) { upload.copyTo(file, overwrite = true); upload.delete() }
+                    try { if (!upload.renameTo(file)) upload.copyTo(file, overwrite = true) } finally { upload.delete() }
                 } else {
                     val url = body.optString("url", "")
                     if (!SpeakerRules.urlAllowed(url)) throw ErrorCatalog.error("invalid_parameter", "url must be a public https:// address (or send audio/* bytes as the body).")

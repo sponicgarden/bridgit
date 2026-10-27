@@ -50,6 +50,8 @@ object ApiChanges {
             Item("Live text panel: kind=text, then stream text into it", "/v1/text/stream"),
             Item("Callbacks: Rahul can set a callback URL for you; events are POSTed signed with HMAC-SHA256; send a test", "/v1/callback/test"),
             Item("MCP: use Bridget as an MCP server (Streamable HTTP) with your key", "/v1/mcp"),
+            Item("Speaker status: playing shows only your own sound; busy and paused added", "/v1/speaker"),
+            Item("End tour: optional tour_id so you only end the tour you mean", "/v1/tour"),
         )),
     )
 
