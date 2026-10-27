@@ -94,6 +94,38 @@
     <string name="access_battery">Battery: unrestricted</string>
     <string name="access_battery_unlocks">Keeps the listener running when the screen is off.</string>
 
+    <string name="access_notifications_partly">Capture notifications are turned off</string>
+
+    <string-array name="access_how_notifications">
+        <item>Tap Turn on.</item>
+        <item>If Android asks, choose \"Allow\".</item>
+        <item>If a settings page opens, turn on \"All Bridget notifications\" and \"Captures\".</item>
+        <item>Come back here.</item>
+    </string-array>
+    <string-array name="access_how_camera">
+        <item>Tap Grant.</item>
+        <item>Choose \"While using the app\".</item>
+        <item>Come back here.</item>
+        <item>If App info opens instead, tap Permissions, then Camera, then \"Allow only while using the app\".</item>
+    </string-array>
+    <string-array name="access_how_mic">
+        <item>Tap Grant.</item>
+        <item>Choose \"While using the app\".</item>
+        <item>Come back here.</item>
+        <item>If App info opens instead, tap Permissions, then Microphone, then \"Allow only while using the app\".</item>
+    </string-array>
+    <string-array name="access_how_photos">
+        <item>Tap Grant.</item>
+        <item>Choose \"Allow all\", or \"Select photos\" to share only some.</item>
+        <item>Come back here.</item>
+        <item>To change it later, tap Change, then Permissions, then \"Photos and videos\".</item>
+    </string-array>
+    <string-array name="access_how_battery">
+        <item>Tap Turn on.</item>
+        <item>Choose \"Allow\" in the pop-up.</item>
+        <item>Come back here.</item>
+    </string-array>
+
     <string name="access_how_title">Show me how</string>
     <string name="access_how_note">If a button lands somewhere unexpected, follow these steps.</string>
     <string name="access_how_step">%1$d. %2$s</string>
