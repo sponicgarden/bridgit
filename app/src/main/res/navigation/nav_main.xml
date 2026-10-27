@@ -15,6 +15,7 @@
     <!-- Full-screen flows (no bottom bar). agentId set = show the setup prompt for that agent (rotate / resume). -->
     <fragment android:id="@+id/addAgent" android:name="net.finleg.bridget.ui.addagent.AddAgentFragment">
         <argument android:name="agentId" app:argType="string" app:nullable="true" android:defaultValue="@null" />
+        <argument android:name="fromRotate" app:argType="boolean" android:defaultValue="false" />
     </fragment>
     <fragment android:id="@+id/pairCode" android:name="net.finleg.bridget.ui.addagent.PairCodeFragment" />
     <fragment android:id="@+id/features" android:name="net.finleg.bridget.ui.more.FeaturesFragment" />

@@ -56,7 +56,8 @@ class BridgeService : LifecycleService() {
         when (intent?.action) {
             ACTION_PAUSE -> {
                 app.settings.listenerEnabled = false
-                app.log.system("audit", "setting", "You paused the listener from the notification")
+                if (!intent.getBooleanExtra(EXTRA_SILENT, false))
+                    app.log.system("audit", "setting", "You paused the listener from the notification")
                 stopEverything(); return START_NOT_STICKY
             }
         }
@@ -249,6 +250,7 @@ class BridgeService : LifecycleService() {
         const val NOTIF_ID = 1
         const val ACTION_PAUSE = "net.finleg.bridget.PAUSE"
         const val EXTRA_BACKGROUND = "background"
+        const val EXTRA_SILENT = "silent"
         private const val RECHECK_MS = 5 * 60 * 1000L
 
         @Volatile var running: BridgeService? = null; private set
@@ -261,6 +263,10 @@ class BridgeService : LifecycleService() {
             ctx.startForegroundService(Intent(ctx, BridgeService::class.java).putExtra(EXTRA_BACKGROUND, true))
 
         fun pause(ctx: Context) = ctx.startService(Intent(ctx, BridgeService::class.java).setAction(ACTION_PAUSE))
+
+        /** Stops the listener without the "paused from the notification" log line; the caller logs its own reason. */
+        fun pauseSilently(ctx: Context) =
+            ctx.startService(Intent(ctx, BridgeService::class.java).setAction(ACTION_PAUSE).putExtra(EXTRA_SILENT, true))
 
         /** The phone's Tailscale addresses: IPv4 in 100.64.0.0/10 and, if present, IPv6 in fd7a:115c:a1e0::/48. */
         fun tailscaleAddresses(): List<String> = runCatching {

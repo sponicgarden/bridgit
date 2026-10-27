@@ -96,7 +96,9 @@ class BridgeApp : Application() {
  */
 class Pairing {
     class Window(val agentId: String, val agentName: String, val code: String, val key: String,
-                 val expiresAt: Long, var wrongAttempts: Int = 0, var redeemed: Boolean = false)
+                 val expiresAt: Long, var wrongAttempts: Int = 0) {
+        @Volatile var redeemed: Boolean = false
+    }
 
     @Volatile var window: Window? = null
         private set
