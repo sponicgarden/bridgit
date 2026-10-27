@@ -30,6 +30,7 @@ import kotlinx.coroutines.withContext
 import net.finleg.bridget.BridgeApp
 import net.finleg.bridget.R
 import net.finleg.bridget.databinding.FragmentInteractionsBinding
+import net.finleg.bridget.interact.IKind
 import net.finleg.bridget.interact.IStatus
 import net.finleg.bridget.interact.Interaction
 import net.finleg.bridget.ui.feedback.decodeFileThumb
@@ -145,6 +146,8 @@ class InteractionsFragment : Fragment() {
     }
 
     private fun open(i: Interaction) {
+        // D26: a text interaction opens (or reopens) the live text panel instead of a detail screen.
+        if (i.kind == IKind.TEXT) { (activity as? net.finleg.bridget.ui.MainActivity)?.showTextPanel(i.id); return }
         findNavController().navigate(R.id.interactionDetail, bundleOf("interactionId" to i.id))
     }
 
