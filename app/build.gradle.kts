@@ -63,7 +63,11 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/helperAssets"))
-    testOptions { unitTests.isReturnDefaultValues = true }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+        // ApiDocsTest writes build/apidocs/api.html for this version (tools/publish-apk.sh passes the APK's).
+        unitTests.all { it.systemProperty("bridget.version", (project.findProperty("bridgetDocsVersion") as String?) ?: defaultConfig.versionName!!) }
+    }
     packaging {
         resources {
             excludes += setOf(
