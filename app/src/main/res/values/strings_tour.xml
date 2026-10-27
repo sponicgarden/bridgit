@@ -39,6 +39,9 @@
     <string name="tour_need_location_permission">Bridget can\'t use your location yet</string>
     <string name="tour_need_location_setting">Android\'s Location is off</string>
     <string name="tour_need_speaker_switch">Speaker switch is off</string>
+    <string name="tour_need_listener">Bridget is paused, so your agent can\'t hear from it</string>
+    <string name="tour_fix_resume">Resume</string>
+    <string name="tour_resumed_audit">You resumed the listener from City tour</string>
     <string name="tour_need_notifications">Notifications are off</string>
     <string name="tour_opt_gallery">Gallery switch is off, so your new photos aren\'t sent</string>
     <string name="tour_opt_mic">Microphone permission isn\'t allowed yet, so you can\'t ask out loud</string>

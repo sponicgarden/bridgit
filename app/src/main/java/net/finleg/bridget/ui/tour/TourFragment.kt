@@ -261,7 +261,7 @@ class TourFragment : Fragment() {
 
     private data class Need(val key: String, val text: Int, val action: Int, val fix: () -> Unit)
 
-    private fun needs(): List<Need> = app.tours.missing().mapNotNull { m ->
+    private fun needs(): List<Need> = listenerNeed() + app.tours.missing().map { m ->
         when (m) {
             "Location switch" -> Need(m, R.string.tour_need_location_switch, R.string.tour_fix_turn_on) { turnOn("location") }
             "Location permission" -> Need(m, R.string.tour_need_location_permission, R.string.tour_fix_allow) {
@@ -279,6 +279,15 @@ class TourFragment : Fragment() {
             else -> Need(m, 0, 0) {}
         }.let { n -> if (n.text == 0) Need(m, 0, 0) {} else n }
     }
+
+    /** The agent gets ticks only while the listener runs; BridgeService.start does nothing while paused. */
+    private fun listenerNeed(): List<Need> = if (app.settings.listenerEnabled) emptyList() else listOf(
+        Need("listener", R.string.tour_need_listener, R.string.tour_fix_resume) {
+            app.settings.listenerEnabled = true
+            app.log.system("audit", "setting", getString(R.string.tour_resumed_audit))
+            runCatching { BridgeService.start(requireContext()) }
+            requestRender()
+        })
 
     private fun optional(): List<Need> = buildList {
         if (!app.settings.isOn("gallery")) add(Need("gallery", R.string.tour_opt_gallery, R.string.tour_fix_turn_on) { turnOn("gallery") })
@@ -336,7 +345,7 @@ class TourFragment : Fragment() {
         val hint = when {
             kinds.isEmpty() -> R.string.tour_start_hint_kinds
             agentId == null -> R.string.tour_start_hint_agent
-            app.tours.missing().isNotEmpty() -> R.string.tour_start_hint_needed
+            app.tours.missing().isNotEmpty() || !app.settings.listenerEnabled -> R.string.tour_start_hint_needed
             else -> 0
         }
         s.start.isEnabled = hint == 0 && !starting
@@ -564,12 +573,13 @@ class TourFragment : Fragment() {
             setPadding(ctx.dp(24), ctx.dp(8), ctx.dp(24), 0)
             addView(field)
         }
-        MaterialAlertDialogBuilder(ctx)
+        val dialog = MaterialAlertDialogBuilder(ctx)
             .setTitle(getString(R.string.tour_type_title, t.agent))
             .setView(box)
             .setPositiveButton(R.string.tour_send) { _, _ -> send(field.text.toString(), spoken = false) }
             .setNegativeButton(R.string.tour_cancel, null)
             .show()
+        dialog.window?.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE)
         field.requestFocus()
     }
 
