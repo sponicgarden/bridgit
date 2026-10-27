@@ -90,7 +90,9 @@
     <string name="access_mic_unlocks">Lets agents record audio clips when the Microphone switch is on.</string>
     <string name="access_photos">Photos</string>
     <string name="access_photos_unlocks">Lets agents find and fetch photos from your gallery.</string>
-    <string name="access_photos_partly">Only the photos you picked</string>
+    <string name="access_photos_partly">Only the photos you picked. New photos and screenshots stay hidden until you choose \"Allow all\"</string>
+    <string name="access_screenshots">Screenshots</string>
+    <string name="access_screenshots_unlocks">Lets agents see your screen when they ask. Bridget\'s screenshot service can\'t read or tap anything.</string>
     <string name="access_battery">Battery: unrestricted</string>
     <string name="access_battery_unlocks">Keeps the listener running when the screen is off.</string>
 
@@ -119,6 +121,12 @@
         <item>Choose \"Allow all\", or \"Select photos\" to share only some.</item>
         <item>Come back here.</item>
         <item>To change it later, tap Change, then Permissions, then \"Photos and videos\".</item>
+    </string-array>
+    <string-array name="access_how_screenshots">
+        <item>Tap Turn on. Android opens \"Bridget screenshots\".</item>
+        <item>Turn on \"Use Bridget screenshots\" and tap Allow.</item>
+        <item>If Android says \"Restricted setting\": open Bridget\'s App info, tap the three dots (top right), tap \"Allow restricted settings\", confirm, then try again.</item>
+        <item>Come back here, and turn on Screenshots in Features.</item>
     </string-array>
     <string-array name="access_how_battery">
         <item>Tap Turn on.</item>

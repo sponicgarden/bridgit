@@ -67,7 +67,7 @@ class Registry(app: BridgeApp) {
     val micLock = Mutex()
 
     val modules: List<Capability> = listOf(
-        StatusModule(app), CameraModule(app, this), MicModule(app, this), GalleryModule(app), LogModule(app),
+        StatusModule(app), CameraModule(app, this), MicModule(app, this), GalleryModule(app), ScreenModule(app), LogModule(app),
         net.finleg.bridget.feedback.FeedbackModule(app),
         net.finleg.bridget.interact.InteractionModule(app),
         LocationModule(app), SpeakerModule(app), net.finleg.bridget.tour.TourModule(app),

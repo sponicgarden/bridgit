@@ -104,7 +104,7 @@ object SetupPrompt {
     fun qrPayload(agentName: String, key: String, addr: Address): String =
         JSONObject().put("bridget", 1).put("agent", agentName).put("base_url", addr.baseUrl).put("key", key).toString()
 
-    private val CAPTURE_IDS = setOf("camera", "mic", "gallery")
+    private val CAPTURE_IDS = setOf("camera", "mic", "gallery", "screen")
 }
 
 /** `GET /v1/guide`: Markdown for an AI agent, generated live (API-09). */

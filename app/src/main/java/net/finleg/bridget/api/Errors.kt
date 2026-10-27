@@ -26,7 +26,7 @@ object ErrorCatalog {
         Entry(403, "forbidden_source", "Caller is not on the tailnet", "Check Tailscale"),
         Entry(403, "capability_disabled", "Master switch off", "Tell Rahul which switch (`setting` field)"),
         Entry(403, "permission_denied", "Android permission not granted (`permission` field)", "Tell Rahul; the Access screen fixes it"),
-        Entry(403, "access_needed", "Android special access off (`setting` field)", "Tell Rahul; Bridget also notifies him", built = false),
+        Entry(403, "access_needed", "Android special access off (`setting` field)", "Tell Rahul; Bridget also notifies him"),
         Entry(403, "pairing_closed", "No pairing window open", "Ask Rahul to open one"),
         Entry(403, "screen_denied", "Rahul denied screen access", "Don't ask again soon", built = false),
         Entry(403, "agent_not_allowed", "(Reserved for section 15)", "—", built = false),

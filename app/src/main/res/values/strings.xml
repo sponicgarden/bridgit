@@ -32,6 +32,12 @@
     <string name="cap_mic_desc">Audio clips when an agent asks</string>
     <string name="cap_gallery">Gallery</string>
     <string name="cap_gallery_desc">Find and send photos from your gallery</string>
+    <string name="cap_screen">Screenshots</string>
+    <string name="cap_screen_desc">Agents see your screen when they ask. Needs Bridget\'s screenshot service (Access).</string>
+    <string name="notif_screenshot">%1$s is taking a screenshot</string>
+    <string name="screenshot_service_label">Bridget screenshots</string>
+    <string name="screenshot_service_summary">Lets your agents take a screenshot when they ask</string>
+    <string name="screenshot_service_desc">Bridget uses this only to take a screenshot when one of your agents asks, and only while Screenshots is on in Bridget\'s Features. It can\'t read, tap or type on your screen. Every screenshot shows a notification and is logged. Apps that block screenshots come out blank.</string>
     <string name="cap_log">Log</string>
     <string name="cap_log_desc">Agents can read the activity log</string>
 

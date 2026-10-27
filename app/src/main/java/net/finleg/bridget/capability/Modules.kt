@@ -267,14 +267,17 @@ class GalleryModule(app: BridgeApp) : Capability(app) {
                     .put("width_px", it.width).put("height_px", it.height)
                     .put("size_bytes", it.size).put("mime", it.mime).put("album", it.album ?: JSONObject.NULL))
             }
-            Reply.Json(JSONObject().put("access_mode", m).put("photos", arr))
+            val out = JSONObject().put("access_mode", m).put("photos", arr)
+            if (m == "selected") out.put("hint", "Only the photos Rahul picked are visible. For new photos and screenshots, " +
+                "ask him to set Photos to \"Allow all\" (Bridget > More > Access > Photos > Change).")
+            Reply.Json(out)
         }
         endpoint(Endpoints.GALLERY_PHOTO) {
             val m = mode()
             val idStr = path("id") ?: ""
             val id = idStr.toLongOrNull() ?: throw ErrorCatalog.error("invalid_parameter", "id must be a gallery id from /v1/gallery/recent.")
             val spec = legacyOrPreset(this)
-            val item = gallery.find(id) ?: throw ErrorCatalog.error("photo_not_found", "No photo with that id" + if (m == "selected") " in the selected set." else ".")
+            val item = gallery.find(id) ?: throw notFound(m, "No photo with that id")
             val raw = gallery.read(id) ?: throw ErrorCatalog.error("photo_not_found", "That photo could not be opened.")
             val img = ImageUtil.prepare(raw, item.mime, spec)
             if (wantsRaw()) rawReply(img, mapOf("X-Bridget-Id" to idStr, "X-Bridget-Taken-At" to isoAt(item.takenAt)))
@@ -307,8 +310,8 @@ class GalleryModule(app: BridgeApp) : Capability(app) {
                 if (found == null) return@endpoint Reply.Json(JSONObject().put("new", false).put("type", type)
                     .put("message", "No new $type image in $wait s. Ask again with the same since."))
             }
-            val (item, path) = found ?: throw ErrorCatalog.error("photo_not_found",
-                "No ${if (type == "any") "" else "$type "}images" + (if (since != null) " newer than since" else "") + (if (m == "selected") " in the selected set." else "."))
+            val (item, path) = found ?: throw notFound(m,
+                "No ${if (type == "any") "" else "$type "}images" + (if (since != null) " newer than since" else ""))
             val bytesIn = gallery.read(item.id) ?: throw ErrorCatalog.error("photo_not_found", "That image could not be opened.")
             val img = ImageUtil.prepare(bytesIn, item.mime, spec, forceJpeg = !spec.original)
             val kindName = gallery.kindOf(path)
@@ -323,6 +326,16 @@ class GalleryModule(app: BridgeApp) : Capability(app) {
                 .put("original_width_px", item.width).put("original_height_px", item.height).put("access_mode", m))
         }
     }
+
+    /**
+     * photo_not_found. With "Select photos" access Android only shows Bridget the photos Rahul picked, and
+     * new screenshots are never in that set, so say how to fix it instead of just "not found".
+     */
+    private fun notFound(mode: String, what: String) =
+        if (mode != "selected") ErrorCatalog.error("photo_not_found", "$what.", mapOf("access_mode" to mode))
+        else ErrorCatalog.error("photo_not_found", "$what in the photos Rahul picked. Bridget has \"Select photos\" access only, " +
+            "so new photos and screenshots stay hidden. Ask Rahul to open Bridget > More > Access > Photos > Change and choose " +
+            "\"Allow all\".", mapOf("access_mode" to mode, "setting" to "photos_allow_all"))
 
     private class Since(val id: Long? = null, val ts: Long? = null) {
         fun isOlderThan(item: Gallery.Item) = if (id != null) item.id > id else item.addedAt > ts!!

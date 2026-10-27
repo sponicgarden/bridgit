@@ -255,8 +255,15 @@ object Endpoints {
         query = listOf(Param("tour_id", "string", "Only end this tour (it must be yours and still running)")),
         example = "DELETE /v1/tour", returns = "ended", errors = listOf("not_found"))
 
+    val SCREEN_CAPTURE = EndpointSpec("POST", "/screen/capture", "screen", "What's on Rahul's screen right now (D17, no prompt once he's turned it on)",
+        capture = true, idempotent = true, media = true, query = sizing,
+        body = listOf(Param("mode", "string", "private (default): kept in memory, nothing saved", enum = listOf("private"))),
+        example = "POST /v1/screen/capture?size=agent", returns = "captured_at, width_px, height_px, format, size_bytes, mode, data_base64 (or raw=1 bytes)",
+        errors = listOf("capability_disabled", "access_needed", "notifications_required", "device_locked", "rate_limited", "sensor_busy",
+            "not_supported", "capture_timeout", "service_start_blocked", "payload_too_large"))
+
     val all = listOf(HEALTH, CAPABILITIES, GUIDE, OPENAPI, CHANGES, HELPER, PAIR, SNAPSHOT, MIC, GALLERY_RECENT, GALLERY_PHOTO,
-        IMAGE_LAST, LOG, LOG_ENTRY, LOG_STATS, LOG_EXPORT, LOG_NOTE, AUDIT, FEEDBACK_LIST, FEEDBACK_GET, FEEDBACK_STATUS, FEEDBACK_POST,
+        IMAGE_LAST, SCREEN_CAPTURE, LOG, LOG_ENTRY, LOG_STATS, LOG_EXPORT, LOG_NOTE, AUDIT, FEEDBACK_LIST, FEEDBACK_GET, FEEDBACK_STATUS, FEEDBACK_POST,
         INTERACTION_CREATE, INTERACTION_LIST, INTERACTION_GET, INTERACTION_CANCEL, EVENTS, TEXT_STREAM, CALLBACK_TEST, MCP,
         LOCATION, SPEAKER_PLAY, SPEAKER_SAY, SPEAKER_STATUS, SPEAKER_STOP, TOUR_GET, TOUR_PHOTO, TOUR_END, ME)
 }

@@ -57,6 +57,8 @@ object ApiChanges {
             Item("MCP: use Bridget as an MCP server (Streamable HTTP) with your key", "/v1/mcp"),
             Item("Speaker status: playing shows only your own sound; busy and paused added", "/v1/speaker"),
             Item("End tour: optional tour_id so you only end the tour you mean", "/v1/tour"),
+            Item("Screenshot on request: what's on Rahul's screen now, nothing saved (once he turns on Screenshots)", "/v1/screen/capture"),
+            Item("Gallery with \"Select photos\" access: photo_not_found and /v1/gallery/recent say how Rahul allows all", "/v1/gallery/recent"),
         )),
     )
 
