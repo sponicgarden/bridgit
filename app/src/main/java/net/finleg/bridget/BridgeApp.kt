@@ -61,6 +61,7 @@ class BridgeApp : Application() {
         interactions = net.finleg.bridget.interact.InteractionStore(this)
         speaker = net.finleg.bridget.capability.SpeakerQueue(this)
         tours = net.finleg.bridget.tour.TourManager(this)
+        net.finleg.bridget.ui.interactions.SpeakHook.speak = { c, agent, title, text -> net.finleg.bridget.interact.Speaker.speak(c, agent, title, text) }
         feedback.onStatusChange { FeedbackNotifier.statusChanged(this, it) }
         interactions.addListener { i, what -> net.finleg.bridget.interact.InteractionNotifier.onChange(this, i, what) }
         applyAppearance()
