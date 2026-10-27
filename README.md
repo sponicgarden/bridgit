@@ -124,7 +124,9 @@ Images and clips come back as MCP image/audio content; errors as
 bytes to the HTTP endpoint). Each tool call is checked like a direct call
 (switch, developer, capture and rate limits) and gets its own log entry for
 the real endpoint, marked `via: mcp`. Requests with a browser `Origin`
-header are refused (403); batches get 400.
+header are refused (403); batches get 400. The whole JSON-RPC message is
+capped at 2 MB, so base64 images sent with `interactions_send` or
+`feedback_file` must be smaller over MCP than over HTTP.
 
 ## Security model
 
