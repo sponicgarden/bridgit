@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home (UI-09 … UI-11, ui-spec 5.2). -->
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?android:attr/colorBackground">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:minHeight="64dp"
+            app:title="@string/app_name" />
+
+        <androidx.core.widget.NestedScrollView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingStart="16dp"
+                android:paddingTop="4dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="16dp">
+
+                <!-- Hero card -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/hero"
+                    style="@style/Widget.Bridget.Card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardBackgroundColor="?attr/colorPrimaryContainer"
+                    app:contentPaddingBottom="14dp"
+                    app:contentPaddingTop="14dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <!-- One focus stop for state, address and chips (ui-spec 5.2 A11y). -->
+                            <LinearLayout
+                                android:id="@+id/heroInfo"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:accessibilityLiveRegion="polite"
+                                android:focusable="true"
+                                android:gravity="center_vertical"
+                                android:orientation="horizontal"
+                                android:screenReaderFocusable="true">
+
+                                <net.finleg.bridget.ui.home.BeaconDotView
+                                    android:id="@+id/beacon"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginStart="-7dp"
+                                    android:layout_marginEnd="3dp" />
+
+                                <TextView
+                                    android:id="@+id/state"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:importantForAccessibility="no"
+                                    android:textAppearance="?attr/textAppearanceTitleLarge"
+                                    android:textColor="?attr/colorOnPrimaryContainer"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/pause"
+                                style="@style/Widget.Material3.Button.OutlinedButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:text="@string/home_pause"
+                                android:textColor="?attr/colorOnPrimaryContainer" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/resume"
+                                style="@style/Widget.Material3.Button"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:text="@string/home_resume"
+                                android:visibility="gone" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/address"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:background="?attr/selectableItemBackground"
+                            android:importantForAccessibility="no"
+                            android:minHeight="32dp"
+                            android:gravity="center_vertical"
+                            android:textAppearance="@style/TextAppearance.Bridget.Mono"
+                            android:textColor="?attr/colorOnPrimaryContainer" />
+
+                        <com.google.android.material.chip.ChipGroup
+                            android:id="@+id/heroChips"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="6dp"
+                            android:importantForAccessibility="noHideDescendants"
+                            app:chipSpacingHorizontal="6dp"
+                            app:chipSpacingVertical="6dp">
+
+                            <TextView android:id="@+id/chipUptime" style="@style/HomeHeroChip" />
+                            <TextView android:id="@+id/chipTailscale" style="@style/HomeHeroChip" />
+                            <TextView android:id="@+id/chipBattery" style="@style/HomeHeroChip" />
+                        </com.google.android.material.chip.ChipGroup>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Banners, most urgent first (UI-10) -->
+                <LinearLayout
+                    android:id="@+id/banners"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <!-- Agents (UI-11) -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:accessibilityHeading="true"
+                        android:text="@string/home_agents"
+                        android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/seeAll"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/home_see_all" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/agentRows"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/noAgents"
+                    style="@style/Widget.Bridget.Card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="@string/home_no_agents"
+                            android:textAppearance="?attr/textAppearanceBodyMedium" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/addAgent"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="@string/home_add_agent"
+                            app:icon="@drawable/ic_add" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Today -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/today"
+                    style="@style/Widget.Bridget.Card"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:minHeight="48dp"
+                    app:contentPaddingBottom="12dp"
+                    app:contentPaddingTop="12dp">
+
+                    <TextView
+                        android:id="@+id/todayText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="?attr/textAppearanceBodyMedium" />
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Quick switches -->
+                <TextView
+                    android:id="@+id/quickHeader"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:layout_marginBottom="6dp"
+                    android:accessibilityHeading="true"
+                    android:text="@string/home_quick_switches"
+                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                <GridLayout
+                    android:id="@+id/quickGrid"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:columnCount="2"
+                    android:useDefaultMargins="false" />
+
+                <!-- "Waiting for you" (open questions) arrives with interactions in P2. -->
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+    </LinearLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

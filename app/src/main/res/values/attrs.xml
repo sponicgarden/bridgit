@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- UI-02 "success" roles (not part of Material 3). -->
+    <attr name="colorSuccess" format="color" />
+    <attr name="colorSuccessContainer" format="color" />
+    <attr name="colorOnSuccessContainer" format="color" />
+</resources>
