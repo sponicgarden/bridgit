@@ -496,6 +496,14 @@ def main():
             time.sleep(1)
         assert False, "listener did not come back within 30 s"
 
+    @c.check("A30", "after a background (re)start, opening the app gives the listener camera and mic again (ARC-03)")
+    def _():
+        if captures_note:
+            raise Unverified(captures_note)
+        c.adb("shell", "am", "start", "-n", f"{c.pkg}/net.finleg.bridget.ui.MainActivity"); time.sleep(4)
+        l = c.call("GET", "/capabilities", T).json()["listener"]
+        assert l["camera_ready"] and l["mic_ready"], l
+
     # ---- cleanup and results --------------------------------------------------------------------------
     c.hook(remove=T)
     c.keys.clear()

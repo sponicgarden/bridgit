@@ -64,6 +64,9 @@ class BridgeService : LifecycleService() {
         if (!app.settings.listenerEnabled) { stopEverything(); return START_NOT_STICKY }
         // A null intent means Android restarted us in the background (START_STICKY).
         val background = intent == null || intent.getBooleanExtra(EXTRA_BACKGROUND, false)
+        // A background start (boot, update, restart) never downgrades a service that is
+        // already running with camera/mic types from a visible start.
+        if (background && watcher != null) return START_STICKY
         if (!promote(background)) return START_NOT_STICKY
         if (watcher == null) {
             app.updateListener { it.copy(running = true, startedAt = System.currentTimeMillis(), port = app.settings.port) }

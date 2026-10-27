@@ -85,7 +85,13 @@ object Sentences {
             }
             return if (ok) "$who fetched $what" else "$who couldn't use $what"
         }
-        if (e.kind == "request" && who == null) return if (e.result == "unauthorized") "A call with a wrong key was refused" else e.message
+        if (e.kind == "request" && who == null) return when (e.result) {
+            "unauthorized" -> "A call with a wrong or old key was refused"
+            "rate_limited" -> "Calls from ${e.sourceIp ?: "an address"} were held back after wrong keys"
+            "forbidden_source" -> "A call from outside Tailscale was refused"
+            "not_found" -> "A call to an unknown address was refused"
+            else -> e.message
+        }
         if (e.kind == "note" && who != null) return "$who wrote a note"
         return e.message
     }
