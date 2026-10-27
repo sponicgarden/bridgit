@@ -406,6 +406,8 @@ class TtsFiles(private val ctx: Context) {
     private val ready = CompletableDeferred<Boolean>()
     private val pending = ConcurrentHashMap<String, CompletableDeferred<Boolean>>()
     private val mutex = Mutex()
+    /** Chosen offline voice per language tag (null = keep the engine's default). */
+    private val voices = HashMap<String, android.speech.tts.Voice?>()
 
     private val listener = object : UtteranceProgressListener() {
         override fun onStart(u: String?) {}
@@ -430,11 +432,17 @@ class TtsFiles(private val ctx: Context) {
         val done = CompletableDeferred<Boolean>()
         pending[id] = done
         try {
-            val started = withContext(Dispatchers.Main) {
-                t.language = language?.let { java.util.Locale.forLanguageTag(it) } ?: java.util.Locale.getDefault()
+            // Off the main thread: these are calls into the speech service, and listing voices can take seconds
+            // (an ANR in 1.5.2 testing). Serialised by [mutex], since language, rate and voice are engine-wide.
+            val started = withContext(Dispatchers.IO) {
+                val locale = language?.let { java.util.Locale.forLanguageTag(it) } ?: java.util.Locale.getDefault()
+                t.language = locale
                 t.setSpeechRate(rate); t.setPitch(pitch)
-                // Prefer a voice that doesn't need the network (Codex review: TTS may use network voices).
-                t.voices?.filter { !it.isNetworkConnectionRequired && it.locale == t.voice?.locale }?.minByOrNull { it.latency }?.let { t.voice = it }
+                // Prefer a voice that doesn't need the network (Codex review: TTS may use network voices); looked up once per language.
+                val tag = locale.toLanguageTag()
+                val v = if (voices.containsKey(tag)) voices[tag] else
+                    t.voices?.filter { !it.isNetworkConnectionRequired && it.locale == t.voice?.locale }?.minByOrNull { it.latency }.also { voices[tag] = it }
+                v?.let { t.voice = it }
                 t.synthesizeToFile(text, null, out, id) == TextToSpeech.SUCCESS
             }
             if (!started) return false
