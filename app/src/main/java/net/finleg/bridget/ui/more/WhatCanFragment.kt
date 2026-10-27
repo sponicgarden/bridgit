@@ -15,6 +15,7 @@ import net.finleg.bridget.R
 import net.finleg.bridget.databinding.FragmentWhatCanBinding
 import net.finleg.bridget.databinding.WhatcanCardBinding
 import net.finleg.bridget.databinding.WhatcanHeaderBinding
+import net.finleg.bridget.databinding.WhatcanSectionBinding
 import net.finleg.bridget.ui.common.themeColor
 import com.google.android.material.R as M
 
@@ -36,14 +37,20 @@ class WhatCanFragment : Fragment() {
             v.updatePadding(bottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom + v.context.resources.getDimensionPixelSize(R.dimen.whatcan_gap)); insets
         }
         b.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
-        val now = WhatCanData.all.count { it.stage == WhatCanData.Stage.NOW }
-        b.toolbar.subtitle = getString(R.string.whatcan_subtitle, now, WhatCanData.all.size)
+        val abilities = WhatCanData.all.filter { it.kind == WhatCanData.Kind.ABILITY }
+        b.toolbar.subtitle = getString(R.string.whatcan_subtitle, abilities.count { it.stage == WhatCanData.Stage.NOW }, abilities.size)
+        // Two parts: what agents can do with the phone, then how Bridget works (owner request).
         val rows = mutableListOf<Any>()
-        var last: String? = null
-        for (f in WhatCanData.all) {
-            val group = groupOf(f.stage)
-            if (group != last) { rows += group; last = group }
-            rows += f
+        for ((kind, title, intro) in listOf(
+            Triple(WhatCanData.Kind.ABILITY, R.string.whatcan_section_abilities, R.string.whatcan_section_abilities_intro),
+            Triple(WhatCanData.Kind.MECHANIC, R.string.whatcan_section_mechanics, R.string.whatcan_section_mechanics_intro))) {
+            rows += Section(getString(title), getString(intro))
+            var last: String? = null
+            for (f in WhatCanData.all.filter { it.kind == kind }) {
+                val group = groupOf(f.stage)
+                if (group != last) { rows += group; last = group }
+                rows += f
+            }
         }
         b.list.adapter = Adapter(rows)
     }
@@ -55,21 +62,29 @@ class WhatCanFragment : Fragment() {
         else -> R.string.whatcan_group_planned
     })
 
+    private data class Section(val title: String, val intro: String)
+
     private class Adapter(val rows: List<Any>) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
         class H(val b: WhatcanHeaderBinding) : RecyclerView.ViewHolder(b.root)
         class C(val b: WhatcanCardBinding) : RecyclerView.ViewHolder(b.root)
+        class S(val b: WhatcanSectionBinding) : RecyclerView.ViewHolder(b.root)
 
-        override fun getItemViewType(position: Int) = if (rows[position] is String) 0 else 1
+        override fun getItemViewType(position: Int) = when (rows[position]) { is String -> 0; is Section -> 2; else -> 1 }
         override fun getItemCount() = rows.size
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
             val inf = LayoutInflater.from(parent.context)
-            return if (viewType == 0) H(WhatcanHeaderBinding.inflate(inf, parent, false)) else C(WhatcanCardBinding.inflate(inf, parent, false))
+            return when (viewType) {
+                0 -> H(WhatcanHeaderBinding.inflate(inf, parent, false))
+                2 -> S(WhatcanSectionBinding.inflate(inf, parent, false))
+                else -> C(WhatcanCardBinding.inflate(inf, parent, false))
+            }
         }
 
         override fun onBindViewHolder(h: RecyclerView.ViewHolder, position: Int) {
             val row = rows[position]
             if (h is H) { h.b.root.text = row as String; return }
+            if (h is S) { val sec = row as Section; h.b.title.text = sec.title; h.b.intro.text = sec.intro; return }
             val f = row as WhatCanData.Feature
             val b = (h as C).b
             val ctx = b.root.context
@@ -78,7 +93,8 @@ class WhatCanFragment : Fragment() {
             b.useCase.text = f.useCase
             b.stage.text = f.stage.label
             b.ref.text = ctx.getString(R.string.whatcan_ref, f.ref)
-            b.ref.isVisible = f.ref.isNotEmpty()
+            // Spec references are for the technical part only; the use cases stay plain.
+            b.ref.isVisible = f.ref.isNotEmpty() && f.kind == WhatCanData.Kind.MECHANIC
             val (bg, fg) = when (f.stage) {
                 WhatCanData.Stage.NOW -> R.attr.colorSuccessContainer to R.attr.colorOnSuccessContainer
                 WhatCanData.Stage.P2 -> M.attr.colorPrimaryContainer to M.attr.colorOnPrimaryContainer
