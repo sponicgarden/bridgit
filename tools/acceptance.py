@@ -79,6 +79,14 @@ class Ctx:
             raise RuntimeError(f"pairing {name} failed: HTTP {r.status} {r.json().get('error')}")
         self.keys[name] = r.json()["key"]
 
+    def wait_auth_window(self):
+        """Waits until this address may fail a sign-in again (SEC-06 allows 5 per minute)."""
+        r = self.call("GET", "/health", raw_key="brg_" + secrets.token_urlsafe(32)[:43])
+        if r.status == 429:
+            time.sleep(int(r.json().get("retry_after_s", 60)) + 1)
+        else:
+            time.sleep(61)  # that probe was a failure too; let the window empty fully
+
     def wait_logged(self, agent, request_id, timeout=10):
         """The log is written asynchronously: poll until the entry is readable."""
         end = time.time() + timeout
@@ -382,6 +390,8 @@ def main():
 
     @c.check("A22", "pairing: wrong code -> 401, right code -> key once, then 403 pairing_closed")
     def _():
+        # Earlier checks used this address's failed sign-ins; pairing obeys the same block (SEC-06).
+        c.wait_auth_window()
         code = c.hook(rotate=T)
         wrong = "000000" if code != "000000" else "111111"
         expect(c.call("POST", "/pair", body={"code": wrong}), 401, "unauthorized")
@@ -443,11 +453,14 @@ def main():
     @c.check("A28", "SECRETS: no key value or Bearer header in the log DB, prefs, API log/guide output or logcat")
     def _():
         values = [v.encode() for v in c.keys.values()]
+        api = {}
+        for name, path in (("log export", "/log/export?format=jsonl"), ("guide", "/guide"),
+                           ("openapi", "/openapi.json"), ("capabilities", "/capabilities")):
+            r = c.call("GET", path, T); expect(r, 200)
+            api[name] = r.body
+        assert len(api["log export"]) > 4096, "log export too small to be a real check"
         blobs = {
-            "log export": c.call("GET", "/log/export?format=jsonl", T).body,
-            "guide": c.call("GET", "/guide", T).body,
-            "openapi": c.call("GET", "/openapi.json", T).body,
-            "capabilities": c.call("GET", "/capabilities", T).body,
+            **api,
             "log.db": c.run_as("cat", "databases/log.db") + c.run_as("cat", "databases/log.db-wal"),
             "shared_prefs": b"".join(c.run_as("cat", f"shared_prefs/{n}") for n in ("agents.xml", "settings.xml", "pending_key.xml")),
             "logcat": subprocess.run(["adb", "-s", c.serial, "logcat", "-d"], capture_output=True, timeout=60).stdout,
