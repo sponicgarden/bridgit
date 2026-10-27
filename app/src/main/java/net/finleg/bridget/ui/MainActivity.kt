@@ -16,6 +16,7 @@ import net.finleg.bridget.BridgeApp
 import net.finleg.bridget.BridgeService
 import net.finleg.bridget.R
 import net.finleg.bridget.databinding.ActivityMainBinding
+import net.finleg.bridget.update.UpdateDialog
 
 /**
  * The single Activity (ARC-06). Each screen is a Fragment in nav_main.xml.
@@ -68,6 +69,7 @@ class MainActivity : AppCompatActivity() {
             val s = app.listener.value
             if (!s.running || s.startedInBackground) runCatching { BridgeService.start(this) }
         }
+        UpdateDialog.autoCheckIfDue(this) // UPD-02: at most once a day, only when the app is opened.
     }
 
     /**

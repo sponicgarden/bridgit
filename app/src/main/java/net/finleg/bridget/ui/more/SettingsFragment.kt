@@ -33,6 +33,7 @@ import net.finleg.bridget.databinding.SettingsRowBinding
 import net.finleg.bridget.log.LogQuery
 import net.finleg.bridget.ui.common.themeColor
 import net.finleg.bridget.ui.home.UiActions
+import net.finleg.bridget.update.UpdateDialog
 import java.security.MessageDigest
 import java.text.NumberFormat
 
@@ -97,6 +98,9 @@ class SettingsFragment : Fragment() {
         // About
         row(b.version, R.string.settings_version, onClick = null)
         b.version.value.text = getString(R.string.settings_version_value, app.appVersion(), BuildConfig.BUILD_TYPE)
+        // UPD-02, UPD-06: debug builds don't check; the row says how to update them.
+        row(b.checkUpdates, R.string.update_check) { UpdateDialog.checkForUpdates(requireActivity(), manual = true) }
+        b.checkUpdates.value.text = if (UpdateDialog.isDebugBuild) getString(R.string.update_debug) else app.appVersion()
         row(b.commit, R.string.settings_commit, mono = true, onClick = null)
         b.commit.value.text = if (BuildConfig.DIRTY_BUILD) getString(R.string.more_dirty, BuildConfig.GIT_COMMIT) else BuildConfig.GIT_COMMIT
         val cert = certificateSha256()
@@ -146,7 +150,7 @@ class SettingsFragment : Fragment() {
             "dark" -> R.string.settings_theme_dark
             else -> R.string.settings_theme_system
         })
-        listOf(b.port, b.bind, b.logVisibility, b.keep, b.theme, b.version, b.commit, b.cert, b.spec, b.export, b.clear,
+        listOf(b.port, b.bind, b.logVisibility, b.keep, b.theme, b.version, b.checkUpdates, b.commit, b.cert, b.spec, b.export, b.clear,
             b.notifListener, b.notifCapture).forEach { it.root.contentDescription = "${it.title.text}, ${it.value.text}" }
     }
 
