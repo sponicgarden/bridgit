@@ -1,24 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Colour tokens: spec UI-02, plus the "derived" roles from docs/ui-spec.md 2.1. -->
+<!-- Colour tokens: spec UI-02 as changed in 1.4.2 (owner: blue instead of teal, stronger steps between surfaces); gold (secondary) and green (success) unchanged. -->
 <resources>
-    <color name="b_primary">#5FD4C4</color>
-    <color name="b_on_primary">#00372F</color>
-    <color name="b_primary_container">#005047</color>
-    <color name="b_on_primary_container">#A6F2E6</color>
+    <color name="b_primary">#ADC6FF</color>
+    <color name="b_on_primary">#002B6B</color>
+    <color name="b_primary_container">#1B4AAE</color>
+    <color name="b_on_primary_container">#DCE6FF</color>
     <color name="b_secondary">#FFC15E</color>
     <color name="b_on_secondary">#412D00</color>
     <color name="b_secondary_container">#5C4200</color>
     <color name="b_on_secondary_container">#FFDEA6</color>
-    <color name="b_surface">#0E1513</color>
-    <color name="b_surface_container">#1A2120</color>
-    <color name="b_surface_container_high">#252B2A</color>
-    <color name="b_surface_container_low">#161D1B</color>
-    <color name="b_surface_container_highest">#2F3634</color>
-    <color name="b_surface_container_lowest">#090F0E</color>
-    <color name="b_on_surface">#DDE4E1</color>
-    <color name="b_on_surface_variant">#BEC9C6</color>
-    <color name="b_outline">#899391</color>
-    <color name="b_outline_variant">#3F4947</color>
+    <color name="b_surface">#0B0F17</color>
+    <color name="b_surface_container">#1A2130</color>
+    <color name="b_surface_container_high">#262F42</color>
+    <color name="b_surface_container_low">#121825</color>
+    <color name="b_surface_container_highest">#323C52</color>
+    <color name="b_surface_container_lowest">#06090F</color>
+    <color name="b_on_surface">#E1E6F2</color>
+    <color name="b_on_surface_variant">#BAC4D8</color>
+    <color name="b_outline">#8892A8</color>
+    <color name="b_outline_variant">#3D475C</color>
     <color name="b_error">#FFB4AB</color>
     <color name="b_on_error">#690005</color>
     <color name="b_error_container">#93000A</color>

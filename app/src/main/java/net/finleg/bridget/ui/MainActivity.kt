@@ -1,6 +1,7 @@
 package net.finleg.bridget.ui
 
 import android.content.ClipboardManager
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import androidx.activity.enableEdgeToEdge
@@ -16,6 +17,7 @@ import net.finleg.bridget.BridgeApp
 import net.finleg.bridget.BridgeService
 import net.finleg.bridget.R
 import net.finleg.bridget.databinding.ActivityMainBinding
+import net.finleg.bridget.update.UpdateDialog
 
 /**
  * The single Activity (ARC-06). Each screen is a Fragment in nav_main.xml.
@@ -42,7 +44,23 @@ class MainActivity : AppCompatActivity() {
         ViewCompat.setOnApplyWindowInsetsListener(b.bottomNav) { v, insets ->
             v.updatePadding(bottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom); insets
         }
-        if (savedInstanceState == null) route()
+        if (savedInstanceState == null) { route(); openReportFrom(intent) }
+    }
+
+    /** The feedback notification (FBK-11) opens its report. */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        openReportFrom(intent)
+    }
+
+    private fun openReportFrom(intent: Intent?) {
+        val id = intent?.getLongExtra(EXTRA_REPORT_ID, -1L) ?: -1L
+        if (id < 0) return
+        intent?.removeExtra(EXTRA_REPORT_ID)
+        // Not over an unfinished setup prompt or first run: those must finish first.
+        if (nav.currentDestination?.id in setOf(R.id.addAgent, R.id.pairCode, R.id.firstRun)) return
+        nav.navigate(R.id.reportDetail, Bundle().apply { putLong("reportId", id) })
     }
 
     /** First run, or back to an unfinished setup prompt after a crash (AGT-05a). */
@@ -68,6 +86,8 @@ class MainActivity : AppCompatActivity() {
             val s = app.listener.value
             if (!s.running || s.startedInBackground) runCatching { BridgeService.start(this) }
         }
+        UpdateDialog.resumeAfterPermission(this) // back from "Install unknown apps"
+        UpdateDialog.autoCheckIfDue(this) // UPD-02: at most once a day, only when the app is opened.
     }
 
     /**
@@ -84,6 +104,8 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val CLIP_LABEL = "Bridget setup prompt"
+        /** Long extra: open this report (from the feedback notification). */
+        const val EXTRA_REPORT_ID = "report_id"
         val TOP_LEVEL = setOf(R.id.home, R.id.agents, R.id.activity, R.id.more)
     }
 }

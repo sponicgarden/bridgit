@@ -3,5 +3,5 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item android:id="@+id/agents_rename" android:title="@string/agents_rename" app:showAsAction="never" />
-    <!-- Report a bug / Request a feature go here in P1b. -->
+    <!-- Report a bug / Request a feature: appended from menu/feedback_overflow.xml (FBK-01). -->
 </menu>

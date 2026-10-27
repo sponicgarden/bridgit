@@ -31,6 +31,8 @@
     <string name="home_banner_turn_on">Turn on</string>
     <string name="home_banner_tailscale">Tailscale isn\'t connected. Agents can\'t reach Bridget.</string>
     <string name="home_banner_open_tailscale">Open Tailscale</string>
+    <string name="home_banner_tailscale_missing">Tailscale isn\'t installed. Agents reach Bridget through Tailscale, so install it and sign in.</string>
+    <string name="home_banner_install_tailscale">Install Tailscale</string>
     <string name="home_banner_battery">Android may stop Bridget when the screen is off.</string>
     <string name="home_banner_fix">Fix</string>
     <string name="home_banner_permission">%1$s permission was removed.</string>
@@ -64,6 +66,7 @@
 
     <!-- First run (UI-08) -->
     <string name="firstrun_p1_title">Meet Bridget.</string>
+    <string name="firstrun_p1_tagline">Bridget: Agentic Android Device Bridge</string>
     <string name="firstrun_p1_body">Let your AI agents use this phone\'s camera, mic, photos and more, only when they ask, always visibly.</string>
     <string name="firstrun_p2_title">Private by design.</string>
     <string name="firstrun_p2_body">Bridget only answers over your Tailscale network. Each agent gets its own key. Everything is logged here.</string>
@@ -87,7 +90,11 @@
     <string name="more_access">Access</string>
     <string name="more_settings">Settings</string>
     <string name="more_about">About</string>
-    <string name="more_about_title">About Bridget</string>
+    <string name="more_report_bug">Report a bug</string>
+    <string name="more_request_feature">Request a feature</string>
+    <string name="more_my_reports">My reports</string>
+    <string name="more_check_updates">Check for updates</string>
+    <string name="more_about_title">Bridget: Agentic Android Device Bridge</string>
     <string name="more_about_body">Version %1$s (%2$s)\nCommit %3$s\n\nSpec: docs/bridget-spec-v2.md in sponicgarden/bridget</string>
     <string name="more_dirty">%1$s (dirty)</string>
 

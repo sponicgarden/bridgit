@@ -1,5 +1,6 @@
 package net.finleg.bridget.ui.home
 
+import net.finleg.bridget.ui.common.brandTitle
 import android.Manifest
 import android.os.BatteryManager
 import android.os.Bundle
@@ -47,6 +48,7 @@ import net.finleg.bridget.databinding.HomeSwitchCardBinding
 import net.finleg.bridget.log.LogQuery
 import net.finleg.bridget.ui.common.Fmt
 import net.finleg.bridget.ui.common.themeColor
+import net.finleg.bridget.ui.feedback.handleFeedbackMenu
 import java.util.Calendar
 
 /**
@@ -82,11 +84,13 @@ class HomeFragment : Fragment() {
         ViewCompat.setOnApplyWindowInsetsListener(b.toolbar) { v, insets ->
             v.updatePadding(top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top); insets
         }
-        // Report a bug / Request a feature join this menu in P1b (FBK-01).
+        b.brandTitle.text = brandTitle(requireContext())
         b.toolbar.menu.add(0, MENU_SETTINGS, 0, R.string.home_menu_settings)
             .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
+        b.toolbar.inflateMenu(R.menu.feedback_overflow) // Report a bug / Request a feature (FBK-01)
         b.toolbar.setOnMenuItemClickListener {
-            if (it.itemId == MENU_SETTINGS) { findNavController().navigate(R.id.settings); true } else false
+            if (it.itemId == MENU_SETTINGS) { findNavController().navigate(R.id.settings); true }
+            else handleFeedbackMenu(it, "Home")
         }
 
         b.pause.setOnClickListener {
@@ -268,7 +272,11 @@ class HomeFragment : Fragment() {
         val ctx = requireContext()
         val s = app.listener.value
         val out = mutableListOf<Banner>()
-        if (s.running && s.boundTo.isEmpty() && s.bindError == null)
+        if (!UiActions.isTailscaleInstalled(ctx))
+            out += Banner("ts", getString(R.string.home_banner_tailscale_missing), getString(R.string.home_banner_install_tailscale), true) {
+                UiActions.openTailscale(ctx)
+            }
+        else if (s.running && s.boundTo.isEmpty() && s.bindError == null)
             out += Banner("ts", getString(R.string.home_banner_tailscale), getString(R.string.home_banner_open_tailscale), true) {
                 UiActions.openTailscale(ctx)
             }

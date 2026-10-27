@@ -34,9 +34,21 @@
                 android:layout_marginTop="8dp"
                 android:layout_marginBottom="8dp" />
 
-            <!-- Report a bug, Request a feature and My reports (with divider) arrive in P1b (FBK-01, FBK-09). -->
+            <!-- FBK-01, FBK-09 -->
+            <include android:id="@+id/report_bug" layout="@layout/more_row" />
+            <include android:id="@+id/request_feature" layout="@layout/more_row" />
+            <include android:id="@+id/my_reports" layout="@layout/more_row" />
 
+            <com.google.android.material.divider.MaterialDivider
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="8dp" />
+
+            <!-- UPD-02 -->
+            <include android:id="@+id/check_updates" layout="@layout/more_row" />
             <include android:id="@+id/about" layout="@layout/more_row" />
+            <include android:id="@+id/what_can" layout="@layout/more_row" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </LinearLayout>

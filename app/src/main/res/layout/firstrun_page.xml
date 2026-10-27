@@ -30,6 +30,17 @@
             android:accessibilityHeading="true"
             android:textAppearance="?attr/textAppearanceHeadlineSmall" />
 
+        <!-- Page 1 only: the full name. -->
+        <TextView
+            android:id="@+id/tagline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/firstrun_p1_tagline"
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:textColor="?attr/colorPrimary"
+            android:visibility="gone" />
+
         <TextView
             android:id="@+id/body"
             android:layout_width="match_parent"

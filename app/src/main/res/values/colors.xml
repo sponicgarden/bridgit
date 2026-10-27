@@ -1,24 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Colour tokens: spec UI-02, plus the "derived" roles from docs/ui-spec.md 2.1. -->
+<!-- Colour tokens: spec UI-02 as changed in 1.4.2 (owner: blue instead of teal, stronger steps between surfaces); gold (secondary) and green (success) unchanged. -->
 <resources>
-    <color name="b_primary">#0F6E64</color>
+    <color name="b_primary">#1F5BD6</color>
     <color name="b_on_primary">#FFFFFF</color>
-    <color name="b_primary_container">#A6F2E6</color>
-    <color name="b_on_primary_container">#00201C</color>
+    <color name="b_primary_container">#D6E2FF</color>
+    <color name="b_on_primary_container">#001849</color>
     <color name="b_secondary">#7A5900</color>
     <color name="b_on_secondary">#FFFFFF</color>
     <color name="b_secondary_container">#FFDEA6</color>
     <color name="b_on_secondary_container">#261900</color>
-    <color name="b_surface">#F6FAF8</color>
-    <color name="b_surface_container">#EAF0EE</color>
-    <color name="b_surface_container_high">#E1E8E5</color>
-    <color name="b_surface_container_low">#F0F5F3</color>
-    <color name="b_surface_container_highest">#DBE2DF</color>
+    <color name="b_surface">#F8F9FF</color>
+    <color name="b_surface_container">#E6EBF5</color>
+    <color name="b_surface_container_high">#D7DEEC</color>
+    <color name="b_surface_container_low">#EFF2FA</color>
+    <color name="b_surface_container_highest">#C9D2E3</color>
     <color name="b_surface_container_lowest">#FFFFFF</color>
-    <color name="b_on_surface">#171D1B</color>
-    <color name="b_on_surface_variant">#3F4947</color>
-    <color name="b_outline">#6F7977</color>
-    <color name="b_outline_variant">#BEC9C6</color>
+    <color name="b_on_surface">#151B27</color>
+    <color name="b_on_surface_variant">#3C4558</color>
+    <color name="b_outline">#6B758A</color>
+    <color name="b_outline_variant">#B5BFD2</color>
     <color name="b_error">#BA1A1A</color>
     <color name="b_on_error">#FFFFFF</color>
     <color name="b_error_container">#FFDAD6</color>
@@ -42,7 +42,7 @@
     <color name="avatar_fg_6">#451A03</color>
     <color name="avatar_bg_7">#E2E8F0</color>
     <color name="avatar_fg_7">#0F172A</color>
-    <color name="brand_primary">#0F6E64</color>
+    <color name="brand_primary">#1F5BD6</color>
     <color name="beacon_gold">#FFC15E</color>
     <color name="qr_dark">#000000</color>
     <color name="qr_light">#FFFFFF</color>

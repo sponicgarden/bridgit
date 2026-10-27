@@ -10,6 +10,8 @@ import net.finleg.bridget.capability.Registry
 import net.finleg.bridget.core.AgentRegistry
 import net.finleg.bridget.core.PendingKeyVault
 import net.finleg.bridget.core.Settings
+import net.finleg.bridget.feedback.FeedbackNotifier
+import net.finleg.bridget.feedback.FeedbackStore
 import net.finleg.bridget.log.LogStore
 
 /** Process-wide state. Everything here lives as long as the process. */
@@ -19,6 +21,7 @@ class BridgeApp : Application() {
     lateinit var log: LogStore
     lateinit var registry: Registry
     lateinit var vault: PendingKeyVault
+    lateinit var feedback: FeedbackStore
     val pairing = Pairing()
 
     /** What the listener is doing, for Home, the notification and the Add-agent check. */
@@ -51,6 +54,8 @@ class BridgeApp : Application() {
         log = LogStore(this) { settings.retention() }
         registry = Registry(this)
         vault = PendingKeyVault(this)
+        feedback = FeedbackStore(this)
+        feedback.onStatusChange { FeedbackNotifier.statusChanged(this, it) }
         applyAppearance()
         createChannels()
     }
@@ -74,6 +79,8 @@ class BridgeApp : Application() {
             NotificationManager.IMPORTANCE_DEFAULT).apply {
             description = getString(R.string.channel_capture_desc); setSound(null, null)
         })
+        FeedbackNotifier.createChannel(this)
+        net.finleg.bridget.update.UpdateInstaller.cleanStale(this) // UPD-05: downloads older than an hour go
     }
 
     /** PRD-05: captures need Bridget's notifications on, including the capture channel. */

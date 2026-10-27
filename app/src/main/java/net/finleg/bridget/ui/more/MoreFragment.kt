@@ -16,8 +16,11 @@ import net.finleg.bridget.R
 import net.finleg.bridget.capability.appVersion
 import net.finleg.bridget.databinding.FragmentMoreBinding
 import net.finleg.bridget.databinding.MoreRowBinding
+import net.finleg.bridget.feedback.ReportKind
+import net.finleg.bridget.ui.feedback.openReport
+import net.finleg.bridget.update.UpdateDialog
 
-/** More (UI-07, ui-spec 5.13): Features, Access, Settings, About. */
+/** More (UI-07, ui-spec 5.13): Features, Access, Settings, the reporter (FBK-01), Check for updates (UPD-02), About. */
 class MoreFragment : Fragment() {
     private var _b: FragmentMoreBinding? = null
     private val b get() = _b!!
@@ -31,12 +34,21 @@ class MoreFragment : Fragment() {
         ViewCompat.setOnApplyWindowInsetsListener(b.toolbar) { v, insets ->
             v.updatePadding(top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top); insets
         }
-        // Overflow with Report a bug / Request a feature arrives in P1b (FBK-01).
         row(b.features, R.drawable.ic_toggle, R.string.more_features) { findNavController().navigate(R.id.features) }
         row(b.access, R.drawable.ic_shield, R.string.more_access) { findNavController().navigate(R.id.access) }
         row(b.settings, R.drawable.ic_settings, R.string.more_settings) { findNavController().navigate(R.id.settings) }
-        // P1b adds Report a bug (bug_report), Request a feature (lightbulb) and My reports (inbox) here.
+        row(b.reportBug, R.drawable.feedback_ic_bug, R.string.more_report_bug) {
+            openReport(this, ReportKind.BUG, "More")
+        }
+        row(b.requestFeature, R.drawable.feedback_ic_lightbulb, R.string.more_request_feature) {
+            openReport(this, ReportKind.FEATURE, "More")
+        }
+        row(b.myReports, R.drawable.ic_nav_activity, R.string.more_my_reports) { findNavController().navigate(R.id.myReports) }
+        row(b.checkUpdates, R.drawable.ic_check, R.string.more_check_updates) {
+            UpdateDialog.checkForUpdates(requireActivity(), manual = true)
+        }
         row(b.about, R.drawable.ic_info, R.string.more_about) { showAbout() }
+        row(b.whatCan, R.drawable.feedback_ic_lightbulb, R.string.more_what_can) { findNavController().navigate(R.id.whatCan) }
     }
 
     private fun row(r: MoreRowBinding, icon: Int, title: Int, onClick: () -> Unit) {

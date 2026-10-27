@@ -2,6 +2,9 @@
 <!-- Shared strings. Each screen keeps its own strings in strings_<screen>.xml. -->
 <resources>
     <string name="app_name">Bridget</string>
+    <!-- Full name (owner, 27 Oct 2026): shown on first run, under the Home title and in About. -->
+    <string name="app_tagline">Agentic Android Device Bridge</string>
+    <string name="app_full_name">Bridget: Agentic Android Device Bridge</string>
 
     <!-- Notification channels (UI-21) -->
     <string name="channel_listener">Listener</string>
@@ -31,6 +34,16 @@
     <string name="cap_gallery_desc">Find and send photos from your gallery</string>
     <string name="cap_log">Log</string>
     <string name="cap_log_desc">Agents can read the activity log</string>
+
+    <string name="cap_feedback">Feedback</string>
+    <string name="cap_feedback_desc">Bug reports and feature requests</string>
+
+    <!-- Feedback channel (UI-21) and verify step (FBK-11) -->
+    <string name="channel_feedback">Feedback</string>
+    <string name="channel_feedback_desc">When an agent marks one of your reports fixed</string>
+    <string name="feedback_notif_title">Report %1$s is marked %2$s</string>
+    <string name="feedback_confirm">Confirm</string>
+    <string name="feedback_still_broken">Still broken</string>
 
     <!-- Shared -->
     <string name="nav_home">Home</string>

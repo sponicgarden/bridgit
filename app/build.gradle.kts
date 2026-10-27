@@ -20,8 +20,10 @@ android {
         applicationId = "net.finleg.bridget"
         minSdk = 34
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.3.0"
+        // -PbridgetVersionCode / -PbridgetVersionName build an older-looking copy, used only to test
+        // the in-app update path (UPD-03/04) against the published release. Never published.
+        versionCode = (project.findProperty("bridgetVersionCode") as String?)?.toInt() ?: 9
+        versionName = (project.findProperty("bridgetVersionName") as String?) ?: "1.4.4"
         buildConfigField("int", "DEFAULT_PORT", "8734")
         buildConfigField("String", "GIT_COMMIT", "\"${gitCommit()}\"")
         buildConfigField("boolean", "DIRTY_BUILD", "${gitDirty()}")

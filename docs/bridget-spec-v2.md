@@ -104,6 +104,15 @@ should treat these as settled unless a serious problem is found.
 | D15 | 27 Oct 2026 | Screens use **native Kotlin Android Views with Material 3 components**, with a "techie but friendly" look (section 12). | Decided |
 | D16 | 27 Oct 2026 | Spec **"maximum capabilities"**: describe everything Android allows that's useful to a personal agent, phased (section 16). | Decided |
 | D17 | 27 Oct 2026 | **Screenshots use an Accessibility service**, with no per-screenshot approval (replaces D10's approve-each-time design). Default mode: a private in-memory copy; optional mode: Android's normal screenshot, saved to the gallery. The screen-share grant flow (once / 1 h / 16 h) stays only as the fallback when Accessibility is off. | Decided |
+| D29 | 27 Oct 2026 | **Playing mirrors listening, and video goes with audio** (owner): play an audio file, stream audio to the speaker (two-way voice with the mic stream), speak text, play a video on screen, and a **live camera video stream** with optional audio; the video clip (8.3) moves to P2. Section 8.24, all in 1.6. | Decided |
+| D28 | 27 Oct 2026 | **Relay mode: yes** (owner; resolves Q10). Built in P2 as 1.7. Two ways in per agent: **sealed** (end-to-end encrypted; the relay can't read anything) and **connector** (for hosted assistants that can only speak HTTPS/MCP; the relay sees content in transit, never stores it past the job). The phone keeps an **outbound** connection to the relay while listening, so no Google push is needed (FCM optional later, Q9). Hosted on Sponic's Cloudflare account. 4.4, ARC-20..ARC-29. | Decided |
+| D27 | 27 Oct 2026 | **Listening is an owner option, not a ban** (owner: "I never had a no always-on listening rule"). PRD-09's "live streaming" and "always-on listening" are removed from Not in scope. New capability 8.23 Listening: live audio streaming, timed listening sessions, and **always-on listening with wake words recognised on the phone**, each off by default and always visible. Built in P2 as 1.6. | Decided |
+| D26 | 27 Oct 2026 | **P2 Interactions, owner requirements:** (1) **Interactions is a main tab** in place of Activity; Activity moves to More. (2) The Interactions list shows each one's **title and agent**, and each row **expands or collapses to one line**. (3) Rahul can **close** (dismiss) any interaction himself; the agent is told (`dismissed`). (4) A **live text panel**: an agent streams text into the lower half of the screen and it scrolls as it arrives (for example the transcript of an AI session), with pause-scroll and close. (5) **HTML cards** are part of P2 (D23). | Decided |
+| D25 | 27 Oct 2026 | **API revisions** (owner): agents learn new features after an app update by themselves: revision header on every reply, "what's new" until they read `/v1/changes` (API-14). | Decided |
+| D24 | 27 Oct 2026 | **Maximum control and information** (owner): expose every device option Android allows to agents, and list each option on its "What can Bridget do?" card. First step, 1.4.4: camera **zoom** (CAP-05, 0.5x ultra-wide up to the phone's maximum; tested 0.5-30x on the Pixel). Also: when Tailscale isn't installed, Home and first run say so with **Install Tailscale**, and the setup prompt links agents to tailscale.com/download. | Decided |
+| D23 | 27 Oct 2026 | **Blue, higher-contrast palette** (1.4.2): primary teal → blue, larger steps between surface, card and raised layers in both themes; gold (live) and green (success) unchanged (UI-02). **HTML interaction cards (CAP-34) move to P2** with questions and notices: the owner calls interactions with HTML "the killer feature". **"What can Bridget do?"** in More: one card per feature with a use case, built and planned. | Decided |
+| D22 | 27 Oct 2026 | **Name and icon:** the app is "Bridget", full name **"Bridget: Agentic Android Device Bridge"** (first run, Home's top bar with the icon and the version in small type, About). New icon from the owner's artwork (phone outline, stone bridge, cursor), 1.4.1. | Decided |
+| D21 | 27 Oct 2026 | **In-app update check, like Spotka's**: release APKs and a small `latest.json` are published to Sponic's **public R2** bucket; Bridget checks it over HTTPS, verifies the download (SHA-256, package, versionCode, signing certificate) and hands it to Android's installer, which always asks Rahul to confirm. Shipped with P1b as 1.4.0, with a new app icon. Section 12.14. | Decided |
 | D20 | 27 Oct 2026 | No production users before P1a; no migration from 1.2; old 64-hex keys and 1.2 field names are not kept. P1a is installed fresh (uninstall 1.2.0 first) and every agent is paired again with a new `brg_` key. Appendix F (MIG-01..05) is dropped. | Decided |
 
 ## 2. Changes from spec v1.0
@@ -141,9 +150,10 @@ are the deliberate departures. Anything not listed still applies.
 
 - **PRD-03 [Decided] Request-driven.** Bridget does nothing with a sensor
   until an authenticated request arrives, and stops as soon as the request
-  completes. The only standing exceptions are the Accessibility screenshot
-  service (enabled once by Rahul, used only per request, D17) and
-  time-limited screen-share grants used as its fallback.
+  completes. The standing exceptions are the Accessibility screenshot
+  service (enabled once by Rahul, used only per request, D17),
+  time-limited screen-share grants used as its fallback, and the listening
+  modes Rahul turns on himself (8.23, D27).
 - **PRD-04 [Decided] Visible by design.** Every camera, microphone,
   location and screen capture is announced on the phone: a notification
   naming the agent, Android's own privacy indicator, and the log.
@@ -171,9 +181,11 @@ are the deliberate departures. Anything not listed still applies.
 
 ### 3.4 Not in scope
 
-- **PRD-09 [Decided]** No continuous or scheduled capture, live streaming,
-  call recording or always-on listening. Location history/tracking is off
-  by default and only possible as the owner-enabled option CAP-20a (Q14).
+- **PRD-09 [Decided, changed by D27]** No call recording, and no hidden or
+  scheduled capture. **Live audio streaming and always-on listening are owner
+  options** (8.23), off by default, always shown by Android's mic indicator and
+  a Bridget notification. Location history/tracking is off by default and only
+  possible as the owner-enabled option CAP-20a (Q14).
 - **PRD-10 [Decided, reworded after review]** Bridget never reaches into
   other apps' storage or private databases (Android forbids it). But some
   grants **do** expose data other apps produced, and each is in scope only
@@ -385,8 +397,67 @@ Agent ◀── long-poll / webhook ── Relay ◀─────────�
   relay-side cap of 200 jobs per agent per day (`quota_exceeded`). Jobs
   expire after 30 minutes if the phone doesn't pick them up
   (`phone_unreachable`, 504).
-- **ARC-19 [Proposed]** Relay mode changes spec v1 "no cloud relay". It is
-  listed as Open Q10 for the owner; nothing in Direct mode depends on it.
+- **ARC-19 [Decided, D28]** Relay mode changes spec v1 "no cloud relay"; the
+  owner approved it (Q10 resolved). Nothing in Direct mode depends on it.
+
+#### 4.4.1 Relay as built in P2 (1.7), refining ARC-13..19
+
+```
+Hosted agent ──HTTPS / MCP──▶ Relay (Cloudflare Worker + Durable Object per phone, Sponic account)
+Sealed agent ──HTTPS (sealed envelopes)──▶        │   job queue in memory + Durable Object storage, 30 min TTL
+                                                   │
+Pixel: Bridget ◀═══ one outbound WebSocket (TLS), opened by the always-on service ═══╛
+           runs the job through the same pipeline as a direct call ─▶ result back on the socket
+```
+
+- **ARC-20 [P2]** **Transport: the phone dials out.** While the listener runs
+  and relay is on, Bridget keeps one outbound TLS WebSocket to the relay
+  (reconnect with back-off; heartbeat every 30 s). Jobs arrive on it within a
+  second and results go back on it. No inbound port, no Google push needed.
+  [Verify] that a foreground service keeps the socket alive in Doze on the
+  Pixel; if not, add FCM as the wake-up (ARC-16, Q9).
+- **ARC-21 [P2]** **Hosting.** A Cloudflare Worker with one Durable Object
+  per phone (Sponic's Cloudflare account, the same one that hosts the update
+  bucket), in its own Worker and namespace. Code in `relay/` in this repo,
+  deployed with `wrangler`. No database rows hold job content.
+- **ARC-22 [P2]** **Two modes per agent**, chosen in Add agent → "How it
+  connects":
+  - **Relay, sealed (recommended)**: ARC-15 end-to-end encryption; the agent
+    uses the `bridget` helper (or a small library) that seals every request.
+    The relay sees agent id, size and time only.
+  - **Relay, connector**: for hosted assistants (Muse, ChatGPT, Claude.ai
+    connectors) that can't run a helper. They call a normal HTTPS API or an
+    **MCP server** (API-15) on the relay with a bearer token or OAuth. The
+    relay sees request and response **in transit only** (TLS both sides) and
+    never stores them beyond the job. The setup screen says this in one line,
+    and the agent's card shows "Connector: the relay can read this agent's
+    traffic".
+- **ARC-23 [P2]** **Phone authentication.** The phone holds a per-install
+  P-256 key in the Android Keystore; it registers its public key once when
+  Rahul turns relay on (a pairing code shown on the phone, entered at the
+  relay's admin URL, or a one-time token in the deploy script's output) and
+  signs a challenge on every WebSocket connect. Agent tokens never
+  authenticate the phone.
+- **ARC-24 [P2]** **Same rules on the phone.** A relayed job goes through the
+  same pipeline as a direct call: key or token check, switches, rate limits,
+  log entry (with `"via": "relay"` and the agent's relay mode). Relay agents
+  are normal agents in Agents with connection `relay`.
+- **ARC-25 [P2]** **Waiting.** The relay holds the agent's request up to 55 s
+  for the phone's answer, then returns 202 `job_queued` with `poll_url`
+  (API-12). If the phone isn't connected: 202 at once, the job waits up to 30
+  minutes, then `phone_unreachable` (504).
+- **ARC-26 [P2]** **Kill switches.** Turning relay off on the phone closes the
+  socket and makes the relay refuse that phone's jobs. The relay admin page
+  (Cloudflare Access protected) has **Disable device** for a lost phone
+  (ARC-15a). Rotating or removing a relay agent works as for direct agents.
+- **ARC-27 [P2]** **Limits.** Per agent as SEC-06/07; relay-wide 200 jobs per
+  agent per day (`quota_exceeded`), job body 2 MB (25 MB for files later),
+  results streamed back in 512 KB frames.
+- **ARC-28 [P2]** **Interactions and events work through the relay**: a
+  hosted agent can send Rahul a question and wait for the answer like a
+  direct agent (`wait=55`, or a callback the relay makes).
+- **ARC-29 [P2] Setup prompt for relay agents** names the relay URL, the
+  mode, and for connector mode the MCP URL and how to add it as a connector.
 
 **Scenarios relay mode enables (beyond direct calls):**
 
@@ -472,8 +543,9 @@ Agent ◀── long-poll / webhook ── Relay ◀─────────�
   extraction rules), so keys, logs and the inbox never leave the phone
   through Google backup or device transfer.
 - **SEC-16 [Proposed]** Outbound network calls are limited to: approved
-  callback URLs (9.3), the feedback endpoint if upload is on (11.6), and
-  Google's geocoder if address lookup is on (8.8). Each one is logged.
+  callback URLs (9.3), the feedback endpoint if upload is on (11.6),
+  Google's geocoder if address lookup is on (8.8), and the **update check**
+  (12.14, D21: HTTPS GET to Sponic's public R2 host only). Each one is logged.
 
 ### 5.5 Threat model (summary)
 
@@ -611,7 +683,7 @@ under a minute, with nothing typed except the name.
 |---|---|---|
 | `direct` | Agent host on the tailnet with normal routing (Macs, most Linux hosts, phones) | `curl` example |
 | `userspace` | Host running `tailscaled --tun=userspace-networking` (containers, some VMs, Grok's box) | The helper `tools/bridget`, **embedded in the prompt** (the host may have no access to the private repo; Grok's GitHub account doesn't), the env file written with a file tool, then `bridget GET /v1/health`. Alternative: restart tailscaled with `--socks5-server=localhost:1055` and use `curl --socks5-hostname`. |
-| `relay` | Not on the tailnet | Relay base URL, end-to-end encryption via the helper or library (ARC-15) |
+| `relay` | Not on the tailnet | Sealed: relay base URL + helper that seals requests (ARC-15). Connector: relay HTTPS/MCP URL and token; the relay can read this agent's traffic (ARC-22) |
 
 - **AGT-11 [Proposed]** `GET /v1/tools/bridget` returns the helper script
   (text/x-python), unauthenticated because it contains no secrets, for
@@ -715,6 +787,23 @@ under a minute, with nothing typed except the name.
   second capture; 5xx results aren't kept, so a retry really retries.
   Endpoints in 1.3.0: camera snapshot, mic record, `POST /v1/log`.
 
+- **API-15 [P2] MCP endpoint.** `POST /v1/mcp` speaks the Model Context
+  Protocol (Streamable HTTP): every endpoint in the module registry becomes an
+  MCP tool with its JSON schema (from the same `EndpointSpec`s as
+  openapi.json), authenticated with the agent's key. Claude Code and Codex can
+  then add Bridget as an MCP server directly over the tailnet; the relay's
+  connector mode exposes the same tools to hosted assistants (ARC-22).
+- **API-14 [1.4.4, D25] API revisions and "what's new".** The path stays
+  `/v1`; each release that adds to the API bumps an integer **API revision**
+  (1 = 1.3.0, 2 = 1.4.0 feedback, 3 = 1.4.4 zoom and revisions). Every reply
+  carries `X-Bridget-API-Revision`. Bridget remembers, per agent, the revision
+  it last read about (reading `/v1/guide`, `/v1/openapi.json` or
+  `/v1/changes` counts); until it catches up, replies carry
+  `X-Bridget-Whats-New: /v1/changes?since=<n>` and `/v1/health` has a
+  `whats_new` block. `GET /v1/changes?since=<n>` lists what each later
+  revision added. `/v1/health` also returns `links` to the guide, OpenAPI,
+  capabilities and changes. Breaking changes still go to `/v2` (API-01).
+
 ---
 
 ## 8. Capabilities
@@ -728,7 +817,7 @@ every request is logged (section 10).
 |---|---|---|---|
 | 8.1 | Status and self-description | always on | Built / P1 |
 | 8.2 | Camera photo | Camera | Built |
-| 8.3 | Camera video clip | Video | P5 |
+| 8.3 | Camera video clip | Video | P2 (1.6, D29) |
 | 8.4 | Microphone clip | Microphone | Built |
 | 8.5 | Gallery (images, videos, downloads) | Gallery | Built / P3 |
 | 8.6 | Last image | Gallery | Built |
@@ -748,6 +837,8 @@ every request is logged (section 10).
 | 8.20 | Open a link or app (via Rahul's tap) | Interactions | P2 |
 | 8.21 | Sensor snapshot | Phone status | P3 |
 | 8.22 | Communications (SMS, contacts, calendar, calls) | — | Not scheduled |
+| 8.23 | Listening: live stream, sessions, always-on with wake words (D27) | Listening | P2 (1.6) |
+| 8.24 | Playing (audio file, audio stream, speak, video on screen) and live video stream (D29) | Speaker; Video | P2 (1.6) |
 
 ### 8.1 Status and self-description
 
@@ -765,7 +856,10 @@ every request is logged (section 10).
   `{"camera":"rear"|"front","flash":false,"max_width_px":2048|null}` (null =
   full size), plus API-10 presets and `raw=1` **[P1]**. Returns
   `captured_at, width_px, height_px, format, size_bytes, data_base64`.
-- **CAP-05 [P1]** Optional `"lens":"wide"|"ultrawide"|"tele"` where the
+- **CAP-05 [P1; zoom built in 1.4.4]** `"zoom"` is built: any ratio in the camera's range
+  (Pixel 10 Pro XL rear: 0.5-30x; the camera switches lenses by itself); out of range is
+  `invalid_parameter` with `min_zoom` / `max_zoom`; the range is in `/v1/capabilities` after the
+  first photo. Still to do: optional `"lens":"wide"|"ultrawide"|"tele"` where the
   device has it (CameraX camera info), `"zoom": 1.0-10.0`, and
   `"focus":"auto"|"near"`. Unknown values return `invalid_parameter`.
 - Android: CAMERA permission; `camera` FGS type active (ARC-02). Indicator:
@@ -1079,7 +1173,7 @@ On**, one tap from the Access screen).
   actions, a text control becomes inline reply, and tapping opens the full
   card. Lock screen shows only "<Agent> has a question" unless Rahul allows
   full text on the lock screen.
-- **CAP-34 [P5] HTML cards** (after the fast template ships in P2).
+- **CAP-34 [P2, moved from P5 by D23] HTML cards**, built with the fast template.
   `"html": "<…>"` instead of text/controls. The WebView is configured in
   code, never by the page, and the page is treated as untrusted:
   - Content Security Policy forced by Bridget:
@@ -1186,6 +1280,101 @@ On**, one tap from the Access screen).
   screen is off; Bridget waits up to 1 s for a fresh event and otherwise
   returns the last value with its age. Steps are the count since the last
   reboot. No permissions except ACTIVITY_RECOGNITION for steps.
+
+### 8.23 Listening (D27, P2 as 1.6)
+
+Three ways to listen beyond a fixed clip (8.4), each with its own switch under
+Features → Capture → **Listening**, all **off by default**. Whenever the mic is
+open, Android's green mic dot shows and Bridget's ongoing notification says
+"Listening for <who>" with **Stop**. Audio is processed on the phone; what
+leaves it is listed per mode.
+
+- **CAP-44 [P2] Live audio stream.** `POST /v1/mic/stream {"max_seconds":
+  1-3600, "format":"pcm16"|"opus", "transcribe": false}` returns a streaming
+  response (chunked HTTP, or WebSocket at `/v1/mic/stream/ws`): audio frames
+  as they're recorded, and with `transcribe: true` partial and final transcript
+  lines from the on-device recogniser (8.15/CAP-08). The agent ends it by
+  closing; Bridget ends it at `max_seconds`, on **Stop**, or if the switch goes
+  off. Counts as one capture for SEC-07.
+- **CAP-45 [P2] Listening sessions.** Rahul (or an agent, with his OK through
+  a question) starts a session for 5 minutes to 8 hours, from the
+  notification, the Quick Settings tile or Home. During it, Bridget listens on
+  the phone and sends **only what follows a wake word** to the chosen agent.
+- **CAP-46 [P2] Always-on listening** (owner option). The same as a session,
+  with no end time; resumes after a reboot once the app has been opened
+  (ARC-03: Android won't give a boot-started service the microphone). Battery
+  cost is shown in Settings; NFR-06 is measured with it on.
+- **CAP-47 [P2] Wake words.** Recognised **on the phone** (Android's
+  on-device speech recogniser, `SpeechRecognizer.createOnDeviceSpeechRecognizer`,
+  with a cheap keyword spotter in front so the full recogniser only runs after
+  a likely hit; [Verify] battery and accuracy on the Pixel). Each wake word is
+  mapped to an agent and an action, e.g. "Bridget, note" → Claude, send text;
+  "Hey Grok" → Grok, send text and the 10 s audio clip. Up to 10 wake words.
+- **CAP-48 [P2] What is sent.** After a wake word: the transcript of what
+  follows until a pause (max 60 s), optionally the audio clip, the wake word,
+  time, and (if Location is on) nothing else unless asked. Delivered as an
+  event `listen.heard` (9.1) to the mapped agent: long-poll or callback, and
+  through the relay (ARC-28). Nothing before the wake word ever leaves the
+  phone or is stored.
+- **CAP-49 [P2] Transcript to the live text panel.** A stream or session can
+  also show its live transcript in the half-screen text panel (D26), so Rahul
+  sees what the phone heard.
+- **CAP-50 [P2] Controls.** Mute for 15 minutes / 1 hour from the
+  notification; quiet hours; "not while on a call" (always); "pause when the
+  screen is on" (option). Every session start/stop and every wake-word hit is
+  logged (never the transcript text beyond 200 characters, LOG-02).
+- Android: RECORD_AUDIO; `microphone` FGS type, which must be added while the
+  app is visible (ARC-02a); Pixel's "Microphone access" quick toggle blocks
+  everything and Bridget reports `access_needed`.
+
+### 8.24 Playing and video (D29, P2 as 1.6)
+
+The other direction of 8.23, and video next to audio (owner: "analogies for
+playing on the phone to listening… and if we can do video at the same time,
+why not"). Switches: **Speaker** (playing) and **Video** (camera streams and
+clips). Every playback shows a notification naming the agent with **Stop**;
+camera video shows Android's green camera dot.
+
+| Listening / capture (in) | Playing (out) |
+|---|---|
+| Mic clip (CAP-07) | **CAP-51** Play an audio file |
+| Live audio stream (CAP-44) | **CAP-52** Stream audio to the speaker |
+| On-device transcript (CAP-47) | **CAP-53** Speak text aloud (TTS) |
+| Video clip (CAP-06) | **CAP-54** Play a video on the screen |
+| Live video stream (CAP-55) | the live text panel (D26) shows text the same way |
+
+- **CAP-51 [P2] Play an audio file.** `POST /v1/speaker/play` with a body of
+  MP3, M4A, OGG, WAV or FLAC (raw, up to 25 MB) or `{"url":"https://…"}`
+  (HTTPS only, same SSRF rules as EVT-05a). Options: `volume` 0-100 (put back
+  afterwards, CAP-22a), `stream` `media` | `alarm` | `notification`,
+  `loop`, `start_s`, `only_if_unlocked`, `interrupt` (stop what's playing) or
+  `queue`. Respects silent mode and DND unless `stream: alarm` and Rahul allows
+  it in Settings. `GET /v1/speaker` reports what's playing; `DELETE` stops.
+- **CAP-52 [P2] Stream audio to the speaker.** `POST /v1/speaker/stream`
+  (chunked PCM16 or Opus, or WebSocket `/v1/speaker/stream/ws`): the phone
+  plays as it arrives, for live voice from an agent. Same options as CAP-51.
+  With CAP-44 at the same time it's a **two-way voice channel** (the agent
+  hears the room and talks back); echo cancellation on (Android
+  `AcousticEchoCanceler` where available, [Verify]).
+- **CAP-53 [P2] Speak text.** `POST /v1/speaker/say {"text","voice","rate",
+  "pitch","language"}` with Android text-to-speech, on the phone. The same
+  engine reads interactions aloud (CAP-31 `speak`).
+- **CAP-54 [P2] Play a video on the screen.** `POST /v1/screen/play` (MP4 up
+  to 100 MB, or HTTPS URL): opens a full-screen Bridget player only if Rahul
+  allows it (an interaction with **Play** by default; option "play without
+  asking" per agent later, section 15), with **Close** always available.
+- **CAP-55 [P2] Live video stream.** `POST /v1/camera/stream {"camera",
+  "zoom","resolution":"480p"|"720p"|"1080p","fps":1-30,"audio":true|false,
+  "max_seconds":1-3600}` returns a stream: MJPEG over chunked HTTP for
+  simplicity, or WebSocket with H.264 frames; with `audio: true` it carries
+  the mic too (AAC/Opus), so video and audio arrive together. One frame per
+  N seconds (`fps` < 1, e.g. 0.2) gives a cheap "watch the room" mode.
+  Counts as one capture; the camera dot and a notification show throughout.
+- **CAP-06 (video clip) moves from P5 to P2 (1.6)** with the stream, since
+  they share the recorder.
+- Android: camera and microphone FGS types (ARC-02a); playback uses the media
+  session so the system output switcher and headphones work; nothing plays
+  while a call is active.
 
 ### 8.22 Communications (not scheduled)
 
@@ -1484,7 +1673,11 @@ somewhere is optional (11.6).
   `MaterialAlertDialogBuilder`, `Snackbar`, `Badge`,
   `ExtendedFloatingActionButton`, `RecyclerView`. No Compose, no WebView UI
   (except HTML interaction cards, 8.13).
-- **UI-02 [Proposed] Colour.** Brand colours from the icon. Dynamic colour
+- **UI-02 [Proposed] Colour.** *Changed in 1.4.2 (D23): primary is blue
+  (light `#1F5BD6`, dark `#ADC6FF`; containers `#D6E2FF` / `#1B4AAE`) and the
+  surface steps are wider (light `#F8F9FF` → `#E6EBF5` → `#D7DEEC`; dark
+  `#0B0F17` → `#1A2130` → `#262F42`). The table below is the original.*
+  Brand colours from the icon. Dynamic colour
   (Material You) **off**, so Bridget looks the same everywhere and status
   colours stay meaningful.
 
@@ -1757,6 +1950,52 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 
 ---
 
+### 12.14 App updates (D21, 1.4.0)
+
+Copied in concept from the Spotka Android app's update flow
+(`apps/mobile/.../update/AppUpdateLogic.kt`, `AppUpdateInstaller.kt`,
+`ui/components/AppUpdateDialog.kt` in the sponic repo). Spotka's flow is for
+its debug builds; Bridget's is for its **release** build.
+
+- **UPD-01 [P1b]** Each release is published to Sponic's public R2 bucket
+  (`sponic-images`, host `pub-3a79691572bc4abc93fce31910fe320b.r2.dev`)
+  under `bridget/`: the APK as `bridget/bridget-<version>.apk` and a manifest
+  `bridget/latest.json`:
+  `{"package":"net.finleg.bridget","version_name","version_code","url","sha256","size_bytes","published_at","notes"}`.
+  `tools/publish-apk.sh` builds, signs, uploads both and creates the GitHub
+  release. The APK contains no secrets, so a public download is acceptable.
+- **UPD-02 [P1b]** **More → Check for updates** (and Settings → About) runs a
+  check. Bridget also checks by itself at most once a day when the app is
+  opened, never in the background. A newer version shows a dialog with the
+  version and notes: [Download] [Not now].
+- **UPD-03 [P1b] Trust rules** (fail closed): the manifest and APK must come
+  over HTTPS from the R2 host above, with no redirects to another host; the
+  package must equal the installed one; `version_code` must be higher than
+  the installed one; the APK is at most 100 MB; its SHA-256 must match the
+  manifest; the archive's package, versionCode and **signing certificate**
+  must equal the manifest and the installed app. Anything else is refused
+  with a plain reason and logged.
+- **UPD-04 [P1b]** Installing hands the verified file to Android's package
+  installer (`FileProvider`, `ACTION_VIEW`). Android always asks Rahul to
+  confirm; silent installs are impossible. The first time, Android asks to
+  allow installs from Bridget ("Install unknown apps", an Access row; needs
+  `REQUEST_INSTALL_PACKAGES`).
+- **UPD-05 [P1b]** States, as in Spotka: Checking · Up to date · Newer
+  version (Download) · Downloading (progress, Cancel) · Ready (Install) ·
+  Error (reason, OK). Downloads go to `cacheDir` and are deleted after an hour.
+- **UPD-06 [P1b]** Debug builds (`.debug`) don't check: their row says
+  "Debug build: install new builds with adb."
+- **UPD-07 [P1b]** Every check, download and refusal is a `diagnostic` log
+  entry with the host only (no full URL query), the versions and the result.
+- **UPD-08 [P1b]** An update keeps agents, keys, switches and the log
+  (NFR-12): same package, same signing key.
+- **As tested on the Pixel (27 Oct 2026):** a release build updated itself
+  from R2 twice (test build → 1.4.0 → 1.4.1); agents kept working each time.
+  The first update needs "Install unknown apps" for Bridget, and Google Play
+  Protect may show "App scan recommended" for a sideloaded APK; both are
+  Rahul's taps. Turning on "Install unknown apps" can restart Bridget, so it
+  remembers the request and carries on when he comes back (1.4.1).
+
 ## 13. Non-functional requirements
 
 | ID | Requirement | Target |
@@ -1844,15 +2083,15 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 |---|---|---|---|
 | Built | 1.0-1.2 | Listener, keys, camera photo, mic clip, gallery, last image, audit log, four agents | Done 26 Oct 2026 |
 | **P1a** | 1.3.0 (owner, 27 Oct 2026) | New UI shell (12.1-12.5, 12.7-12.9, 12.11-12.13), setup prompt flow (6) with AGT-05a, `brg_` keys, Developer switch, `/v1/guide`, `/v1/openapi.json`, `/v1/tools/bridget`, log store and API with the visibility setting (10), Access screen, boot receiver, network callbacks, cleartext config, size presets, `raw=1` for snapshots, `image/last?wait`, idempotency and pending schema | TST-03 passes; Rahul adds a new agent from the prompt in under 1 minute |
-| **P1b** | 2.0.x | Bug reports and feature requests on the phone (11.1-11.5, 12.10); upload (11.6) only after Q6 | A report filed on the phone is read and moved to `fixed` by a developer agent |
+| **P1b** | 1.4.0 / 1.4.1 (owner, 27 Oct 2026) | Bug reports and feature requests on the phone, copied in concept from Spotka (11.1-11.5, 12.10); upload (11.6) only after Q6; **app updates** (12.14, D21); new app icon | A report filed on the phone is read and moved to `fixed` by a developer agent; an installed 1.4.0 finds and verifies a published update |
 | Gate | before P3 | Battery measurement (NFR-06) over 3 days with the always-on service; Downloads spike (CAP-13) | Both written up in `docs/reviews/` |
-| **P2** | 2.1 | Interactions (8.13) + Inbox (12.6) + events and callbacks (9), open link (8.20), Quick Settings tile, **Accessibility screenshots** (8.10) | A no-webhook agent gets an answer within 1 s of the tap; an agent gets a screenshot in under 1 s with no prompt |
+| **P2** | 1.5 / 1.6 / 1.7 | **1.5:** Interactions (8.13) including HTML cards (CAP-34) and the live text panel, Interactions tab with expand/collapse and close (D26) + Inbox items (12.6) + events and callbacks (9), open link (8.20), Quick Settings tile, MCP endpoint (API-15). **1.6:** Listening (8.23, D27), playing and video streams (8.24, D29), video clip (8.3) and Accessibility screenshots (8.10). **1.7:** Relay (4.4.1, D28) | A no-webhook agent gets an answer within 1 s of the tap; an agent gets a screenshot in under 1 s with no prompt; a wake word on the phone reaches its agent; a non-tailnet agent takes a photo through the relay |
 | **P3** | 2.2 | Phone status and context (8.7), sensors (8.21), location (8.8), flashlight and controls (8.9), find my phone (8.14), gallery filters, videos and downloads (8.5) | Each endpoint's acceptance test on the Pixel |
 | **P4** | 2.3 | Files to phone (8.11), share to agent (8.12) | Share-to-Grok round trip |
-| **P5** | 2.4 | Screen-share grant fallback (CAP-26b), video clip (8.3), text recognition (8.15), mic transcription (CAP-08) | Grant once / 1 h / 16 h tests |
+| **P5** | 2.4 | Screen-share grant fallback (CAP-26b), video clip (8.3), text recognition (8.15), mic transcription (CAP-08); HTML cards moved to P2 (D23) | Grant once / 1 h / 16 h tests |
 | **P6** | 2.5 | App usage (8.16), Health Connect (8.17), notification reading (8.18), clipboard (8.19) | Acceptance tests |
 | **P7** | 3.0 | Per-agent permissions (15) | `spec-per-agent-permissions.md` tests |
-| Relay | 2.x, after owner OK | Relay mode (4.4) | A non-tailnet agent takes a photo with Tailscale off |
+| Relay | 1.7 (in P2, D28) | Relay mode (4.4, 4.4.1) | A non-tailnet agent takes a photo with Tailscale off |
 
 ---
 
@@ -1869,7 +2108,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 | Q7 | Bundle JetBrains Mono (about 300 KB) or use the system monospace font? | Bundle |
 | Q8 | HTTPS on the tailnet with Tailscale certificates (`tailscale cert`)? | No (WireGuard already encrypts) |
 | Q9 | For relay wake-up: Firebase Cloud Messaging (best delivery, adds Firebase) or UnifiedPush/ntfy (no Google, weaker in Doze)? | FCM |
-| Q10 | Build relay mode at all (changes v1 "no cloud relay")? Only with the redesigned encryption (ARC-15), where the relay can't read anything. | Not until the owner says yes |
+| Q10 | ~~Build relay mode at all?~~ **Resolved: yes (D28)**, with sealed and connector modes (ARC-22). | Not until the owner says yes |
 | Q11 | Later: let the listener sleep and wake by push to save battery? | No; revisit if NFR-06 fails |
 | Q12 | Screenshot fallback grant lengths: 1 h and 16 h, or "until midnight"? | 1 h and 16 h |
 | Q13 | Default retention for the log: 20,000 entries / 30 days? | Yes |
@@ -1998,8 +2237,17 @@ decided; Q18 holds the decision. Play policy statements are marked
 | GET | `/v1/audit` | Log (alias) | Built | key |
 | GET/POST | `/v1/feedback`, `/v1/feedback/{id}` | Feedback | P1 | key |
 | POST | `/v1/feedback/{id}/status` | Feedback | P1 | key |
-| any | `https://<relay>/functions/v1/bridget-relay/v1/…` | Relay mode: same paths as above | Relay | key |
-| GET | `https://<relay>/functions/v1/bridget-relay/jobs/{id}` | Relay job status | Relay | key |
+| POST | `/v1/mcp` | MCP server (API-15) | P2 | key |
+| GET | `/v1/changes` | API revisions (API-14) | 1.4.4 | key |
+| POST | `/v1/mic/stream` (+ `/ws`) | Listening (CAP-44) | P2 | key |
+| GET/POST/DELETE | `/v1/listen/sessions` | Listening sessions (CAP-45) | P2 | key |
+| POST | `/v1/speaker/play`, `/v1/speaker/stream` (+ `/ws`), `/v1/speaker/say` | Speaker (CAP-51..53) | P2 | key |
+| GET/DELETE | `/v1/speaker` | Speaker | P2 | key |
+| POST | `/v1/screen/play` | Video on screen (CAP-54) | P2 | key |
+| POST | `/v1/camera/stream` | Live video (CAP-55) | P2 | key |
+| POST | `/v1/text/stream` | Live text panel (D26) | P2 | key |
+| any | `https://<relay>/v1/…`, `https://<relay>/mcp` | Relay mode: same paths; connector MCP (ARC-22) | 1.7 | token |
+| GET | `https://<relay>/jobs/{id}` | Relay job status | 1.7 | token |
 
 ## Appendix B. Setup prompt template
 
@@ -2127,6 +2375,7 @@ Call /v1/health, then tell Rahul you're connected and which features are on.
 | FOREGROUND_SERVICE + _SPECIAL_USE, _CAMERA, _MICROPHONE, _LOCATION, _MEDIA_PROJECTION (fallback only) | ARC-02 | Manifest |
 | INTERNET, ACCESS_NETWORK_STATE | listener, callbacks | Manifest |
 | REQUEST_IGNORE_BATTERY_OPTIMIZATIONS | listener | Pop-up |
+| REQUEST_INSTALL_PACKAGES | 12.14 updates | Special access "Install unknown apps" (`ACTION_MANAGE_UNKNOWN_APP_SOURCES` + package) |
 | PACKAGE_USAGE_STATS | 8.16 | Special access (Appendix E) |
 | ACCESS_NOTIFICATION_POLICY | 8.9 DND | Special access |
 | WRITE_SETTINGS | 8.9 brightness | Special access |
@@ -2148,6 +2397,7 @@ Call /v1/health, then tell Rahul you're connected and which features are on.
 | Battery exemption | `android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` + package | Allow/Deny pop-up |
 | App info (restricted settings, permissions) | `android.settings.APPLICATION_DETAILS_SETTINGS` + package | Bridget's App info |
 | Notification channels | `android.settings.APP_NOTIFICATION_SETTINGS` + `EXTRA_APP_PACKAGE` | Bridget's notification settings |
+| Install unknown apps (updates, 12.14) | `android.settings.MANAGE_UNKNOWN_APP_SOURCES` + package | Bridget's own switch |
 | Full-screen notifications | `android.settings.MANAGE_APP_USE_FULL_SCREEN_INTENT` + package | Bridget's own switch (`AppManageFullScreenIntent`), verified 27 Oct 2026 |
 | Location all the time | request ACCESS_BACKGROUND_LOCATION | Bridget's Location permission page |
 

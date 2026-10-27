@@ -179,3 +179,29 @@ class ApiLogicTest {
         try { Pending.body("nope", "x", "/", "r"); fail() } catch (_: IllegalArgumentException) {}
     }
 }
+
+/**
+ * Ways API revisions (API-14) can fail: a release adds an endpoint but no revision entry
+ * (agents never hear of it), an entry names an endpoint that doesn't exist, revisions out
+ * of order, or whats_new still nags an agent that is up to date.
+ */
+class ApiChangesTest {
+    @Test fun revisionsAreOrderedAndNameRealEndpoints() {
+        val revs = ApiChanges.revisions.map { it.revision }
+        assertEquals((1..revs.size).toList(), revs)
+        val paths = Endpoints.all.map { it.fullPath }.toSet()
+        for (r in ApiChanges.revisions) for (i in r.items) i.endpoint?.let { assertTrue("unknown endpoint $it", it in paths) }
+        // every endpoint is announced in some revision (directly or as part of a family)
+        for (e in Endpoints.all) assertTrue("${e.fullPath} not announced", ApiChanges.revisions.flatMap { it.items }
+            .any { it.endpoint != null && (e.fullPath == it.endpoint || e.fullPath.startsWith(it.endpoint.substringBefore("/{")) || it.endpoint.startsWith(e.fullPath)) }
+            || e.fullPath in setOf("/v1/capabilities", "/v1/guide", "/v1/openapi.json", "/v1/pair", "/v1/audit"))
+    }
+
+    @Test fun whatsNew() {
+        assertEquals(org.json.JSONObject.NULL, ApiChanges.whatsNew(ApiChanges.CURRENT))
+        val w = ApiChanges.whatsNew(0) as org.json.JSONObject
+        assertEquals(ApiChanges.CURRENT, w.getInt("new_revisions"))
+        assertEquals("/v1/changes?since=0", w.getString("url"))
+        assertEquals(1, ApiChanges.json(ApiChanges.CURRENT - 1, "x").getJSONArray("changes").length())
+    }
+}

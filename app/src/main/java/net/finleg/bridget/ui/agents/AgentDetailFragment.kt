@@ -30,6 +30,7 @@ import net.finleg.bridget.log.LogQuery
 import net.finleg.bridget.ui.common.Fmt
 import net.finleg.bridget.ui.common.LogRowAdapter
 import net.finleg.bridget.ui.common.themeColor
+import net.finleg.bridget.ui.feedback.handleFeedbackMenu
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -62,7 +63,12 @@ class AgentDetailFragment : Fragment() {
         }
         b.toolbar.setNavigationOnClickListener { findNavController().popBackStack() }
         b.toolbar.inflateMenu(R.menu.agents_detail_menu)
-        b.toolbar.setOnMenuItemClickListener { if (it.itemId == R.id.agents_rename) { rename(); true } else false }
+        b.toolbar.inflateMenu(R.menu.feedback_overflow) // Report a bug / Request a feature (FBK-01)
+        b.toolbar.setOnMenuItemClickListener {
+            if (it.itemId == R.id.agents_rename) { rename(); true }
+            // Agent names go in the context only from an agent screen (FBK-06).
+            else handleFeedbackMenu(it, "Agent detail") { agent()?.name?.let { n -> "Agent: $n" } }
+        }
 
         // Row taps open the entry sheet in Activity; here the rows are read-only and "See all" goes there.
         activityAdapter = LogRowAdapter(app.agents) { }
