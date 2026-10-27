@@ -85,7 +85,7 @@ class CardWebView(context: Context, private val onRespond: (Any) -> Unit, privat
         if (!request.isForMainFrame || request.method != "GET" || request.url.toString() != CARD_URL) return blocked()
         val bytes = synchronized(this) { page.also { page = null } } ?: return blocked()
         return WebResourceResponse("text/html", "utf-8", 200, "OK",
-            mapOf("Content-Security-Policy" to CardRules.CSP, "Cache-Control" to "no-store"), ByteArrayInputStream(bytes))
+            mapOf("Content-Security-Policy" to HEADER_CSP, "Cache-Control" to "no-store"), ByteArrayInputStream(bytes))
     }
 
     /** Answers are no longer taken (the card was answered or closed elsewhere). */
@@ -170,6 +170,12 @@ class CardWebView(context: Context, private val onRespond: (Any) -> Unit, privat
 
         /** The fail-closed answer to every request a card makes. */
         const val CARD_URL = "https://card.bridget.invalid/"
+        /**
+         * The CSP again as a header, plus `sandbox allow-scripts` (headers only; a meta tag can't sandbox).
+         * Without allow-same-origin the card and every frame it makes get fresh opaque origins: no IndexedDB or
+         * Cache Storage shared between cards, and frames can't reach unguarded WebRTC constructors (Codex review).
+         */
+        val HEADER_CSP = CardRules.CSP.trimEnd().trimEnd(';') + "; sandbox allow-scripts"
         fun blocked() = WebResourceResponse("text/plain", "utf-8", 403, "Blocked by Bridget", emptyMap(), ByteArrayInputStream(ByteArray(0)))
     }
 }
