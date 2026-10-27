@@ -49,6 +49,7 @@ import net.finleg.bridget.tour.TourKinds
 import net.finleg.bridget.ui.common.Fmt
 import net.finleg.bridget.ui.common.dp
 import net.finleg.bridget.ui.common.themeColor
+import net.finleg.bridget.ui.feedback.handleFeedbackMenu
 import net.finleg.bridget.ui.home.PermissionAsker
 import net.finleg.bridget.ui.home.UiActions
 import kotlin.math.roundToInt
@@ -59,8 +60,7 @@ import kotlin.math.roundToInt
  * history, Ask / Type / Pause / Skip / End). The state follows app.tours.state, so a tour the
  * agent ends (DELETE /v1/tour) or that hits the time limit drops back to setup by itself.
  *
- * TODO(8.25 step 5): the ongoing tour notification with Ask, Pause and End is not built yet;
- * Home shows a card while a tour runs instead.
+ * The ongoing notification with Ask, Pause and End is TourNotifier (it follows app.tours.state).
  */
 class TourFragment : Fragment() {
     private var _b: FragmentTourBinding? = null
@@ -85,6 +85,9 @@ class TourFragment : Fragment() {
     private var shownTourId: String? = null
     private var liveAzimuth: Double? = null
     private var accuracyM: Float? = null
+    private var lat: Double? = null
+    private var lon: Double? = null
+    private var batteryLine: String? = null
     private var haveFix = false
     private val said = TourSaidAdapter()
 
@@ -117,7 +120,10 @@ class TourFragment : Fragment() {
             v.updatePadding(bottom = controlsPad + insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom); insets
         }
         b.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
-        // Report a bug / Request a feature go in an overflow menu here later (P1b pattern).
+        b.toolbar.inflateMenu(R.menu.feedback_overflow) // Report a bug / Request a feature (FBK-01)
+        b.toolbar.setOnMenuItemClickListener {
+            handleFeedbackMenu(it, "City tour") { app.tours.current()?.let { t -> "Tour with ${t.agent}" } }
+        }
 
         buildSetup()
         buildRunning()
@@ -291,6 +297,8 @@ class TourFragment : Fragment() {
 
     private fun optional(): List<Need> = buildList {
         if (!app.settings.isOn("gallery")) add(Need("gallery", R.string.tour_opt_gallery, R.string.tour_fix_turn_on) { turnOn("gallery") })
+        if (!app.settings.isOn(MIC_SWITCH))
+            add(Need("mic_switch", R.string.tour_opt_mic_switch, R.string.tour_fix_turn_on) { turnOn(MIC_SWITCH) })
         if (!requireContext().granted(Manifest.permission.RECORD_AUDIO))
             add(Need("mic", R.string.tour_opt_mic, R.string.tour_fix_allow) { perms.request(Manifest.permission.RECORD_AUDIO) })
     }
@@ -420,9 +428,14 @@ class TourFragment : Fragment() {
             distance(t.distanceM),
             resources.getQuantityString(R.plurals.tour_updates, t.ticks, t.ticks),
             resources.getQuantityString(R.plurals.tour_photos_sent, t.photos, t.photos),
-        ).joinToString(" · ")
+            batteryLine,
+        ).filterNotNull().joinToString(" · ")
         renderHeading(t)
+        // Coordinates to 4 decimals on screen only; the log keeps 3 (LOG-02).
+        val coords = if (lat != null && lon != null) String.format(java.util.Locale.US, "%.4f, %.4f", lat, lon) else null
         r.accuracy.text = when {
+            coords != null && accuracyM != null -> getString(R.string.tour_coords, coords, accuracyM!!.roundToInt())
+            coords != null -> coords
             accuracyM != null -> getString(R.string.tour_accuracy, accuracyM!!.roundToInt())
             !haveFix -> getString(R.string.tour_no_fix)
             else -> ""
@@ -481,6 +494,14 @@ class TourFragment : Fragment() {
                 liveAzimuth = reading?.azimuthDeg ?: liveAzimuth
                 haveFix = fix != null
                 accuracyM = fix?.takeIf { it.hasAccuracy() }?.accuracy
+                lat = fix?.latitude; lon = fix?.longitude
+                val used = withContext(Dispatchers.IO) { runCatching { app.tours.batteryUsed(t) }.getOrNull() }
+                val charged = app.tours.current()?.charged == true
+                batteryLine = when {
+                    used != null -> getString(R.string.tour_battery_used, used)
+                    charged -> getString(R.string.tour_battery_charging)
+                    else -> getString(R.string.tour_battery_unknown)
+                }
                 app.tours.current()?.let { if (_b != null) renderRunning(it) }
             }
             delay(COMPASS_MS)
@@ -503,6 +524,8 @@ class TourFragment : Fragment() {
     private fun beginAsk(): Boolean {
         if (app.tours.current() == null) return false
         val ctx = requireContext()
+        // TOUR-01: asking out loud needs the Microphone switch; typing doesn't.
+        if (!app.settings.isOn(MIC_SWITCH)) { micOffDialog(); return false }
         if (!ctx.granted(Manifest.permission.RECORD_AUDIO)) {
             perms.request(Manifest.permission.RECORD_AUDIO)
             return false
@@ -522,6 +545,17 @@ class TourFragment : Fragment() {
         askLimit?.cancel()
         askLimit = viewLifecycleOwner.lifecycleScope.launch { delay(MAX_ASK_MS); finishAsk() }
         return true
+    }
+
+    /** The Microphone switch is off: explain, with a one-tap fix (switch on + audit line) or Type. */
+    private fun micOffDialog() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.tour_mic_off_title)
+            .setMessage(R.string.tour_mic_off_body)
+            .setPositiveButton(R.string.tour_mic_turn_on) { _, _ -> turnOn(MIC_SWITCH) }
+            .setNeutralButton(R.string.tour_mic_type_instead) { _, _ -> typeDialog() }
+            .setNegativeButton(R.string.tour_cancel, null)
+            .show()
     }
 
     private fun finishAsk() {
@@ -601,6 +635,8 @@ class TourFragment : Fragment() {
 
     companion object {
         private const val DEFAULT_INTERVAL = 60
+        /** MicModule.switchKey. */
+        private const val MIC_SWITCH = "mic"
         private const val HOLD_MS = 400L
         private const val MAX_ASK_MS = 30_000L
         private const val COMPASS_MS = 2_000L

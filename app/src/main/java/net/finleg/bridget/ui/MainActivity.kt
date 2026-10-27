@@ -51,7 +51,7 @@ class MainActivity : AppCompatActivity() {
         ViewCompat.setOnApplyWindowInsetsListener(b.bottomNav) { v, insets ->
             v.updatePadding(bottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom); insets
         }
-        if (savedInstanceState == null) { route(); openReportFrom(intent); openInteractionFrom(intent) }
+        if (savedInstanceState == null) { route(); openReportFrom(intent); openInteractionFrom(intent); openTourFrom(intent) }
         watchInteractionsBadge()
     }
 
@@ -77,6 +77,15 @@ class MainActivity : AppCompatActivity() {
         setIntent(intent)
         openReportFrom(intent)
         openInteractionFrom(intent)
+        openTourFrom(intent)
+    }
+
+    /** The City tour notification opens the tour screen. */
+    private fun openTourFrom(intent: Intent?) {
+        if (intent?.getBooleanExtra(net.finleg.bridget.tour.TourNotifier.EXTRA_OPEN_TOUR, false) != true) return
+        intent.removeExtra(net.finleg.bridget.tour.TourNotifier.EXTRA_OPEN_TOUR)
+        if (nav.currentDestination?.id in setOf(R.id.addAgent, R.id.pairCode, R.id.firstRun, R.id.tour)) return
+        nav.navigate(R.id.tour)
     }
 
     /** A question or notice notification (CAP-33) opens its interaction. */

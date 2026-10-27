@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import net.finleg.bridget.BridgeApp
 import net.finleg.bridget.R
 import net.finleg.bridget.databinding.FragmentAppletsBinding
+import net.finleg.bridget.ui.feedback.handleFeedbackMenu
 
 /**
  * Applets tab (owner, 27 Oct 2026; replaces the Agents tab): ready-made sessions with an agent.
@@ -36,6 +37,8 @@ class AppletsFragment : Fragment() {
         ViewCompat.setOnApplyWindowInsetsListener(b.toolbar) { v, insets ->
             v.updatePadding(top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top); insets
         }
+        b.toolbar.inflateMenu(R.menu.feedback_overflow) // Report a bug / Request a feature (FBK-01)
+        b.toolbar.setOnMenuItemClickListener { handleFeedbackMenu(it, "Applets") }
         b.cityTour.setOnClickListener { findNavController().navigate(R.id.tour) }
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
