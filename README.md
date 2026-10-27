@@ -107,7 +107,8 @@ The log setting **Agents can read: all entries / only their own** (Settings
 - The log (SQLite on the phone) never stores keys, request headers, media or
   long texts. No analytics, no third-party SDKs other than Ktor (HTTP),
   CameraX, AndroidX/Material and ZXing (QR).
-- App backup is disabled. 1.3.0 makes no outgoing network calls.
+- App backup is disabled. The only outgoing call is the update check (from 1.4.0): HTTPS to
+  Sponic's public R2 host, verified before Android asks you to install.
 
 ## Build
 

@@ -104,6 +104,7 @@ should treat these as settled unless a serious problem is found.
 | D15 | 27 Oct 2026 | Screens use **native Kotlin Android Views with Material 3 components**, with a "techie but friendly" look (section 12). | Decided |
 | D16 | 27 Oct 2026 | Spec **"maximum capabilities"**: describe everything Android allows that's useful to a personal agent, phased (section 16). | Decided |
 | D17 | 27 Oct 2026 | **Screenshots use an Accessibility service**, with no per-screenshot approval (replaces D10's approve-each-time design). Default mode: a private in-memory copy; optional mode: Android's normal screenshot, saved to the gallery. The screen-share grant flow (once / 1 h / 16 h) stays only as the fallback when Accessibility is off. | Decided |
+| D21 | 27 Oct 2026 | **In-app update check, like Spotka's**: release APKs and a small `latest.json` are published to Sponic's **public R2** bucket; Bridget checks it over HTTPS, verifies the download (SHA-256, package, versionCode, signing certificate) and hands it to Android's installer, which always asks Rahul to confirm. Shipped with P1b as 1.4.0, with a new app icon. Section 12.14. | Decided |
 | D20 | 27 Oct 2026 | No production users before P1a; no migration from 1.2; old 64-hex keys and 1.2 field names are not kept. P1a is installed fresh (uninstall 1.2.0 first) and every agent is paired again with a new `brg_` key. Appendix F (MIG-01..05) is dropped. | Decided |
 
 ## 2. Changes from spec v1.0
@@ -472,8 +473,9 @@ Agent ◀── long-poll / webhook ── Relay ◀─────────�
   extraction rules), so keys, logs and the inbox never leave the phone
   through Google backup or device transfer.
 - **SEC-16 [Proposed]** Outbound network calls are limited to: approved
-  callback URLs (9.3), the feedback endpoint if upload is on (11.6), and
-  Google's geocoder if address lookup is on (8.8). Each one is logged.
+  callback URLs (9.3), the feedback endpoint if upload is on (11.6),
+  Google's geocoder if address lookup is on (8.8), and the **update check**
+  (12.14, D21: HTTPS GET to Sponic's public R2 host only). Each one is logged.
 
 ### 5.5 Threat model (summary)
 
@@ -1757,6 +1759,46 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 
 ---
 
+### 12.14 App updates (D21, 1.4.0)
+
+Copied in concept from the Spotka Android app's update flow
+(`apps/mobile/.../update/AppUpdateLogic.kt`, `AppUpdateInstaller.kt`,
+`ui/components/AppUpdateDialog.kt` in the sponic repo). Spotka's flow is for
+its debug builds; Bridget's is for its **release** build.
+
+- **UPD-01 [P1b]** Each release is published to Sponic's public R2 bucket
+  (`sponic-images`, host `pub-3a79691572bc4abc93fce31910fe320b.r2.dev`)
+  under `bridget/`: the APK as `bridget/bridget-<version>.apk` and a manifest
+  `bridget/latest.json`:
+  `{"package":"net.finleg.bridget","version_name","version_code","url","sha256","size_bytes","published_at","notes"}`.
+  `tools/publish-apk.sh` builds, signs, uploads both and creates the GitHub
+  release. The APK contains no secrets, so a public download is acceptable.
+- **UPD-02 [P1b]** **More → Check for updates** (and Settings → About) runs a
+  check. Bridget also checks by itself at most once a day when the app is
+  opened, never in the background. A newer version shows a dialog with the
+  version and notes: [Download] [Not now].
+- **UPD-03 [P1b] Trust rules** (fail closed): the manifest and APK must come
+  over HTTPS from the R2 host above, with no redirects to another host; the
+  package must equal the installed one; `version_code` must be higher than
+  the installed one; the APK is at most 100 MB; its SHA-256 must match the
+  manifest; the archive's package, versionCode and **signing certificate**
+  must equal the manifest and the installed app. Anything else is refused
+  with a plain reason and logged.
+- **UPD-04 [P1b]** Installing hands the verified file to Android's package
+  installer (`FileProvider`, `ACTION_VIEW`). Android always asks Rahul to
+  confirm; silent installs are impossible. The first time, Android asks to
+  allow installs from Bridget ("Install unknown apps", an Access row; needs
+  `REQUEST_INSTALL_PACKAGES`).
+- **UPD-05 [P1b]** States, as in Spotka: Checking · Up to date · Newer
+  version (Download) · Downloading (progress, Cancel) · Ready (Install) ·
+  Error (reason, OK). Downloads go to `cacheDir` and are deleted after an hour.
+- **UPD-06 [P1b]** Debug builds (`.debug`) don't check: their row says
+  "Debug build: install new builds with adb."
+- **UPD-07 [P1b]** Every check, download and refusal is a `diagnostic` log
+  entry with the host only (no full URL query), the versions and the result.
+- **UPD-08 [P1b]** An update keeps agents, keys, switches and the log
+  (NFR-12): same package, same signing key.
+
 ## 13. Non-functional requirements
 
 | ID | Requirement | Target |
@@ -1844,7 +1886,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 |---|---|---|---|
 | Built | 1.0-1.2 | Listener, keys, camera photo, mic clip, gallery, last image, audit log, four agents | Done 26 Oct 2026 |
 | **P1a** | 1.3.0 (owner, 27 Oct 2026) | New UI shell (12.1-12.5, 12.7-12.9, 12.11-12.13), setup prompt flow (6) with AGT-05a, `brg_` keys, Developer switch, `/v1/guide`, `/v1/openapi.json`, `/v1/tools/bridget`, log store and API with the visibility setting (10), Access screen, boot receiver, network callbacks, cleartext config, size presets, `raw=1` for snapshots, `image/last?wait`, idempotency and pending schema | TST-03 passes; Rahul adds a new agent from the prompt in under 1 minute |
-| **P1b** | 2.0.x | Bug reports and feature requests on the phone (11.1-11.5, 12.10); upload (11.6) only after Q6 | A report filed on the phone is read and moved to `fixed` by a developer agent |
+| **P1b** | 1.4.0 (owner, 27 Oct 2026) | Bug reports and feature requests on the phone, copied in concept from Spotka (11.1-11.5, 12.10); upload (11.6) only after Q6; **app updates** (12.14, D21); new app icon | A report filed on the phone is read and moved to `fixed` by a developer agent; an installed 1.4.0 finds and verifies a published update |
 | Gate | before P3 | Battery measurement (NFR-06) over 3 days with the always-on service; Downloads spike (CAP-13) | Both written up in `docs/reviews/` |
 | **P2** | 2.1 | Interactions (8.13) + Inbox (12.6) + events and callbacks (9), open link (8.20), Quick Settings tile, **Accessibility screenshots** (8.10) | A no-webhook agent gets an answer within 1 s of the tap; an agent gets a screenshot in under 1 s with no prompt |
 | **P3** | 2.2 | Phone status and context (8.7), sensors (8.21), location (8.8), flashlight and controls (8.9), find my phone (8.14), gallery filters, videos and downloads (8.5) | Each endpoint's acceptance test on the Pixel |
@@ -2127,6 +2169,7 @@ Call /v1/health, then tell Rahul you're connected and which features are on.
 | FOREGROUND_SERVICE + _SPECIAL_USE, _CAMERA, _MICROPHONE, _LOCATION, _MEDIA_PROJECTION (fallback only) | ARC-02 | Manifest |
 | INTERNET, ACCESS_NETWORK_STATE | listener, callbacks | Manifest |
 | REQUEST_IGNORE_BATTERY_OPTIMIZATIONS | listener | Pop-up |
+| REQUEST_INSTALL_PACKAGES | 12.14 updates | Special access "Install unknown apps" (`ACTION_MANAGE_UNKNOWN_APP_SOURCES` + package) |
 | PACKAGE_USAGE_STATS | 8.16 | Special access (Appendix E) |
 | ACCESS_NOTIFICATION_POLICY | 8.9 DND | Special access |
 | WRITE_SETTINGS | 8.9 brightness | Special access |
@@ -2148,6 +2191,7 @@ Call /v1/health, then tell Rahul you're connected and which features are on.
 | Battery exemption | `android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` + package | Allow/Deny pop-up |
 | App info (restricted settings, permissions) | `android.settings.APPLICATION_DETAILS_SETTINGS` + package | Bridget's App info |
 | Notification channels | `android.settings.APP_NOTIFICATION_SETTINGS` + `EXTRA_APP_PACKAGE` | Bridget's notification settings |
+| Install unknown apps (updates, 12.14) | `android.settings.MANAGE_UNKNOWN_APP_SOURCES` + package | Bridget's own switch |
 | Full-screen notifications | `android.settings.MANAGE_APP_USE_FULL_SCREEN_INTENT` + package | Bridget's own switch (`AppManageFullScreenIntent`), verified 27 Oct 2026 |
 | Location all the time | request ACCESS_BACKGROUND_LOCATION | Bridget's Location permission page |
 
