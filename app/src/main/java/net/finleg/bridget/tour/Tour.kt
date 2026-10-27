@@ -44,6 +44,8 @@ data class Tour(
     val startedAt: Long, val paused: Boolean = false, val lastTickAt: Long = 0, val ticks: Int = 0,
     val distanceM: Double = 0.0, val lastLat: Double? = null, val lastLon: Double? = null, val photos: Int = 0,
     val heading: Double? = null, val caption: String? = null, val said: List<Said> = emptyList(),
+    /** TOUR-04: battery percentage at the start; [charged] once the phone was seen charging during the tour. */
+    val batteryStartPct: Int? = null, val charged: Boolean = false,
 ) {
     fun json(): JSONObject = JSONObject().put("tour_id", id).put("kinds", JSONArray(kinds)).put("interval_s", intervalS)
         .put("started_at", isoAt(startedAt)).put("paused", paused).put("ticks", ticks)
@@ -101,6 +103,15 @@ class TourState {
     }
 }
 
+/** TOUR-04: battery used so far. Pure, unit-tested. */
+object TourBattery {
+    /** Percentage points used since the start, or null when unknown or the phone charged during the tour. */
+    fun used(startPct: Int?, nowPct: Int?, charged: Boolean): Int? {
+        if (charged || startPct == null || nowPct == null) return null
+        return (startPct - nowPct).coerceAtLeast(0)
+    }
+}
+
 /** TOUR-02: what an ended tour's stored events keep. Pure, unit-tested. */
 object TourPrivacy {
     val EVENT_TYPES = setOf("tour.tick", "tour.question")
@@ -133,6 +144,26 @@ class TourManager(private val app: BridgeApp) {
 
     fun current(): Tour? = tour.current()
 
+    init {
+        // The ongoing tour notification (8.25 step 5) follows the state; it goes when the tour ends.
+        scope.launch { TourNotifier.follow(app, tour.flow) }
+    }
+
+    private val battery get() = app.getSystemService(android.os.BatteryManager::class.java)
+
+    /** Battery level 0-100, or null if Android doesn't say. */
+    fun batteryPct(): Int? = runCatching { battery?.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY) }
+        .getOrNull()?.takeIf { it in 0..100 }
+
+    fun charging(): Boolean = runCatching { battery?.isCharging == true }.getOrDefault(false)
+
+    /** TOUR-04: battery used so far by tour [t], or null (unknown, or charged during the tour). Notes charging it sees. */
+    fun batteryUsed(t: Tour): Int? {
+        val chargingNow = charging()
+        val cur = if (chargingNow && !t.charged) tour.update(t.id) { it.copy(charged = true) } ?: t.copy(charged = true) else t
+        return TourBattery.used(cur.batteryStartPct, batteryPct(), cur.charged || chargingNow)
+    }
+
     /** What's missing before a tour can start (TOUR-01); empty = ready. */
     fun missing(): List<String> = buildList {
         if (!app.settings.isOn("location")) add("Location switch")
@@ -146,7 +177,8 @@ class TourManager(private val app: BridgeApp) {
         val a = app.agents.get(agentId) ?: throw IllegalArgumentException("No such agent")
         require(kinds.isNotEmpty() && kinds.all { it in TourKinds.all }) { "Pick at least one kind of tour" }
         require(intervalS in TourKinds.intervals) { "Bad interval" }
-        val t = Tour("t" + UUID.randomUUID().toString().replace("-", "").take(10), a.id, a.name, kinds, intervalS, System.currentTimeMillis())
+        val t = Tour("t" + UUID.randomUUID().toString().replace("-", "").take(10), a.id, a.name, kinds, intervalS, System.currentTimeMillis(),
+            batteryStartPct = batteryPct(), charged = charging())
         tour.locked {
             tour.take()?.let { finish(it, "a new tour started") }
             tour.begin(t)
@@ -183,6 +215,7 @@ class TourManager(private val app: BridgeApp) {
         val t = tour.current()?.takeIf { it.id == id && !it.paused } ?: return
         val fix: Location? = reader.fresh(high = false, timeoutMs = 10_000) ?: reader.lastKnown()
         val compass = Compass.read(app)
+        val chargingNow = charging()
         val since = if (t.lastTickAt > 0) t.lastTickAt else t.startedAt
         val photos = if (app.settings.isOn("gallery") && Gallery(app).accessMode() != null)
             Gallery(app).recent(20).filter { it.addedAt > since }.take(10) else emptyList()
@@ -204,7 +237,7 @@ class TourManager(private val app: BridgeApp) {
             app.interactions.event(cur.agentId, "tour.tick", data)
             tour.update(id) { c -> c.copy(lastTickAt = System.currentTimeMillis(), ticks = c.ticks + 1,
                 distanceM = c.distanceM + moved, lastLat = fix?.latitude ?: c.lastLat, lastLon = fix?.longitude ?: c.lastLon,
-                photos = c.photos + photos.size, heading = compass?.azimuthDeg ?: c.heading) }
+                photos = c.photos + photos.size, heading = compass?.azimuthDeg ?: c.heading, charged = c.charged || chargingNow) }
             Unit
         }
     }
@@ -243,6 +276,9 @@ class TourManager(private val app: BridgeApp) {
     /** Ends whatever tour runs (Rahul's End, the test hook). */
     fun end(reason: String) { tour.locked { tour.take()?.let { finish(it, reason) } } }
 
+    /** Ends tour [tourId] only if it is still the current one (the notification's End). */
+    fun endIfCurrent(tourId: String, reason: String) = endTour(tourId, reason)
+
     /** Ends tour [tourId] only if it is still the current one. */
     private fun endTour(tourId: String, reason: String) { tour.locked { tour.take(tourId)?.let { finish(it, reason) } } }
 
@@ -258,9 +294,12 @@ class TourManager(private val app: BridgeApp) {
         runCatching { app.interactions.scrubTourEvents(t.agentId, t.id) }.onFailure {
             app.log.system("diagnostic", "service", "Couldn't clear the tour's locations: ${it.javaClass.simpleName}", level = "warn")
         }
+        val chargingNow = charging()
+        val used = TourBattery.used(t.batteryStartPct, batteryPct(), t.charged || chargingNow)
         app.interactions.event(t.agentId, "tour.ended", JSONObject().put("tour_id", t.id).put("reason", reason)
             .put("duration_s", (System.currentTimeMillis() - t.startedAt) / 1000).put("distance_m", Math.round(t.distanceM))
-            .put("ticks", t.ticks).put("photos_sent", t.photos))
+            .put("ticks", t.ticks).put("photos_sent", t.photos)
+            .put("battery_used_pct", used ?: JSONObject.NULL).put("charged_during_tour", t.charged || chargingNow))
         app.log.system("audit", "agent", "City tour with ${t.agent} ended ($reason)")
     }
 }

@@ -31,7 +31,7 @@ class InteractionModule(app: BridgeApp) : Capability(app) {
     override val group = "talk"
     override val switchKey = "interactions"
     override val endpoints = listOf(Endpoints.INTERACTION_CREATE, Endpoints.INTERACTION_LIST, Endpoints.INTERACTION_GET,
-        Endpoints.INTERACTION_CANCEL, Endpoints.EVENTS, Endpoints.TEXT_STREAM)
+        Endpoints.INTERACTION_CANCEL, Endpoints.EVENTS, Endpoints.TEXT_STREAM, Endpoints.CALLBACK_TEST)
 
     /** D26: POST /v1/text/stream calls per agent per second. */
     private val streamLimiter = RateLimiter(windowMs = 1000)
@@ -157,6 +157,8 @@ class InteractionModule(app: BridgeApp) : Capability(app) {
             val i = try { app.interactions.appendText(a.id, id, append, done) } catch (e: InteractionError) { fail(e) }
             Reply.Json(JSONObject().put("interaction_id", i.id).put("length", i.streamText.length).put("status", i.status.id).put("done", i.streamDone))
         }
+        // EVT-06: a signed test event to the caller's callback URL, sent now.
+        endpoint(Endpoints.CALLBACK_TEST) { app.callbackDispatcher.test(this) }
 
         endpoint(Endpoints.EVENTS) {
             val a = agent!!

@@ -35,7 +35,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** Agent detail (UI-14, AGT-12 … AGT-15, ui-spec 5.5). No Callback section until P2. */
+/** Agent detail (UI-14, AGT-12 … AGT-15, ui-spec 5.5), with the Callback URL row (EVT-05). */
 class AgentDetailFragment : Fragment() {
     private var _b: FragmentAgentDetailBinding? = null
     private val b get() = _b!!
@@ -84,6 +84,8 @@ class AgentDetailFragment : Fragment() {
                 if (on) R.string.agents_developer_on_log else R.string.agents_developer_off_log, a.name))
         }
         b.notes.setOnFocusChangeListener { _, has -> if (!has) saveNotes() }
+        b.callbackSet.setOnClickListener { askCallbackUrl() }
+        b.callbackRemove.setOnClickListener { confirmRemoveCallback() }
 
         bindAgent()
         app.agents.addListener(agentsChanged)
@@ -136,6 +138,115 @@ class AgentDetailFragment : Fragment() {
         }
         if (savedNotes == null) savedNotes = a.notes
         b.activityEmpty.text = getString(R.string.agents_no_calls, a.name)
+        bindCallback(a)
+    }
+
+    // ---- Callback URL (EVT-05) ----
+
+    private fun bindCallback(a: Agent) {
+        val cb = app.callbacks.get(a.id)
+        b.callbackValue.text = if (cb != null) getString(R.string.callback_set_to, cb.host) else getString(R.string.callback_not_set, a.name)
+        b.callbackSet.setText(if (cb != null) R.string.callback_change else R.string.callback_set)
+        b.callbackRemove.isVisible = cb != null
+    }
+
+    private fun askCallbackUrl() {
+        val a = agent() ?: return
+        val ctx = requireContext()
+        val layout = com.google.android.material.textfield.TextInputLayout(ctx, null,
+            com.google.android.material.R.attr.textInputOutlinedStyle).apply {
+            hint = getString(R.string.callback_dialog_label)
+            placeholderText = getString(R.string.callback_dialog_hint)
+        }
+        val input = com.google.android.material.textfield.TextInputEditText(layout.context).apply {
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_URI
+            isSingleLine = true
+            importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO
+            setText(app.callbacks.get(a.id)?.url ?: "")
+        }
+        layout.addView(input)
+        val box = android.widget.FrameLayout(ctx).apply {
+            val pad = (20 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad / 2, pad, 0)
+            addView(layout)
+        }
+        val dialog = MaterialAlertDialogBuilder(ctx)
+            .setTitle(getString(R.string.callback_dialog_title, a.name))
+            .setView(box)
+            .setPositiveButton(R.string.callback_next, null)
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+        input.requestFocus()
+        dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).setOnClickListener {
+            val url = input.text?.toString()?.trim() ?: ""
+            val check = net.finleg.bridget.core.CallbackRules.check(url,
+                net.finleg.bridget.core.CallbackRules.tailnetDomain(app.listener.value.magicDns), app.settings.allowInternetCallbacks)
+            if (check is net.finleg.bridget.core.CallbackRules.Check.Bad) { layout.error = check.reason; return@setOnClickListener }
+            dialog.dismiss()
+            confirmCallback(url)
+        }
+    }
+
+    /** The full URL is shown before saving (EVT-05). */
+    private fun confirmCallback(url: String) {
+        val a = agent() ?: return
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.callback_confirm_title, a.name))
+            .setMessage(getString(R.string.callback_confirm_body, a.name, url))
+            .setPositiveButton(R.string.callback_save) { _, _ ->
+                val cur = agent() ?: return@setPositiveButton
+                app.callbackDispatcher.cancel(cur.id)
+                val secret = app.callbacks.set(cur.id, url)
+                app.log.system("audit", "agent", getString(R.string.callback_set_log, cur.name, app.callbacks.get(cur.id)?.host ?: "?"))
+                bindCallback(cur)
+                showSecretOnce(cur.name, secret)
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    /** Shown once; never stored in the UI state, the log or saved instance state. */
+    private fun showSecretOnce(agentName: String, secret: String) {
+        val ctx = requireContext()
+        val view = android.widget.TextView(ctx).apply {
+            text = getString(R.string.callback_secret_body, agentName) + "\n\n" + secret
+            setTextIsSelectable(false)
+            val pad = (24 * resources.displayMetrics.density).toInt()
+            setPadding(pad, pad / 2, pad, 0)
+            setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_BodyMedium)
+        }
+        MaterialAlertDialogBuilder(ctx)
+            .setTitle(getString(R.string.callback_secret_title, agentName))
+            .setView(view)
+            .setCancelable(false)
+            .setPositiveButton(R.string.callback_copy) { _, _ ->
+                val cm = ctx.getSystemService(android.content.ClipboardManager::class.java) ?: return@setPositiveButton
+                val clip = android.content.ClipData.newPlainText(net.finleg.bridget.ui.MainActivity.CLIP_LABEL_SECRET, secret)
+                // SEC-11: Android hides the preview of a sensitive clip; MainActivity clears it on return.
+                clip.description.extras = android.os.PersistableBundle().apply {
+                    putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE, true)
+                }
+                cm.setPrimaryClip(clip)
+                view.post { com.google.android.material.snackbar.Snackbar.make(b.root, R.string.callback_copied,
+                    com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show() }
+            }
+            .setNegativeButton(R.string.callback_done, null)
+            .show()
+    }
+
+    private fun confirmRemoveCallback() {
+        val a = agent() ?: return
+        val cb = app.callbacks.get(a.id) ?: return
+        MaterialAlertDialogBuilder(requireContext())
+            .setMessage(getString(R.string.callback_remove_confirm, a.name, cb.host))
+            .setPositiveButton(R.string.callback_remove) { _, _ ->
+                app.callbacks.remove(a.id)
+                app.callbackDispatcher.cancel(a.id)
+                app.log.system("audit", "agent", getString(R.string.callback_removed_log, a.name, cb.host))
+                agent()?.let { bindCallback(it) }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun loadLog() {

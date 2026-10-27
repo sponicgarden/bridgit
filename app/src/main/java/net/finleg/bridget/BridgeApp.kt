@@ -25,6 +25,8 @@ class BridgeApp : Application() {
     lateinit var interactions: net.finleg.bridget.interact.InteractionStore
     lateinit var speaker: net.finleg.bridget.capability.SpeakerQueue
     lateinit var tours: net.finleg.bridget.tour.TourManager
+    lateinit var callbacks: net.finleg.bridget.core.CallbackStore
+    lateinit var callbackDispatcher: net.finleg.bridget.interact.CallbackDispatcher
     val pairing = Pairing()
 
     /** What the listener is doing, for Home, the notification and the Add-agent check. */
@@ -61,6 +63,9 @@ class BridgeApp : Application() {
         interactions = net.finleg.bridget.interact.InteractionStore(this)
         speaker = net.finleg.bridget.capability.SpeakerQueue(this)
         tours = net.finleg.bridget.tour.TourManager(this)
+        callbacks = net.finleg.bridget.core.CallbackStore(this)
+        callbackDispatcher = net.finleg.bridget.interact.CallbackDispatcher(this, callbacks)
+        interactions.addEventListener { callbackDispatcher.onEvent(it) } // EVT-06
         // Play aloud (UI-16): Rahul's own tap, so silent/DND don't block it; a call still does. Same queue as everything else.
         net.finleg.bridget.ui.interactions.SpeakHook.speak = { _, agent, title, text ->
             if (!speaker.inCall()) speaker.speakText("owner", agent, net.finleg.bridget.interact.NotifRules.utterance(agent, title, text), allowInQuiet = true)

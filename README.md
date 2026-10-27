@@ -128,6 +128,28 @@ header are refused (403); batches get 400. The whole JSON-RPC message is
 capped at 2 MB, so base64 images sent with `interactions_send` or
 `feedback_file` must be smaller over MCP than over HTTP.
 
+### Callbacks
+
+Rahul can give an agent a **Callback URL** in its agent screen (tailnet
+addresses only, unless Settings > Allow internet callbacks is on; then a public
+`https://` URL works too). Bridget then POSTs every event for that agent as
+`{"event": {id, type, at, data}, "agent": "<name>"}`, retrying at 10 s, 60 s and
+5 min (`GET /v1/events` always has them). The callback secret (`cbs_…`) is shown
+once when the URL is saved. Check the signature like this:
+
+```python
+import hmac, hashlib, time
+def verify(secret: str, headers, raw_body: bytes) -> bool:
+    ts = headers["X-Bridget-Timestamp"]
+    want = "sha256=" + hmac.new(secret.encode(), ts.encode() + b"." + raw_body, hashlib.sha256).hexdigest()
+    fresh = abs(time.time() - int(ts)) <= 300  # also drop X-Bridget-Event-Id values you've already seen
+    return fresh and hmac.compare_digest(want, headers["X-Bridget-Signature"])
+```
+
+`POST /v1/callback/test` sends a signed `callback.test` event right away and
+returns `{delivered, http_status, host}` (502 `callback_failed` if the
+receiver didn't answer 2xx).
+
 ## Security model
 
 - Listens only on the phone's Tailscale addresses (IPv4 100.64.0.0/10 and

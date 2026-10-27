@@ -93,6 +93,9 @@
         <!-- CAP-33: answers questions from notification buttons and inline reply. -->
         <receiver android:name=".interact.InteractionActionReceiver" android:exported="false" />
 
+        <!-- 8.25: Ask, Pause/Resume and End from the City tour notification. -->
+        <receiver android:name=".tour.TourActionReceiver" android:exported="false" />
+
         <!-- CAP-41: opens an interaction link from a notification action (no trampolines). -->
         <activity
             android:name=".interact.LinkActivity"

@@ -96,7 +96,10 @@ class StatusModule(app: BridgeApp) : Capability(app) {
                 out.put(m.id, JSONObject().put("title", st.title).put("enabled", st.enabled).put("ready", st.ready)
                     .put("blocked_reason", st.blockedReason ?: JSONObject.NULL).put("details", st.details))
             }
+            // EVT-05: whether the caller has a callback, and its host only (never the URL or secret).
+            val cb = agent?.let { app.callbacks.get(it.id) }
             Reply.Json(JSONObject().put("capabilities", out).put("notifications", app.captureNotificationsOn())
+                .put("callback", JSONObject().put("set", cb != null).put("host", cb?.host ?: JSONObject.NULL))
                 .put("listener", JSONObject().put("camera_ready", app.listener.value.cameraReady).put("mic_ready", app.listener.value.micReady)))
         }
         endpoint(Endpoints.CHANGES) {

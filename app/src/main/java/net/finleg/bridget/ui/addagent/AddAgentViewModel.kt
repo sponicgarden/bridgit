@@ -167,7 +167,9 @@ class AddAgentViewModel(application: Application) : AndroidViewModel(application
         val helper = if (connection == Connection.USERSPACE)
             runCatching { app.assets.open("bridget-helper.py").bufferedReader().use { it.readText() } }.getOrNull()
         else null
-        prompt = SetupPrompt.build(name, k, connection, app.address(), deviceModel(), app.registry.caps(), helper)
+        // A callback set for this agent: the prompt carries its existing secret (EVT-06), never a new one.
+        val callback = agentId?.let { id -> app.callbacks.get(id)?.let { app.callbacks.secret(id) } }
+        prompt = SetupPrompt.build(name, k, connection, app.address(), deviceModel(), app.registry.caps(), helper, callback)
     }
 
     /** Rebuilds the prompt (for example once the Tailscale address is known). */

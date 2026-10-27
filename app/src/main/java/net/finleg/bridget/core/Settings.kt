@@ -51,6 +51,11 @@ class Settings(context: Context) {
         get() = prefs.getInt("speaker_ceiling", 70)
         set(v) { prefs.edit().putInt("speaker_ceiling", v.coerceIn(10, 100)).apply(); changed() }
 
+    /** EVT-05: a public HTTPS callback URL needs this (off by default). Tailnet callbacks never do. */
+    var allowInternetCallbacks: Boolean
+        get() = prefs.getBoolean(PREF_INTERNET_CALLBACKS, false)
+        set(v) { prefs.edit().putBoolean(PREF_INTERNET_CALLBACKS, v).apply(); changed() }
+
     var firstRunDone: Boolean
         get() = prefs.getBoolean("first_run_done", false)
         set(v) { prefs.edit().putBoolean("first_run_done", v).apply() }
@@ -62,5 +67,9 @@ class Settings(context: Context) {
         private val p = context.getSharedPreferences("agents", Context.MODE_PRIVATE)
         override fun load(): String? = p.getString("agents", null)
         override fun save(json: String) { p.edit().putString("agents", json).apply() }
+    }
+
+    companion object {
+        const val PREF_INTERNET_CALLBACKS = "allow_internet_callbacks"
     }
 }

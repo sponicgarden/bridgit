@@ -66,7 +66,7 @@ class MainActivity : AppCompatActivity() {
             navInset = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
             v.updatePadding(bottom = navInset); applyPanelInset(); insets
         }
-        if (savedInstanceState == null) { route(); openReportFrom(intent); openInteractionFrom(intent) }
+        if (savedInstanceState == null) { route(); openReportFrom(intent); openInteractionFrom(intent); openTourFrom(intent) }
         watchInteractionsBadge()
         watchTextPanel()
     }
@@ -147,6 +147,15 @@ class MainActivity : AppCompatActivity() {
         setIntent(intent)
         openReportFrom(intent)
         openInteractionFrom(intent)
+        openTourFrom(intent)
+    }
+
+    /** The City tour notification opens the tour screen. */
+    private fun openTourFrom(intent: Intent?) {
+        if (intent?.getBooleanExtra(net.finleg.bridget.tour.TourNotifier.EXTRA_OPEN_TOUR, false) != true) return
+        intent.removeExtra(net.finleg.bridget.tour.TourNotifier.EXTRA_OPEN_TOUR)
+        if (nav.currentDestination?.id in setOf(R.id.addAgent, R.id.pairCode, R.id.firstRun, R.id.tour)) return
+        nav.navigate(R.id.tour)
     }
 
     /** A question or notice notification (CAP-33) opens its interaction. */
@@ -186,7 +195,15 @@ class MainActivity : AppCompatActivity() {
     /** Android lets an app see the clipboard only while its window has focus, so SEC-11 runs here, not in onResume. */
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) clearOurClip()
+        if (hasFocus) { clearOurClip(); leftApp = false }
+    }
+
+    /** True once Bridget went to the background; a copied callback secret is cleared only after that. */
+    private var leftApp = false
+
+    override fun onStop() {
+        super.onStop()
+        leftApp = true
     }
 
     override fun onResume() {
@@ -208,12 +225,15 @@ class MainActivity : AppCompatActivity() {
         val cm = getSystemService(ClipboardManager::class.java) ?: return
         val label = runCatching { cm.primaryClipDescription?.label?.toString() }.getOrNull() ?: return
         if (label == CLIP_LABEL) runCatching { cm.clearPrimaryClip() }
+        // The secret's Copy button closes a dialog, which refocuses this window at once: wait until Rahul has been away.
+        if (label == CLIP_LABEL_SECRET && leftApp) runCatching { cm.clearPrimaryClip() }
     }
 
     fun showBottomBar(show: Boolean) { b.bottomNav.visibility = if (show) View.VISIBLE else View.GONE }
 
     companion object {
         const val CLIP_LABEL = "Bridget setup prompt"
+        const val CLIP_LABEL_SECRET = "Bridget callback secret"
         /** Long extra: open this report (from the feedback notification). */
         const val EXTRA_REPORT_ID = "report_id"
         /** Long extra: open this interaction (from a question or notice notification). */

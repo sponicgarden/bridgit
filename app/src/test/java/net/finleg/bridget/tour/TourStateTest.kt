@@ -94,4 +94,16 @@ class TourStateTest {
 
         assertNull(TourPrivacy.scrub(JSONObject().put("tour_id", "t1").put("reason", "time limit")))
     }
+
+    @Test fun batteryUsedSoFar() {
+        assertEquals(7, TourBattery.used(80, 73, charged = false))
+        assertEquals(0, TourBattery.used(80, 81, charged = false)) // never negative
+        assertNull(TourBattery.used(80, 70, charged = true))       // charging during the tour: unknown
+        assertNull(TourBattery.used(null, 70, charged = false))
+        assertNull(TourBattery.used(80, null, charged = false))
+        val t = tour().copy(batteryStartPct = 90)
+        val s = TourState(); s.begin(t)
+        assertTrue(s.update("t1") { it.copy(charged = true) }!!.charged)
+        assertEquals(90, s.current()!!.batteryStartPct)
+    }
 }
