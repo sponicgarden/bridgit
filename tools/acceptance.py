@@ -38,7 +38,8 @@ class Ctx:
         cmd = ["shell", "am", "broadcast", "-f", "0x20", "-a", "net.finleg.bridget.debug.SETUP",
                "-n", f"{self.pkg}/net.finleg.bridget.DebugSetupReceiver"]
         for k, v in extras.items():
-            cmd += (["--ez", k, "true" if v else "false"] if isinstance(v, bool) else ["--es", k, str(v)])
+            # adb joins arguments into one shell command: quote values so spaces survive.
+            cmd += (["--ez", k, "true" if v else "false"] if isinstance(v, bool) else ["--es", k, "'" + str(v).replace("'", "'\\''") + "'"])
         out = self.adb(*cmd)
         m = re.search(r'data="(\d{6})"', out)
         return m.group(1) if m else None
@@ -412,6 +413,61 @@ def main():
         r2 = c.call("GET", "/health", P)
         assert r2.json()["whats_new"] is None and "x-bridget-whats-new" not in r2.headers, "still nagging after reading the changes"
         return f"revision {rev}"
+
+    # ---- 1.5: interactions (8.13, D26) ----------------------------------------------------------------
+    def question(agent, title, **extra):
+        body = {"kind": "question", "title": title, "controls": [
+            {"type": "button", "id": "yes", "label": "Yes", "style": "primary"}, {"type": "button", "id": "no", "label": "No"}]}
+        body.update(extra)
+        return c.call("POST", "/interactions", agent, body)
+
+    @c.check("I01", "a question reaches the phone; the waiting agent gets the answer about 1 s after the tap (stand-in tap)")
+    def _():
+        c.hook(interactions=True); time.sleep(0.5)
+        r = question(T, "Acceptance: pay the test invoice?"); expect(r, 201)
+        iid = r.json()["interaction_id"]
+        with concurrent.futures.ThreadPoolExecutor(1) as ex:
+            fut = ex.submit(c.call, "GET", f"/interactions/{iid}?wait=30", T)
+            time.sleep(2)
+            t_tap = time.time()
+            c.hook(answer=f"{iid}:yes")
+            w = fut.result(40)
+        expect(w, 200)
+        j = w.json(); lag = time.time() - t_tap
+        assert j["status"] == "answered" and j["answer"]["button"] == "yes", j
+        return f"answer arrived {lag:.2f} s after the tap (includes the adb broadcast)"
+
+    @c.check("I02", "ownership: another agent can't read or cancel it (404); bad links and notice buttons are refused")
+    def _():
+        r = question(T, "Acceptance: ownership"); expect(r, 201); iid = r.json()["interaction_id"]
+        expect(c.call("GET", f"/interactions/{iid}", P), 404, "not_found")
+        expect(c.call("DELETE", f"/interactions/{iid}", P), 404, "not_found")
+        assert all(x["interaction_id"] != iid for x in c.call("GET", "/interactions", P).json()["interactions"])
+        expect(c.call("DELETE", f"/interactions/{iid}", T), 200)
+        expect(c.call("POST", "/interactions", T, {"kind": "question", "title": "x", "controls": [
+            {"type": "button", "id": "a", "label": "A"}, {"type": "link", "id": "l", "label": "L", "url": "javascript:alert(1)"}]}), 422, "invalid_parameter")
+        expect(c.call("POST", "/interactions", T, {"kind": "notice", "title": "x", "controls": [{"type": "button", "id": "a", "label": "A"}]}), 422, "invalid_parameter")
+
+    @c.check("I03", "Rahul closes it: the agent sees dismissed and gets an interaction.dismissed event")
+    def _():
+        cur = c.call("GET", "/events?types=interaction.dismissed", T).json()["next_cursor"]
+        r = question(T, "Acceptance: close me"); expect(r, 201); iid = r.json()["interaction_id"]
+        c.hook(dismiss=str(iid))
+        g = c.call("GET", f"/interactions/{iid}?wait=10", T).json()
+        assert g["status"] == "dismissed", g
+        ev = c.call("GET", f"/events?since={cur}&wait=10&types=interaction.dismissed", T, timeout=20).json()
+        assert any(e["data"]["interaction_id"] == iid for e in ev["events"]), ev
+
+    @c.check("I04", "at most 5 open questions per agent (429 too_many_open)")
+    def _():
+        ids = []
+        codes = []
+        for n in range(6):
+            r = question(P, f"Acceptance: open {n}"); codes.append(r.status)
+            if r.status == 201: ids.append(r.json()["interaction_id"])
+        for i in ids: c.call("DELETE", f"/interactions/{i}", P)
+        assert codes[-1] == 429 and codes.count(201) == 5, codes
+        return f"statuses {codes}"
 
     # ---- 1.5: location, speaker, City tour (D30) ------------------------------------------------------
     @c.check("L01", "location: a fix with latitude, longitude, altitude, accuracy, and the compass heading")
