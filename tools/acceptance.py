@@ -458,7 +458,9 @@ def main():
     @c.check("F06", "report text and status notes never reach the log other agents can read")
     def _():
         time.sleep(1.5)  # async log writer
-        blob = c.call("GET", "/log/export?format=jsonl", T).body.decode()
+        since = urllib.request.quote(started.isoformat(timespec="seconds"))  # this run only: the log outlives reinstalls
+        blob = c.call("GET", f"/log/export?format=jsonl&since={since}", T).body.decode()
+        assert len(blob) > 1000, "export for this run is empty"
         for secret_text in ("acceptance: image/last was slow", "Looking at it", "Fix in PR #3", "acceptance: with image"):
             assert secret_text not in blob, f"log contains report text: {secret_text!r}"
 
