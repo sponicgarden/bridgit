@@ -35,6 +35,11 @@ object UiActions {
      * Opens the Tailscale app, or its Play page if it isn't installed. A launch
      * intent with setPackage works without a <queries> entry (visibility only filters lookups).
      */
+    /** True if the Tailscale app is on the phone (needs the <queries> entry in the manifest). */
+    fun isTailscaleInstalled(ctx: Context): Boolean =
+        runCatching { ctx.packageManager.getPackageInfo(TAILSCALE_PACKAGE, 0); true }.getOrDefault(false)
+
+    /** Opens Tailscale, or its Play Store page to install it when it's missing. */
     fun openTailscale(ctx: Context) {
         val launch = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER).setPackage(TAILSCALE_PACKAGE)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

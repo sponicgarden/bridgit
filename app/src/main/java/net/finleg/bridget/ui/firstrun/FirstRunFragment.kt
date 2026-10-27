@@ -128,7 +128,9 @@ class FirstRunFragment : Fragment() {
         when {
             ts == null -> p.tsText.text = getString(R.string.firstrun_ts_checking)
             ts.isEmpty() -> {
-                p.tsText.text = getString(R.string.firstrun_ts_missing)
+                val installed = net.finleg.bridget.ui.home.UiActions.isTailscaleInstalled(ctx)
+                p.tsText.text = getString(if (installed) R.string.firstrun_ts_missing else R.string.home_banner_tailscale_missing)
+                p.openTailscale.text = getString(if (installed) R.string.home_banner_open_tailscale else R.string.home_banner_install_tailscale)
                 p.tsIcon.setImageResource(R.drawable.ic_warning)
                 p.tsIcon.setColorFilter(ctx.themeColor(M.attr.colorError))
             }

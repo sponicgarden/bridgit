@@ -31,6 +31,8 @@
     <string name="home_banner_turn_on">Turn on</string>
     <string name="home_banner_tailscale">Tailscale isn\'t connected. Agents can\'t reach Bridget.</string>
     <string name="home_banner_open_tailscale">Open Tailscale</string>
+    <string name="home_banner_tailscale_missing">Tailscale isn\'t installed. Agents reach Bridget through Tailscale, so install it and sign in.</string>
+    <string name="home_banner_install_tailscale">Install Tailscale</string>
     <string name="home_banner_battery">Android may stop Bridget when the screen is off.</string>
     <string name="home_banner_fix">Fix</string>
     <string name="home_banner_permission">%1$s permission was removed.</string>

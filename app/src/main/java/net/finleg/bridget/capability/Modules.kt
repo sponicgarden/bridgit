@@ -141,6 +141,11 @@ class CameraModule(app: BridgeApp, private val registry: Registry) : Capability(
     override val permissions = listOf(Manifest.permission.CAMERA)
     override val endpoints = listOf(Endpoints.SNAPSHOT)
     override fun blockedReason() = captureBlocked(app, Manifest.permission.CAMERA, app.listener.value.cameraReady)
+    override fun details() = JSONObject().apply {
+        put("cameras", org.json.JSONArray().put("rear").put("front"))
+        // Zoom range of the camera used last; known after the first photo.
+        net.finleg.bridget.BridgeService.running?.camera?.lastZoomRange?.let { (min, max) -> put("zoom_min", min.toDouble()).put("zoom_max", max.toDouble()) }
+    }
 
     override fun Route.install(api: ApiServer) = with(api) {
         endpoint(Endpoints.SNAPSHOT) {
@@ -149,14 +154,16 @@ class CameraModule(app: BridgeApp, private val registry: Registry) : Capability(
             val flash = if (body.has("flash")) body.opt("flash") as? Boolean
                 ?: throw ErrorCatalog.error("invalid_parameter", "flash must be true or false.") else false
             val spec = snapshotSpec(this)
+            val zoom = if (!body.has("zoom") || body.isNull("zoom")) null else (body.opt("zoom") as? Number)?.toFloat()
+                ?.takeIf { it in 0.1f..100f } ?: throw ErrorCatalog.error("invalid_parameter", "zoom must be a number such as 0.5, 1, 2 or 5.")
             requireUsable()
             val img = api.withSensor(registry.cameraLock, app.getString(R.string.notif_taking_photo, agentName)) {
-                api.service.camera.snapshot(which == "rear", flash, spec)
+                api.service.camera.snapshot(which == "rear", flash, spec, zoom)
             }
-            data = JSONObject().put("camera", which).put("width_px", img.width).put("height_px", img.height)
+            data = JSONObject().put("camera", which).put("width_px", img.width).put("height_px", img.height).put("zoom", zoom ?: 1f)
             val at = isoAt(System.currentTimeMillis())
             if (wantsRaw()) rawReply(img, mapOf("X-Bridget-Captured-At" to at, "X-Bridget-Camera" to which))
-            else Reply.Json(envelope(img, at, "captured_at", null).put("source", "camera").put("camera", which))
+            else Reply.Json(envelope(img, at, "captured_at", null).put("source", "camera").put("camera", which).put("zoom", zoom ?: 1.0))
         }
     }
 

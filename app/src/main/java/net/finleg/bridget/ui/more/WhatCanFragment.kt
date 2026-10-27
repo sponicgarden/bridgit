@@ -91,6 +91,10 @@ class WhatCanFragment : Fragment() {
             b.title.text = f.title
             b.what.text = f.what
             b.useCase.text = f.useCase
+            val opts = WhatCanData.options[f.title].orEmpty()
+            b.optionsLabel.isVisible = opts.isNotEmpty()
+            b.options.isVisible = opts.isNotEmpty()
+            b.options.text = opts.joinToString("\n") { "•  $it" }
             b.stage.text = f.stage.label
             b.ref.text = ctx.getString(R.string.whatcan_ref, f.ref)
             // Spec references are for the technical part only; the use cases stay plain.
@@ -103,7 +107,8 @@ class WhatCanFragment : Fragment() {
             }
             b.stage.background.mutate().setTint(ctx.themeColor(bg))
             b.stage.setTextColor(ctx.themeColor(fg))
-            b.root.contentDescription = "${f.title}. ${f.stage.label}. ${f.what} For example: ${f.useCase}"
+            b.root.contentDescription = "${f.title}. ${f.stage.label}. ${f.what}" +
+                (if (opts.isNotEmpty()) " Options: " + opts.joinToString("; ") + "." else "") + " For example: ${f.useCase}"
         }
     }
 

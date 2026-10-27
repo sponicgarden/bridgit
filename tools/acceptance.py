@@ -477,7 +477,7 @@ def main():
     elif c.locked():
         captures_note = "phone was locked; captures need it unlocked (TST-03)"
 
-    @c.check("A23", "camera snapshot (rear, 1024 px) and raw=1")
+    @c.check("A23", "camera snapshot (rear, 1024 px), raw=1, and zoom (CAP-05)")
     def _():
         if captures_note:
             raise Unverified(captures_note)
@@ -486,7 +486,13 @@ def main():
         j = r.json(); assert j["width_px"] <= 1024 and j["format"] == "jpeg"
         r2 = c.call("POST", "/camera/snapshot", T, {"camera": "rear", "size": "thumb", "raw": 1}, timeout=40); expect(r2, 200)
         assert r2.body[:2] == b"\xff\xd8"
-        return f"{j['width_px']}x{j['height_px']} in {r.secs:.1f} s; raw {len(r2.body)//1024} KB"
+        r3 = c.call("POST", "/camera/snapshot", T, {"camera": "rear", "zoom": 2, "size": "thumb"}, timeout=40); expect(r3, 200)
+        assert r3.json().get("zoom") == 2, r3.json().get("zoom")
+        bad = c.call("POST", "/camera/snapshot", T, {"camera": "rear", "zoom": 50, "size": "thumb"}, timeout=40)
+        expect(bad, 422, "invalid_parameter")
+        zmin, zmax = bad.json().get("min_zoom"), bad.json().get("max_zoom")
+        assert zmin is not None and zmax is not None and zmax > 1, bad.json()
+        return f"{j['width_px']}x{j['height_px']} in {r.secs:.1f} s; raw {len(r2.body)//1024} KB; zoom 2x ok, range {zmin:.1f}-{zmax:.1f}x"
 
     @c.check("A24", "mic clip (3 s)")
     def _():

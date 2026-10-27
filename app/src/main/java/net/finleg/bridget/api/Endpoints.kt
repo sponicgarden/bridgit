@@ -59,9 +59,10 @@ object Endpoints {
         body = listOf(
             Param("camera", "string", "rear (default) or front", enum = listOf("rear", "front")),
             Param("flash", "boolean", "Fire the flash (default false)"),
+            Param("zoom", "number", "Zoom ratio, e.g. 0.5 (ultra-wide), 1, 2, 5 (telephoto); the range is in /v1/capabilities after the first photo"),
             Param("max_width_px", "integer", "Width limit, 64-20000, or null for full size (default 2048 unless size is given)"),
         ) + sizing.filter { it.name != "max_width_px" },
-        example = "POST /v1/camera/snapshot {\"camera\":\"rear\"}",
+        example = "POST /v1/camera/snapshot {\"camera\":\"rear\",\"zoom\":2}",
         returns = "captured_at, width_px, height_px, format, size_bytes, data_base64 (or JPEG bytes with raw=1)",
         errors = listOf("capability_disabled", "permission_denied", "notifications_required", "device_locked", "sensor_busy", "capture_timeout", "service_start_blocked", "payload_too_large"))
     val MIC = EndpointSpec("POST", "/mic/record", "mic", "Record an audio clip",

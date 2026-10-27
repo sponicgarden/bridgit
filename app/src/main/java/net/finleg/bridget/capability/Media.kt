@@ -84,7 +84,14 @@ object ImageUtil {
 
 class CameraCapture(private val context: Context, private val owner: LifecycleOwner) {
 
-    suspend fun snapshot(rear: Boolean, flash: Boolean, spec: Sizing.Spec): Encoded {
+    /** Zoom range of the last camera used, for /v1/capabilities and error messages. */
+    @Volatile var lastZoomRange: Pair<Float, Float>? = null; private set
+
+    /**
+     * [zoom] (CAP-05): null = the camera's default (1x). Below 1 uses the ultra-wide lens and
+     * above about 5 the telephoto on phones whose camera switches lenses by zoom (Pixel).
+     */
+    suspend fun snapshot(rear: Boolean, flash: Boolean, spec: Sizing.Spec, zoom: Float? = null): Encoded {
         val km = context.getSystemService(KeyguardManager::class.java)
         if (km.isDeviceLocked) throw ApiError(409, "device_locked", "Phone is locked. Unlock it, then retry.")
 
@@ -101,12 +108,22 @@ class CameraCapture(private val context: Context, private val owner: LifecycleOw
                     ResolutionSelector.Builder()
                         .setResolutionStrategy(ResolutionStrategy.HIGHEST_AVAILABLE_STRATEGY).build()
                 ).build()
-            try {
+            val camera = try {
                 withContext(Dispatchers.Main) { provider.bindToLifecycle(owner, selector, capture) }
             } catch (e: Exception) {
                 throw ApiError(409, "sensor_busy", "Camera unavailable: ${e.message}")
             }
             try {
+                val zs = withContext(Dispatchers.Main) { camera.cameraInfo.zoomState.value }
+                if (zs != null) lastZoomRange = zs.minZoomRatio to zs.maxZoomRatio
+                if (zoom != null) {
+                    val (min, max) = lastZoomRange ?: (1f to 1f)
+                    if (zoom < min - 0.001f || zoom > max + 0.001f) throw ApiError(422, "invalid_parameter",
+                        "zoom must be ${"%.1f".format(min)} to ${"%.1f".format(max)} on this ${if (rear) "rear" else "front"} camera",
+                        mapOf("min_zoom" to min, "max_zoom" to max))
+                    withContext(Dispatchers.Main) { camera.cameraControl.setZoomRatio(zoom).await() }
+                    delay(400) // let focus and exposure settle at the new zoom
+                }
                 // take() yields Result: success, or the capture error. null here means timeout.
                 val outcome = withTimeoutOrNull(20_000) { take(capture, file) }
                     ?: throw ApiError(504, "capture_timeout", "Camera did not produce a photo in time")

@@ -17,6 +17,88 @@ object WhatCanData {
     data class Feature(val stage: Stage, val title: String, val what: String, val useCase: String, val ref: String,
                        val kind: Kind = Kind.ABILITY)
 
+    /**
+     * The choices an agent has for each feature, shown as "Options" on its card (owner request).
+     * Built features list what the API accepts today; planned ones list what the spec plans.
+     */
+    val options: Map<String, List<String>> = mapOf(
+        "Take a photo" to listOf(
+            "Back or front camera",
+            "Zoom: 0.5× (ultra-wide) up to the phone's maximum (telephoto)",
+            "Flash on or off",
+            "Size: sized for AI (1568 px), thumbnail (512 px), large (2560 px) or original",
+            "Or an exact width or long edge, and JPEG quality",
+            "Full resolution, up to the 50 MP sensor",
+            "As JSON with the picture inside, or as plain JPEG bytes",
+            "Never saved to your gallery"),
+        "Record a short clip" to listOf(
+            "Length: 1 to 120 whole seconds",
+            "Comes back as an M4A (AAC) audio file, 44.1 kHz mono",
+            "Not kept on the phone"),
+        "Your latest screenshot or photo" to listOf(
+            "Which: any image, the newest screenshot, or the newest camera photo",
+            "Wait up to 55 seconds for the next one you take",
+            "Size: sized for AI (default), thumbnail, large or original",
+            "As JSON or as plain JPEG bytes, with when it was taken and the album"),
+        "Find photos in your gallery" to listOf(
+            "List the newest 1 to 100 images (no pictures, just details)",
+            "Fetch one image at any of the sizes",
+            "Works with full access or only the photos you picked"),
+        "Questions and notices to you" to listOf(
+            "A notice (one-way) or a question",
+            "Buttons (up to 6), a text reply, a choice list, or a link",
+            "An image with the message",
+            "Normal or urgent; read aloud if you allow it",
+            "Expires after 1 minute to 7 days",
+            "The agent waits for your answer or gets a callback"),
+        "Rich HTML cards" to listOf(
+            "A small HTML page with its own layout, charts and forms",
+            "Runs on the phone with no internet access",
+            "Sends one answer back to the agent"),
+        "Send a screenshot" to listOf(
+            "A private copy (nothing saved) or a normal Android screenshot saved to your gallery",
+            "Same size choices as photos",
+            "At most one every 2 seconds and 60 an hour per agent"),
+        "Open a link or app" to listOf("Web links, maps, phone numbers (dialler only), email", "Or open an app by name", "Only when you tap it"),
+        "Phone status and context" to listOf(
+            "Battery: level, charging, temperature",
+            "Screen: on, locked, brightness",
+            "Sound: ringer, Do Not Disturb, volumes, headphones",
+            "Network: Wi-Fi or mobile, signal, Tailscale address",
+            "Storage, Bluetooth devices, activity (walking, driving)",
+            "A one-word guess: driving, in a pocket, on a table, in use, sleeping hours"),
+        "Location details" to listOf(
+            "Latitude and longitude (x, y)",
+            "Altitude (z) in metres",
+            "Accuracy in metres, speed and heading",
+            "A fresh fix (up to 15 s) or the last known one at once",
+            "High accuracy or battery-friendly",
+            "Street address, if you turn on address lookup"),
+        "Flash the light" to listOf("On for 1 second to 10 minutes; always turns itself off", "Turn off now", "Ask whether it's on"),
+        "Phone controls" to listOf(
+            "Do Not Disturb: off, priority, alarms only or total silence, for a set time",
+            "Ringer: normal, vibrate or silent",
+            "Volume: media, ring and alarm, 0-100",
+            "Brightness: a level or automatic",
+            "Everything goes back as it was when the time is up"),
+        "Find my phone" to listOf("Ring for 5 to 60 seconds at full alarm volume", "Vibrates too, even on silent"),
+        "Sensors" to listOf("Light", "Air pressure", "Proximity", "Steps since restart", "Orientation", "Motion (1-second average)"),
+        "Videos and downloads" to listOf("List recent videos", "Fetch a video, or one still frame at a chosen second", "Ask you to pick a file from Downloads"),
+        "Files to your phone" to listOf("PDF, images, text, CSV, JSON, audio, video, ZIP up to 25 MB", "A note with the file", "Saved to Downloads straight away if the agent asks", "Apps and other executables are refused"),
+        "Share to an agent" to listOf("Photos, PDFs, text and links from any app", "Pick the agent in the share sheet", "Add a note", "See when the agent picked it up"),
+        "Short video clips" to listOf("1 to 30 seconds", "Back or front camera", "With or without sound", "720p or 1080p"),
+        "Read text on the phone" to listOf("From the latest image, a gallery image, or a new photo", "Text and where it is on the image"),
+        "Transcribe clips on the phone" to listOf("Transcript with the audio, or the transcript only"),
+        "Screen sharing as a fallback" to listOf("Allow once, for 1 hour or for 16 hours, or deny", "Stop any time from the status bar"),
+        "App usage" to listOf("Today per app, the app in use now, or a date range"),
+        "Health Connect" to listOf("Steps, distance, active calories", "Sleep with stages", "Resting and average heart rate", "Workouts"),
+        "Read notifications" to listOf("What's showing now", "Recent ones, or wait for the next"),
+        "Copy to clipboard" to listOf("Up to 10 KB of text", "Marked sensitive so it doesn't show a preview", "You approve each one"),
+        "Play an audio file" to listOf("A sound file or a voice message", "Volume and whether it plays on silent would be your settings"),
+        "Everything is logged" to listOf("Filter by agent, type, endpoint, result, level, time or text", "Follow it live", "Stats per agent and endpoint", "Export as JSONL or CSV", "\"All entries\" or \"only their own\" for agents"),
+        "Report a bug or ask for a feature" to listOf("Last screen, up to 5 screenshots and the recent log attached", "\"Don't auto-fix\" keeps it for a person", "Statuses: new, seen, in progress, fixed, won't fix, duplicate", "You confirm a fix or say it's still broken"),
+    )
+
     val all = listOf(
         // ---- Available now --------------------------------------------------------------------------
         Feature(Stage.NOW, "Add an agent in a minute",

@@ -104,6 +104,7 @@ should treat these as settled unless a serious problem is found.
 | D15 | 27 Oct 2026 | Screens use **native Kotlin Android Views with Material 3 components**, with a "techie but friendly" look (section 12). | Decided |
 | D16 | 27 Oct 2026 | Spec **"maximum capabilities"**: describe everything Android allows that's useful to a personal agent, phased (section 16). | Decided |
 | D17 | 27 Oct 2026 | **Screenshots use an Accessibility service**, with no per-screenshot approval (replaces D10's approve-each-time design). Default mode: a private in-memory copy; optional mode: Android's normal screenshot, saved to the gallery. The screen-share grant flow (once / 1 h / 16 h) stays only as the fallback when Accessibility is off. | Decided |
+| D24 | 27 Oct 2026 | **Maximum control and information** (owner): expose every device option Android allows to agents, and list each option on its "What can Bridget do?" card. First step, 1.4.4: camera **zoom** (CAP-05, 0.5x ultra-wide up to the phone's maximum; tested 0.5-30x on the Pixel). Also: when Tailscale isn't installed, Home and first run say so with **Install Tailscale**, and the setup prompt links agents to tailscale.com/download. | Decided |
 | D23 | 27 Oct 2026 | **Blue, higher-contrast palette** (1.4.2): primary teal → blue, larger steps between surface, card and raised layers in both themes; gold (live) and green (success) unchanged (UI-02). **HTML interaction cards (CAP-34) move to P2** with questions and notices: the owner calls interactions with HTML "the killer feature". **"What can Bridget do?"** in More: one card per feature with a use case, built and planned. | Decided |
 | D22 | 27 Oct 2026 | **Name and icon:** the app is "Bridget", full name **"Bridget: Agentic Android Device Bridge"** (first run, Home's top bar with the icon and the version in small type, About). New icon from the owner's artwork (phone outline, stone bridge, cursor), 1.4.1. | Decided |
 | D21 | 27 Oct 2026 | **In-app update check, like Spotka's**: release APKs and a small `latest.json` are published to Sponic's **public R2** bucket; Bridget checks it over HTTPS, verifies the download (SHA-256, package, versionCode, signing certificate) and hands it to Android's installer, which always asks Rahul to confirm. Shipped with P1b as 1.4.0, with a new app icon. Section 12.14. | Decided |
@@ -769,7 +770,10 @@ every request is logged (section 10).
   `{"camera":"rear"|"front","flash":false,"max_width_px":2048|null}` (null =
   full size), plus API-10 presets and `raw=1` **[P1]**. Returns
   `captured_at, width_px, height_px, format, size_bytes, data_base64`.
-- **CAP-05 [P1]** Optional `"lens":"wide"|"ultrawide"|"tele"` where the
+- **CAP-05 [P1; zoom built in 1.4.4]** `"zoom"` is built: any ratio in the camera's range
+  (Pixel 10 Pro XL rear: 0.5-30x; the camera switches lenses by itself); out of range is
+  `invalid_parameter` with `min_zoom` / `max_zoom`; the range is in `/v1/capabilities` after the
+  first photo. Still to do: optional `"lens":"wide"|"ultrawide"|"tele"` where the
   device has it (CameraX camera info), `"zoom": 1.0-10.0`, and
   `"focus":"auto"|"near"`. Unknown values return `invalid_parameter`.
 - Android: CAMERA permission; `camera` FGS type active (ARC-02). Indicator:

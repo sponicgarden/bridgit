@@ -272,7 +272,11 @@ class HomeFragment : Fragment() {
         val ctx = requireContext()
         val s = app.listener.value
         val out = mutableListOf<Banner>()
-        if (s.running && s.boundTo.isEmpty() && s.bindError == null)
+        if (!UiActions.isTailscaleInstalled(ctx))
+            out += Banner("ts", getString(R.string.home_banner_tailscale_missing), getString(R.string.home_banner_install_tailscale), true) {
+                UiActions.openTailscale(ctx)
+            }
+        else if (s.running && s.boundTo.isEmpty() && s.bindError == null)
             out += Banner("ts", getString(R.string.home_banner_tailscale), getString(R.string.home_banner_open_tailscale), true) {
                 UiActions.openTailscale(ctx)
             }

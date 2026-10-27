@@ -33,7 +33,8 @@ object SetupPrompt {
         sb.append("- Base URL: ${addr.baseUrl}")
         addr.ipBaseUrl?.takeIf { addr.magicDns != null }?.let { sb.append("   (IP fallback: $it)") }
         sb.appendLine()
-        sb.appendLine("- Reachable only from devices on Rahul's Tailscale network.")
+        sb.appendLine("- Reachable only from devices on Rahul's Tailscale network. Not on it yet? Install Tailscale on your")
+        sb.appendLine("  computer (https://tailscale.com/download) and ask Rahul to add it to his network.")
         sb.appendLine()
         sb.appendLine("YOUR KEY")
         sb.appendLine("- $key")
