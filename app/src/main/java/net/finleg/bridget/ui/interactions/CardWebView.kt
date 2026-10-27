@@ -66,8 +66,27 @@ class CardWebView(context: Context, private val onRespond: (Any) -> Unit, privat
         addJavascriptInterface(Bridge(), "Bridget")
     }
 
-    /** Loads the agent's HTML with Bridget's head (CSP) in front. Never from a URL. */
-    fun load(html: String) = loadDataWithBaseURL(null, CardRules.prepare(html), "text/html", "utf-8", null)
+    /** The prepared page, served exactly once to the main-frame request for [CARD_URL]. */
+    @Volatile private var page: ByteArray? = null
+
+    /**
+     * Loads the agent's HTML with Bridget's head (CSP) in front. The page is answered from memory by
+     * shouldInterceptRequest for [CARD_URL] (an .invalid name, so it can never be a real host), once,
+     * with the CSP also sent as a response header. Every other request still gets the empty 403.
+     * (A data: URL load is itself intercepted on current WebViews, which showed every card blank.)
+     */
+    fun load(html: String) {
+        page = CardRules.prepare(html).toByteArray(Charsets.UTF_8)
+        loadUrl(CARD_URL)
+    }
+
+    /** The one response the card's WebView ever gets: the page, for its own main-frame load, the first time. */
+    private fun serve(request: WebResourceRequest): WebResourceResponse {
+        if (!request.isForMainFrame || request.method != "GET" || request.url.toString() != CARD_URL) return blocked()
+        val bytes = synchronized(this) { page.also { page = null } } ?: return blocked()
+        return WebResourceResponse("text/html", "utf-8", 200, "OK",
+            mapOf("Content-Security-Policy" to CardRules.CSP, "Cache-Control" to "no-store"), ByteArrayInputStream(bytes))
+    }
 
     /** Answers are no longer taken (the card was answered or closed elsewhere). */
     fun stopAccepting() { accepting = false }
@@ -92,11 +111,11 @@ class CardWebView(context: Context, private val onRespond: (Any) -> Unit, privat
         }
     }
 
-    private class Client : WebViewClient() {
+    private inner class Client : WebViewClient() {
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest) = true
         @Deprecated("Deprecated in Java")
         override fun shouldOverrideUrlLoading(view: WebView, url: String?) = true
-        override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse = blocked()
+        override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse = serve(request)
         @Deprecated("Deprecated in Java")
         override fun shouldInterceptRequest(view: WebView, url: String?): WebResourceResponse = blocked()
         override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) = handler.cancel()
@@ -150,6 +169,7 @@ class CardWebView(context: Context, private val onRespond: (Any) -> Unit, privat
         }
 
         /** The fail-closed answer to every request a card makes. */
+        const val CARD_URL = "https://card.bridget.invalid/"
         fun blocked() = WebResourceResponse("text/plain", "utf-8", 403, "Blocked by Bridget", emptyMap(), ByteArrayInputStream(ByteArray(0)))
     }
 }
