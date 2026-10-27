@@ -1,0 +1,272 @@
+<title>Bridget Spec 2.1</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a field manual. Brand hero in the icon's teal with the beacon gold as the one accent,
+   a contents rail on wide screens, and the full spec as a readable column with status chips. */
+:root {
+  --bg: #F4F8F7;
+  --surface: #FFFFFF;
+  --surface-2: #E8F0EE;
+  --fg: #14201E;
+  --muted: #52615E;
+  --line: #CFDCD9;
+  --teal: #0F6E64;
+  --teal-deep: #0A4640;
+  --teal-soft: #D3EEE9;
+  --gold: #8A6400;
+  --gold-bright: #FFC15E;
+  --gold-soft: #FFF0D1;
+  --ok: #1E7A3C; --ok-soft: #DDF3E3;
+  --warn: #8A5A00; --warn-soft: #FFEFC9;
+  --open: #7A3E9D; --open-soft: #F0E2F8;
+  --grey-soft: #E6EBEA;
+  --hero-fg: #F2FBF9;
+  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --radius: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0C1413; --surface: #131D1B; --surface-2: #1A2725; --fg: #DCE7E4; --muted: #93A6A2; --line: #2A3A37;
+    --teal: #5FD4C4; --teal-deep: #08332E; --teal-soft: #123A35;
+    --gold: #FFC15E; --gold-bright: #FFC15E; --gold-soft: #3A2C0B;
+    --ok: #7FD99A; --ok-soft: #12301C; --warn: #FFD27A; --warn-soft: #3A2C0B; --open: #D7A8F2; --open-soft: #2E1D3A;
+    --grey-soft: #22302D; --hero-fg: #EAF7F4;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0C1413; --surface: #131D1B; --surface-2: #1A2725; --fg: #DCE7E4; --muted: #93A6A2; --line: #2A3A37;
+  --teal: #5FD4C4; --teal-deep: #08332E; --teal-soft: #123A35;
+  --gold: #FFC15E; --gold-bright: #FFC15E; --gold-soft: #3A2C0B;
+  --ok: #7FD99A; --ok-soft: #12301C; --warn: #FFD27A; --warn-soft: #3A2C0B; --open: #D7A8F2; --open-soft: #2E1D3A;
+  --grey-soft: #22302D; --hero-fg: #EAF7F4;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { animation: none !important; transition: none !important; } }
+body { background: var(--bg); color: var(--fg); font: 16px/1.6 var(--font-body); }
+a { color: var(--teal); text-underline-offset: 2px; }
+a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid var(--gold-bright); outline-offset: 2px; border-radius: 4px; }
+code, pre { font-family: var(--font-mono); }
+h1, h2, h3, h4 { font-family: var(--font-display); text-wrap: balance; line-height: 1.2; }
+
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* ---- hero ---- */
+.hero { background: radial-gradient(120% 140% at 85% 0%, #17897C 0%, #0F6E64 35%, #0A4640 100%); color: var(--hero-fg); }
+.hero .wrap { padding-block: 48px 40px; display: grid; grid-template-columns: auto 1fr; gap: 28px; align-items: center; }
+.mark { width: 112px; height: 112px; border-radius: 50%; box-shadow: 0 10px 30px rgba(0,0,0,.25); }
+.eyebrow { font: 500 12px/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: #FFC15E; margin: 0 0 10px; }
+.hero h1 { font-size: clamp(2.4rem, 6vw, 4rem); font-weight: 800; margin: 0; letter-spacing: -.02em; }
+.hero .lede { font-size: 1.2rem; max-width: 60ch; margin: 10px 0 0; color: #DDF2EE; }
+.hero .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.hero .meta span { font: 500 12.5px/1 var(--font-mono); background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.18); padding: 7px 10px; border-radius: 999px; color: #F2FBF9; }
+@media (max-width: 640px) { .hero .wrap { grid-template-columns: 1fr; gap: 18px; padding-block: 32px 28px; } .mark { width: 76px; height: 76px; } }
+
+/* ---- facts strip ---- */
+.facts { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; margin: -22px 0 0; position: relative; }
+.fact { background: var(--surface); padding: 14px 16px; }
+.fact b { display: block; font: 700 1.9rem/1 var(--font-display); color: var(--teal); font-variant-numeric: tabular-nums; }
+.fact span { font-size: 13px; color: var(--muted); }
+@media (max-width: 760px) { .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fact:last-child { grid-column: 1 / -1; } }
+
+/* ---- overview sections ---- */
+.overview { display: grid; gap: 40px; padding-block: 44px 8px; }
+.ov-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 16px; }
+.ov-head h2 { font-size: 1.6rem; margin: 0; }
+.ov-head a { font-size: 14px; }
+.ov-intro { color: var(--muted); max-width: 68ch; margin: 0 0 16px; }
+
+.pillars { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; list-style: none; padding: 0; margin: 0; }
+.pillar { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; }
+.pillar h3 { margin: 0 0 6px; font-size: 1.15rem; }
+.pillar p { margin: 0; color: var(--muted); font-size: 15px; }
+.pillar .k { font: 500 12px/1 var(--font-mono); color: var(--gold); letter-spacing: .08em; text-transform: uppercase; display: block; margin-bottom: 10px; }
+@media (max-width: 860px) { .pillars { grid-template-columns: 1fr; } }
+
+.caps { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
+.cap { display: grid; grid-template-columns: 2.6em 1fr auto; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.cap-no { font: 500 12px var(--font-mono); color: var(--muted); }
+.cap-name { font-weight: 500; font-size: 15px; min-width: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 12px 0 0; font-size: 13px; color: var(--muted); }
+
+.chip, .tag { display: inline-flex; align-items: center; gap: 4px; font: 500 11.5px/1.2 var(--font-mono); padding: 4px 8px; border-radius: 999px; white-space: nowrap; letter-spacing: .01em; }
+.chip-built, .tag-built { background: var(--ok-soft); color: var(--ok); }
+.chip-planned, .tag-phase { background: var(--teal-soft); color: var(--teal); }
+.chip-later, .tag-superseded { background: var(--grey-soft); color: var(--muted); }
+.tag-decided { background: var(--teal); color: var(--surface); }
+.tag-proposed { background: var(--surface-2); color: var(--fg); border: 1px solid var(--line); }
+.tag-open { background: var(--open-soft); color: var(--open); }
+.tag-verify { background: var(--warn-soft); color: var(--warn); }
+
+.road { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; counter-reset: none; }
+.phase { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; grid-template-columns: 180px 1fr; gap: 6px 20px; }
+.phase-head { display: flex; flex-direction: column; gap: 2px; grid-row: span 2; }
+.phase-name { font: 700 1.15rem var(--font-display); color: var(--teal); }
+.phase-ver { font: 500 12.5px var(--font-mono); color: var(--muted); }
+.phase-body { margin: 0; font-size: 15px; min-width: 0; }
+.phase-done { margin: 0; font-size: 14px; color: var(--muted); min-width: 0; }
+.phase-done span, .q-default span { font: 500 11px var(--font-mono); text-transform: uppercase; letter-spacing: .08em; color: var(--gold); margin-right: 6px; }
+@media (max-width: 700px) { .phase { grid-template-columns: 1fr; } .phase-head { grid-row: auto; flex-direction: row; align-items: baseline; gap: 10px; } }
+
+.qs { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.q { display: grid; grid-template-columns: 3em 1fr; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.q-no { font: 700 1rem var(--font-display); color: var(--open); }
+.q-text { margin: 0 0 6px; font-size: 15px; }
+.q-default { margin: 0; font-size: 14px; color: var(--muted); }
+@media (max-width: 860px) { .qs { grid-template-columns: 1fr; } }
+
+/* ---- full spec ---- */
+.spec-band { border-top: 1px solid var(--line); margin-top: 48px; background: var(--surface); }
+.spec-layout { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 48px; padding-block: 40px 80px; }
+.rail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); align-self: start; max-height: calc(100vh - 32px); overflow: auto; font-size: 14px; padding-right: 6px; }
+.rail h2 { font-size: 12px; font-family: var(--font-mono); font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+.toc, .toc ol { list-style: none; margin: 0; padding: 0; }
+.toc > li { margin: 2px 0; }
+.toc > li > a { display: block; padding: 4px 8px; border-radius: 6px; text-decoration: none; color: var(--fg); font-weight: 500; }
+.toc ol { margin: 2px 0 6px 10px; border-left: 1px solid var(--line); }
+.toc ol a { display: block; padding: 2px 10px; color: var(--muted); text-decoration: none; font-size: 13px; }
+.toc a:hover, .toc a.active { background: var(--teal-soft); color: var(--teal); }
+.toc-mobile { display: none; }
+@media (max-width: 980px) {
+  .spec-layout { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .rail { display: none; }
+  .toc-mobile { display: block; border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 14px; background: var(--bg); }
+  .toc-mobile summary { cursor: pointer; font-weight: 600; }
+  .toc-mobile .toc { margin-top: 10px; }
+}
+
+.doc { max-width: 76ch; min-width: 0; }
+.doc > h2 { font-size: 1.9rem; margin: 2.4em 0 .5em; padding-top: .6em; border-top: 1px solid var(--line); }
+.doc > h2:first-of-type { margin-top: 0; border-top: 0; padding-top: 0; }
+.doc h3 { font-size: 1.3rem; margin: 1.8em 0 .5em; }
+.doc h4 { font-size: 1.05rem; margin: 1.4em 0 .4em; }
+.doc p, .doc li { font-size: 16px; }
+.doc ul, .doc ol { padding-left: 1.3em; }
+.doc li { margin: .3em 0; }
+.doc li::marker { color: var(--muted); }
+.doc hr { display: none; }
+.doc code { font-size: .86em; background: var(--surface-2); padding: .1em .35em; border-radius: 5px; overflow-wrap: anywhere; }
+.doc pre { background: var(--teal-deep); color: #DDF2EE; padding: 16px 18px; border-radius: var(--radius); overflow-x: auto; font-size: 13px; line-height: 1.55; }
+.doc pre code { background: none; padding: 0; font-size: inherit; color: inherit; overflow-wrap: normal; }
+.doc blockquote { margin: 1em 0; padding: 10px 16px; border-left: 3px solid var(--gold-bright); background: var(--gold-soft); border-radius: 0 8px 8px 0; }
+.table-wrap { overflow-x: auto; margin: 1em 0 1.4em; border: 1px solid var(--line); border-radius: 10px; max-width: 100%; }
+.doc table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.doc th, .doc td { text-align: left; vertical-align: top; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.doc th { background: var(--surface-2); font-weight: 600; white-space: nowrap; }
+.doc tr:last-child td { border-bottom: 0; }
+.doc td code { white-space: nowrap; }
+@media (max-width: 640px) { .doc td code { white-space: normal; } }
+.req { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; vertical-align: baseline; }
+.rid { font: 500 12.5px var(--font-mono) !important; background: transparent !important; padding: 0 !important; color: var(--muted); scroll-margin-top: 24px; }
+
+.foot { color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); padding-block: 24px 40px; }
+</style>
+
+<header class="hero">
+  <div class="wrap">
+    {{ICON}}
+    <div>
+      <p class="eyebrow">Product &amp; technical specification · v2.1</p>
+      <h1>Bridget</h1>
+      <p class="lede">A private bridge between your AI agents and your Android phone. Agents can see, hear and ask when you let them, always visibly and always on the record.</p>
+      <div class="meta">
+        <span>Pixel 10 Pro XL · Android 17</span>
+        <span>net.finleg.bridget</span>
+        <span>Tailscale only</span>
+        <span>{{VERSION}}</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap">
+    <div class="facts" role="list">
+      <div class="fact" role="listitem"><b>4</b><span>agents paired today</span></div>
+      <div class="fact" role="listitem"><b>{{CAP_COUNT}}</b><span>capabilities specified</span></div>
+      <div class="fact" role="listitem"><b>{{REQ_COUNT}}</b><span>numbered requirements</span></div>
+      <div class="fact" role="listitem"><b>{{D_COUNT}}</b><span>owner decisions</span></div>
+      <div class="fact" role="listitem"><b>{{Q_COUNT}}</b><span>open questions for Rahul</span></div>
+    </div>
+
+    <div class="overview">
+      <section aria-labelledby="ov-what">
+        <div class="ov-head"><h2 id="ov-what">How it works</h2><a href="#3-product">Product details</a></div>
+        <ul class="pillars">
+          <li class="pillar"><span class="k">One key per agent</span><h3>Paste a prompt, connected</h3><p>Name an agent, copy the setup prompt Bridget makes, paste it in. Muse, Grok, Claude and Codex each have their own key, and you can rotate or remove one without touching the others.</p></li>
+          <li class="pillar"><span class="k">Visible by design</span><h3>Nothing happens quietly</h3><p>Every photo, clip, screenshot or location check shows a notification naming the agent, plus Android's own indicator, and lands in a log that agents can read too.</p></li>
+          <li class="pillar"><span class="k">Private network</span><h3>Only over Tailscale</h3><p>Bridget answers only on your tailnet, never the open internet. Every feature starts switched off, and you turn on exactly what you want.</p></li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="ov-caps">
+        <div class="ov-head"><h2 id="ov-caps">What agents can do</h2><a href="#8-capabilities">All capability details</a></div>
+        <p class="ov-intro">Every capability has its own switch on the phone. Built items run on the Pixel today; the rest are planned by phase.</p>
+        <ul class="caps">
+{{CAPS}}
+        </ul>
+        <p class="legend"><span><span class="chip chip-built">Built</span> running on the Pixel</span><span><span class="chip chip-planned">P1-P6</span> planned phase</span><span><span class="chip chip-later">Not scheduled</span> waiting on a decision</span></p>
+      </section>
+
+      <section aria-labelledby="ov-road">
+        <div class="ov-head"><h2 id="ov-road">Roadmap</h2><a href="#16-roadmap-and-phases">Roadmap section</a></div>
+        <ol class="road">
+{{ROADMAP}}
+        </ol>
+      </section>
+
+      <section aria-labelledby="ov-q">
+        <div class="ov-head"><h2 id="ov-q">Decisions waiting for Rahul</h2><a href="#17-open-questions">Open questions section</a></div>
+        <p class="ov-intro">Each has a default that stands until it's answered.</p>
+        <ol class="qs">
+{{QUESTIONS}}
+        </ol>
+      </section>
+    </div>
+  </div>
+
+  <div class="spec-band">
+    <div class="wrap spec-layout">
+      <nav class="rail" aria-label="Spec contents">
+        <h2>Contents</h2>
+        {{TOC}}
+      </nav>
+      <article class="doc">
+        <details class="toc-mobile"><summary>Contents</summary>{{TOC}}</details>
+        <p class="eyebrow" style="color: var(--gold)">Full specification</p>
+{{BODY}}
+        <p class="foot">Source of truth: <code>android/docs/bridget-spec-v2.md</code> in <code>rahuliofam/finleg</code>. Reviewed by Grok 4.7 on 27 Oct 2026; review notes in <code>android/docs/reviews/</code>.</p>
+      </article>
+    </div>
+  </div>
+</main>
+
+<script>
+(function () {
+  try {
+    var links = Array.prototype.slice.call(document.querySelectorAll('.rail .toc a'));
+    var byId = {};
+    links.forEach(function (a) { byId[a.getAttribute('href').slice(1)] = a; });
+    var heads = Array.prototype.slice.call(document.querySelectorAll('.doc h2[id], .doc h3[id]'));
+    if (!('IntersectionObserver' in window) || !heads.length) return;
+    var current = null;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting && byId[e.target.id]) {
+          if (current) current.classList.remove('active');
+          current = byId[e.target.id]; current.classList.add('active');
+        }
+      });
+    }, { rootMargin: '0px 0px -75% 0px' });
+    heads.forEach(function (h) { io.observe(h); });
+  } catch (e) { /* the page reads fine without the highlight */ }
+})();
+</script>
