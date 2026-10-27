@@ -242,7 +242,9 @@ object Endpoints {
         example = "DELETE /v1/speaker", returns = "stopped")
     val TOUR_GET = EndpointSpec("GET", "/tour", "tour", "Your running City tour, if Rahul started one with you (D30)",
         example = "GET /v1/tour", returns = "tour{tour_id, kinds, interval_s, started_at, ticks, last_tick_at, distance_m, photos_sent} or null")
-    val TOUR_END = EndpointSpec("DELETE", "/tour", "tour", "End your City tour", example = "DELETE /v1/tour", returns = "ended", errors = listOf("not_found"))
+    val TOUR_END = EndpointSpec("DELETE", "/tour", "tour", "End your City tour",
+        query = listOf(Param("tour_id", "string", "Only end this tour (it must be yours and still running)")),
+        example = "DELETE /v1/tour", returns = "ended", errors = listOf("not_found"))
 
     val all = listOf(HEALTH, CAPABILITIES, GUIDE, OPENAPI, CHANGES, HELPER, PAIR, SNAPSHOT, MIC, GALLERY_RECENT, GALLERY_PHOTO,
         IMAGE_LAST, LOG, LOG_ENTRY, LOG_STATS, LOG_EXPORT, LOG_NOTE, AUDIT, FEEDBACK_LIST, FEEDBACK_GET, FEEDBACK_STATUS, FEEDBACK_POST,
