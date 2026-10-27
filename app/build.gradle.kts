@@ -22,8 +22,8 @@ android {
         targetSdk = 35
         // -PbridgetVersionCode / -PbridgetVersionName build an older-looking copy, used only to test
         // the in-app update path (UPD-03/04) against the published release. Never published.
-        versionCode = (project.findProperty("bridgetVersionCode") as String?)?.toInt() ?: 14
-        versionName = (project.findProperty("bridgetVersionName") as String?) ?: "1.5.2"
+        versionCode = (project.findProperty("bridgetVersionCode") as String?)?.toInt() ?: 15
+        versionName = (project.findProperty("bridgetVersionName") as String?) ?: "1.5.3"
         buildConfigField("int", "DEFAULT_PORT", "8734")
         buildConfigField("String", "GIT_COMMIT", "\"${gitCommit()}\"")
         buildConfigField("boolean", "DIRTY_BUILD", "${gitDirty()}")
