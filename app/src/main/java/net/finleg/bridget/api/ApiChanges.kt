@@ -33,6 +33,11 @@ object ApiChanges {
             Item("Camera zoom: \"zoom\": 0.5 (ultra-wide) to the phone's maximum; range in /v1/capabilities", "/v1/camera/snapshot"),
             Item("API revisions: X-Bridget-API-Revision on every reply, X-Bridget-Whats-New until you've caught up, and this list", "/v1/changes"),
         )),
+        Revision(4, "1.5.0", "2026-10-27", listOf(
+            Item("Interactions: send Rahul a notice or a question with buttons, a text reply, a choice or links; read aloud if you ask", "/v1/interactions"),
+            Item("Wait for his answer (wait=55), list or cancel your interactions", "/v1/interactions/{id}"),
+            Item("Events: answers, closes and expiries for you, oldest first, with long-poll", "/v1/events"),
+        )),
     )
 
     val CURRENT: Int = revisions.maxOf { it.revision }

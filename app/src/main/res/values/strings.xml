@@ -35,6 +35,8 @@
     <string name="cap_log">Log</string>
     <string name="cap_log_desc">Agents can read the activity log</string>
 
+    <string name="cap_interactions">Interactions</string>
+    <string name="cap_interactions_desc">Questions and notices from agents</string>
     <string name="cap_feedback">Feedback</string>
     <string name="cap_feedback_desc">Bug reports and feature requests</string>
 

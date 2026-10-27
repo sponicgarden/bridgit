@@ -164,6 +164,37 @@ object Endpoints {
         example = "POST /v1/feedback {\"kind\":\"bug\",\"description\":\"image/last returned 500 twice\"}", returns = "id, number, status",
         errors = listOf("forbidden", "invalid_parameter", "rate_limited"))
 
+    val INTERACTION_CREATE = EndpointSpec("POST", "/interactions", "interactions", "Send Rahul a notice or a question (buttons, text reply, choice, links)",
+        idempotent = true, privateFields = setOf("text", "image"),
+        body = listOf(
+            Param("kind", "string", "notice (one-way) or question", required = true, enum = listOf("notice", "question")),
+            Param("title", "string", "Up to 80 characters", required = true),
+            Param("text", "string", "Up to 2,000 characters"),
+            Param("image", "object", "{\"gallery_id\"} or {\"data_base64\"}, up to 2 MB"),
+            Param("controls", "array", "Question: 1-6 of {type: button|text|choice|link, id, label, style?, placeholder?, options?, url?, package?}. Notice: links only"),
+            Param("priority", "string", "normal or urgent", enum = listOf("normal", "urgent")),
+            Param("speak", "boolean", "Read it aloud on the phone"),
+            Param("expires_in_seconds", "integer", "60 to 604800, default 86400"),
+        ),
+        example = "POST /v1/interactions {\"kind\":\"question\",\"title\":\"Pay this invoice?\",\"controls\":[{\"type\":\"button\",\"id\":\"yes\",\"label\":\"Pay\",\"style\":\"primary\"},{\"type\":\"button\",\"id\":\"no\",\"label\":\"Not now\"}]}",
+        returns = "interaction_id, status, expires_at",
+        errors = listOf("capability_disabled", "notifications_required", "invalid_parameter", "too_many_open", "photo_not_found"))
+    val INTERACTION_LIST = EndpointSpec("GET", "/interactions", "interactions", "Your interactions, newest first",
+        query = listOf(Param("status", "string", "pending, seen, answered, dismissed, expired or cancelled"), Param("limit", "integer", "1-100, default 50")),
+        example = "GET /v1/interactions?status=answered", returns = "interactions[]")
+    val INTERACTION_GET = EndpointSpec("GET", "/interactions/{id}", "interactions", "One of your interactions; with wait, holds until Rahul answers or closes it",
+        query = listOf(Param("wait", "integer", "Hold up to this many seconds (max 55) for the answer")),
+        example = "GET /v1/interactions/12?wait=55", returns = "kind, status, answer{button, values}, answered_at, closed_at",
+        errors = listOf("not_found", "too_many_waits"))
+    val INTERACTION_CANCEL = EndpointSpec("DELETE", "/interactions/{id}", "interactions", "Cancel one of your interactions",
+        example = "DELETE /v1/interactions/12", returns = "the interaction", errors = listOf("not_found"))
+    val EVENTS = EndpointSpec("GET", "/events", "interactions", "Your events, oldest first: answers, closes, expiries, switch changes",
+        query = listOf(Param("since", "string", "next_cursor from the last call; omit for the last 50"),
+            Param("wait", "integer", "With since: hold up to 55 s for a new event"), Param("types", "string", "Comma list, e.g. interaction.answered")),
+        example = "GET /v1/events?since=0&wait=55", returns = "events[id, type, at, data], next_cursor",
+        errors = listOf("invalid_parameter", "too_many_waits"))
+
     val all = listOf(HEALTH, CAPABILITIES, GUIDE, OPENAPI, CHANGES, HELPER, PAIR, SNAPSHOT, MIC, GALLERY_RECENT, GALLERY_PHOTO,
-        IMAGE_LAST, LOG, LOG_ENTRY, LOG_STATS, LOG_EXPORT, LOG_NOTE, AUDIT, FEEDBACK_LIST, FEEDBACK_GET, FEEDBACK_STATUS, FEEDBACK_POST)
+        IMAGE_LAST, LOG, LOG_ENTRY, LOG_STATS, LOG_EXPORT, LOG_NOTE, AUDIT, FEEDBACK_LIST, FEEDBACK_GET, FEEDBACK_STATUS, FEEDBACK_POST,
+        INTERACTION_CREATE, INTERACTION_LIST, INTERACTION_GET, INTERACTION_CANCEL, EVENTS)
 }

@@ -22,6 +22,7 @@ class BridgeApp : Application() {
     lateinit var registry: Registry
     lateinit var vault: PendingKeyVault
     lateinit var feedback: FeedbackStore
+    lateinit var interactions: net.finleg.bridget.interact.InteractionStore
     val pairing = Pairing()
 
     /** What the listener is doing, for Home, the notification and the Add-agent check. */
@@ -55,6 +56,7 @@ class BridgeApp : Application() {
         registry = Registry(this)
         vault = PendingKeyVault(this)
         feedback = FeedbackStore(this)
+        interactions = net.finleg.bridget.interact.InteractionStore(this)
         feedback.onStatusChange { FeedbackNotifier.statusChanged(this, it) }
         applyAppearance()
         createChannels()

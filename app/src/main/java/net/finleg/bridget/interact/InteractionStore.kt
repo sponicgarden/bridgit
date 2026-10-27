@@ -1,0 +1,217 @@
+package net.finleg.bridget.interact
+
+import android.content.ContentValues
+import android.content.Context
+import android.database.Cursor
+import android.database.sqlite.SQLiteDatabase
+import android.database.sqlite.SQLiteOpenHelper
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
+
+/** One event for an agent (EVT-01, EVT-02). [id] is the cursor. */
+data class Event(val id: Long, val agentId: String, val type: String, val at: Long, val data: JSONObject) {
+    fun toJson(iso: (Long) -> String) = JSONObject().put("id", id.toString()).put("type", type).put("at", iso(at)).put("data", data)
+}
+
+/**
+ * Interactions and events (8.13, section 9) in `interactions.db`, separate from the log and feedback
+ * stores. Every read is scoped to one agent by the caller; the store never returns another agent's rows
+ * through the agent-facing methods ([getFor], [listFor], [eventsFor]).
+ */
+class InteractionStore(context: Context, private val clock: () -> Long = System::currentTimeMillis) {
+    private val db = Helper(context).writableDatabase
+    private val dir = File(context.filesDir, "interactions").apply { mkdirs() }
+    private val _changed = MutableStateFlow(0L)
+    private val listeners = mutableListOf<(Interaction, String) -> Unit>()
+
+    /** Bumps on every change (new interaction, status change, new event). Waits watch it. */
+    val changed: StateFlow<Long> get() = _changed
+
+    /** (interaction, what happened) for the UI and notifications: created, seen, answered, dismissed, expired, cancelled. */
+    fun addListener(l: (Interaction, String) -> Unit) = synchronized(listeners) { listeners += l }
+    fun removeListener(l: (Interaction, String) -> Unit) = synchronized(listeners) { listeners -= l }
+    private fun tell(i: Interaction, what: String) = synchronized(listeners) { listeners.toList() }.forEach { runCatching { it(i, what) } }
+
+    @Synchronized
+    fun create(agentId: String, agent: String, d: Draft, imageJpeg: ByteArray?): Interaction {
+        expireDue()
+        val now = clock()
+        when (d.kind) {
+            IKind.QUESTION, IKind.HTML -> if (count("agent_id = ? AND kind IN ('question','html') AND status IN ('pending','seen')", agentId) >= InteractionRules.OPEN_QUESTIONS_PER_AGENT)
+                throw InteractionError("too_many_open", "You have ${InteractionRules.OPEN_QUESTIONS_PER_AGENT} open questions. Wait for answers or cancel one.")
+            else -> if (count("agent_id = ? AND kind IN ('notice','text') AND created_at > ?", agentId, (now - 3_600_000L).toString()) >= InteractionRules.NOTICES_PER_HOUR)
+                throw InteractionError("too_many_open", "At most ${InteractionRules.NOTICES_PER_HOUR} notices an hour.")
+        }
+        db.beginTransaction()
+        val id: Long
+        var imageName: String? = null
+        try {
+            id = db.insertOrThrow("interactions", null, ContentValues().apply {
+                put("agent_id", agentId); put("agent", agent); put("kind", d.kind.id); put("title", d.title); put("text", d.text)
+                put("controls_json", JSONArray(d.controls.map { it.toJson() }).toString()); put("html", d.html)
+                put("priority", d.priority); put("speak", if (d.speak) 1 else 0); put("status", IStatus.PENDING.id)
+                put("created_at", now); put("expires_at", now + d.expiresInS * 1000)
+            })
+            if (imageJpeg != null) {
+                imageName = "$id.jpg"
+                File(dir, imageName).writeBytes(imageJpeg)
+                db.update("interactions", ContentValues().apply { put("image", imageName) }, "id = ?", arrayOf(id.toString()))
+            }
+            db.setTransactionSuccessful()
+        } catch (e: Exception) {
+            imageName?.let { File(dir, it).delete() }
+            throw e
+        } finally { db.endTransaction() }
+        bump()
+        return get(id)!!.also { tell(it, "created") }
+    }
+
+    /** Agent-facing: the interaction only if it belongs to [agentId]. */
+    fun getFor(agentId: String, id: Long): Interaction? = get(id)?.takeIf { it.agentId == agentId }
+
+    /** Owner-facing (phone UI): any interaction. */
+    fun get(id: Long): Interaction? {
+        expireDue()
+        return db.query("interactions", null, "id = ?", arrayOf(id.toString()), null, null, null).use { c -> if (c.moveToFirst()) row(c) else null }
+    }
+
+    fun listFor(agentId: String, status: IStatus?, limit: Int): List<Interaction> = list("agent_id = ?" + (status?.let { " AND status = ?" } ?: ""),
+        listOfNotNull(agentId, status?.id).toTypedArray(), limit)
+
+    /** Owner-facing list for the Interactions tab: open ones first, then newest. */
+    fun listAll(limit: Int = 300): List<Interaction> {
+        expireDue()
+        return db.query("interactions", null, null, null, null, null,
+            "CASE WHEN status IN ('pending','seen') THEN 0 ELSE 1 END, id DESC", limit.toString()).use { c -> buildList { while (c.moveToNext()) add(row(c)) } }
+    }
+
+    /** Questions waiting for an answer plus notices not yet seen: the tab badge. */
+    fun unreadCount(): Int = count("(kind IN ('question','html') AND status IN ('pending','seen')) OR (kind IN ('notice','text') AND status = 'pending')")
+
+    private fun list(where: String, args: Array<String>, limit: Int): List<Interaction> {
+        expireDue()
+        return db.query("interactions", null, where, args, null, null, "id DESC", limit.toString()).use { c -> buildList { while (c.moveToNext()) add(row(c)) } }
+    }
+
+    /** Rahul opened or saw it (a notice becomes "seen"; a question stays answerable). */
+    @Synchronized
+    fun markSeen(id: Long): Interaction? {
+        val i = get(id) ?: return null
+        if (i.status != IStatus.PENDING) return i
+        update(id, ContentValues().apply { put("status", IStatus.SEEN.id); put("seen_at", clock()) })
+        event(i.agentId, "interaction.seen", JSONObject().put("interaction_id", id))
+        return get(id)!!.also { tell(it, "seen") }
+    }
+
+    /** Rahul answered on the phone or in the notification. */
+    @Synchronized
+    fun answer(id: Long, button: String?, values: Map<String, String>): Interaction {
+        val i = get(id) ?: throw InteractionError("not_found", "No interaction $id.")
+        if (!i.status.open) throw InteractionError("invalid_parameter", "This ${i.kind.id} is already ${i.status.id}.")
+        if (i.kind != IKind.QUESTION) throw InteractionError("invalid_parameter", "Only questions take answers.")
+        val ans = InteractionRules.checkAnswer(i.controls, button, values)
+        val now = clock()
+        update(id, ContentValues().apply { put("status", IStatus.ANSWERED.id); put("answer_json", ans.toString()); put("answered_at", now); put("closed_at", now) })
+        event(i.agentId, "interaction.answered", JSONObject().put("interaction_id", id).put("answer", ans))
+        return get(id)!!.also { tell(it, "answered") }
+    }
+
+    /** Rahul closed it (D26); the agent is told `dismissed`. */
+    @Synchronized
+    fun dismiss(id: Long): Interaction? = close(id, IStatus.DISMISSED, "interaction.dismissed")
+
+    /** The agent cancelled it (DELETE). */
+    @Synchronized
+    fun cancel(agentId: String, id: Long): Interaction {
+        val i = getFor(agentId, id) ?: throw InteractionError("not_found", "No interaction $id of yours.")
+        return close(i.id, IStatus.CANCELLED, null) ?: i
+    }
+
+    private fun close(id: Long, to: IStatus, eventType: String?): Interaction? {
+        val i = get(id) ?: return null
+        if (!i.status.open) return i
+        update(id, ContentValues().apply { put("status", to.id); put("closed_at", clock()) })
+        eventType?.let { event(i.agentId, it, JSONObject().put("interaction_id", id)) }
+        return get(id)!!.also { tell(it, to.id) }
+    }
+
+    /** Moves overdue open interactions to expired (CAP-31) and prunes old rows and events. Cheap; called on every read. */
+    @Synchronized
+    fun expireDue() {
+        val now = clock()
+        val due = db.query("interactions", arrayOf("id", "agent_id"), "status IN ('pending','seen') AND expires_at < ?", arrayOf(now.toString()), null, null, null)
+            .use { c -> buildList { while (c.moveToNext()) add(c.getLong(0) to c.getString(1)) } }
+        for ((id, agentId) in due) {
+            update(id, ContentValues().apply { put("status", IStatus.EXPIRED.id); put("closed_at", now) })
+            event(agentId, "interaction.expired", JSONObject().put("interaction_id", id))
+            row(id)?.let { tell(it, "expired") }
+        }
+        if (now - lastPrune > 3_600_000L) {
+            lastPrune = now
+            val old = db.query("interactions", arrayOf("id", "image"), "status NOT IN ('pending','seen') AND closed_at < ?",
+                arrayOf((now - 30L * 86_400_000).toString()), null, null, null).use { c -> buildList { while (c.moveToNext()) add(c.getLong(0) to c.getString(1)) } }
+            old.forEach { (id, img) -> img?.let { File(dir, it).delete() }; db.delete("interactions", "id = ?", arrayOf(id.toString())) }
+            db.delete("events", "at < ?", arrayOf((now - 7L * 86_400_000).toString()))
+            db.execSQL("DELETE FROM events WHERE id IN (SELECT id FROM events e WHERE (SELECT COUNT(*) FROM events f WHERE f.agent_id = e.agent_id AND f.id > e.id) >= 1000)")
+        }
+    }
+    private var lastPrune = 0L
+
+    // ---- events (section 9) -----------------------------------------------------------------------
+
+    /** Adds an event for one agent ([agentId]) or, with null, for every agent in [allAgents]. */
+    fun event(agentId: String, type: String, data: JSONObject) {
+        db.insert("events", null, ContentValues().apply { put("agent_id", agentId); put("type", type); put("at", clock()); put("data", data.toString()) })
+        bump()
+    }
+
+    /** The agent's events after [sinceId] (oldest first), or its last 50 when [sinceId] is null. */
+    fun eventsFor(agentId: String, sinceId: Long?, types: Set<String>, limit: Int = 100): List<Event> {
+        val where = StringBuilder("agent_id = ?"); val args = mutableListOf(agentId)
+        sinceId?.let { where.append(" AND id > ?"); args += it.toString() }
+        if (types.isNotEmpty()) { where.append(" AND type IN (${types.joinToString(",") { "?" }})"); args += types }
+        val order = if (sinceId == null) "id DESC" else "id ASC"
+        val rows = db.query("events", null, where.toString(), args.toTypedArray(), null, null, order, (if (sinceId == null) 50 else limit).toString())
+            .use { c -> buildList { while (c.moveToNext()) add(Event(c.getLong(0), c.getString(1), c.getString(2), c.getLong(3), JSONObject(c.getString(4)))) } }
+        return if (sinceId == null) rows.reversed() else rows
+    }
+
+    fun imageFile(name: String?): File? = name?.let { File(dir, it) }?.takeIf { it.exists() && it.parentFile == dir }
+
+    private fun bump() { _changed.value = _changed.value + 1 }
+
+    private fun update(id: Long, v: ContentValues) { db.update("interactions", v, "id = ?", arrayOf(id.toString())); bump() }
+
+    private fun count(where: String, vararg args: String): Int =
+        db.rawQuery("SELECT COUNT(*) FROM interactions WHERE $where", args).use { if (it.moveToFirst()) it.getInt(0) else 0 }
+
+    private fun row(id: Long): Interaction? =
+        db.query("interactions", null, "id = ?", arrayOf(id.toString()), null, null, null).use { c -> if (c.moveToFirst()) row(c) else null }
+
+    private fun row(c: Cursor): Interaction {
+        fun s(n: String) = c.getColumnIndexOrThrow(n).let { if (c.isNull(it)) null else c.getString(it) }
+        fun l(n: String) = c.getColumnIndexOrThrow(n).let { if (c.isNull(it)) null else c.getLong(it) }
+        val ctr = JSONArray(s("controls_json") ?: "[]")
+        return Interaction(l("id")!!, s("agent_id")!!, s("agent") ?: "", IKind.of(s("kind"))!!, s("title") ?: "", s("text"), s("image"),
+            (0 until ctr.length()).map { Control.fromJson(ctr.getJSONObject(it)) }, s("html"), s("priority") ?: "normal", l("speak") == 1L,
+            IStatus.of(s("status"))!!, s("answer_json")?.let { JSONObject(it) }, l("created_at")!!, l("expires_at")!!,
+            l("seen_at"), l("answered_at"), l("closed_at"), s("stream_text") ?: "", l("stream_done") == 1L)
+    }
+
+    private class Helper(ctx: Context) : SQLiteOpenHelper(ctx, "interactions.db", null, 1) {
+        override fun onCreate(db: SQLiteDatabase) {
+            db.execSQL("""CREATE TABLE interactions (id INTEGER PRIMARY KEY AUTOINCREMENT, agent_id TEXT NOT NULL, agent TEXT, kind TEXT NOT NULL,
+                title TEXT NOT NULL, text TEXT, image TEXT, controls_json TEXT, html TEXT, priority TEXT, speak INTEGER, status TEXT NOT NULL,
+                answer_json TEXT, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL, seen_at INTEGER, answered_at INTEGER, closed_at INTEGER,
+                stream_text TEXT, stream_done INTEGER)""")
+            db.execSQL("CREATE INDEX interactions_agent ON interactions(agent_id, id)")
+            db.execSQL("CREATE INDEX interactions_status ON interactions(status, expires_at)")
+            db.execSQL("CREATE TABLE events (id INTEGER PRIMARY KEY AUTOINCREMENT, agent_id TEXT NOT NULL, type TEXT NOT NULL, at INTEGER NOT NULL, data TEXT NOT NULL)")
+            db.execSQL("CREATE INDEX events_agent ON events(agent_id, id)")
+        }
+        override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {}
+    }
+}
