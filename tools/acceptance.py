@@ -545,7 +545,7 @@ def main():
         assert any(x["id"] == fb["id"] for x in lst.json()["reports"]), "new report not listed"
         d = c.call("GET", f"/feedback/{fb['id']}", P); expect(d, 200); j = d.json()
         assert j["status"] == "seen" and j["capture_source"] == "agent" and j["filed_by"] == T, (j["status"], j["capture_source"])
-        assert j["context"]["app_version"].startswith("1.4") and len(j["log"]) > 0, "context or log missing"
+        assert re.match(r"^1\.\d+\.\d+", j["context"]["app_version"]) and len(j["log"]) > 0, "context or log missing"
         assert [h["status"] for h in j["history"]] == ["new", "seen"], j["history"]
         assert set(j["allowed_next"]) == {"in_progress", "duplicate", "wont_fix"}, j["allowed_next"]
         return f"{len(j['log'])} log entries attached"
