@@ -37,7 +37,7 @@ fun BridgeApp.address(): Address {
 fun BridgeApp.appVersion(): String = packageManager.getPackageInfo(packageName, 0).versionName ?: "?"
 
 /** Base64 body with the 12 MB cap (API-11). */
-private fun Req.envelope(img: Encoded, at: String, atKey: String, photoId: String?): JSONObject {
+internal fun Req.envelope(img: Encoded, at: String, atKey: String, photoId: String?): JSONObject {
     val b64 = Base64.encodeToString(img.bytes, Base64.NO_WRAP)
     if (b64.length > ApiServer.MAX_PAYLOAD) throw ErrorCatalog.error("payload_too_large",
         "The result is over 12 MB as base64. Ask for a smaller size, or add raw=1.",
@@ -48,9 +48,9 @@ private fun Req.envelope(img: Encoded, at: String, atKey: String, photoId: Strin
         .put("format", fmt).put("mime", img.mime).put("size_bytes", img.bytes.size).put("data_base64", b64)
 }
 
-private fun Req.wantsRaw(): Boolean = arg("raw").let { it == "1" || it == "true" || it == 1 || it == true }
+internal fun Req.wantsRaw(): Boolean = arg("raw").let { it == "1" || it == "true" || it == 1 || it == true }
 
-private fun Req.rawReply(img: Encoded, headers: Map<String, String>): Reply {
+internal fun Req.rawReply(img: Encoded, headers: Map<String, String>): Reply {
     if (img.bytes.size > ApiServer.MAX_RAW) throw ErrorCatalog.error("payload_too_large", "The image is over 40 MB. Ask for a smaller size.")
     bytesOut = img.bytes.size.toLong()
     return Reply.Bytes(img.bytes, img.mime, headers + mapOf("X-Bridget-Width" to img.width.toString(), "X-Bridget-Height" to img.height.toString()))
@@ -64,7 +64,7 @@ class StatusModule(app: BridgeApp) : Capability(app) {
     override val titleRes = R.string.cap_status
     override val descriptionRes = R.string.cap_status_desc
     override val group = "status"
-    override val endpoints = listOf(Endpoints.HEALTH, Endpoints.CAPABILITIES, Endpoints.GUIDE, Endpoints.OPENAPI, Endpoints.CHANGES, Endpoints.HELPER, Endpoints.PAIR)
+    override val endpoints = listOf(Endpoints.HEALTH, Endpoints.CAPABILITIES, Endpoints.GUIDE, Endpoints.OPENAPI, Endpoints.CHANGES, Endpoints.HELPER, Endpoints.PAIR, Endpoints.ME)
 
     /** Reading the guide, openapi.json or the changes means the agent now knows the current API (API-14). */
     private fun markKnown(r: Req) {
@@ -80,6 +80,7 @@ class StatusModule(app: BridgeApp) : Capability(app) {
             val s = app.listener.value
             Reply.Json(JSONObject().put("status", "ok").put("app", "Bridget").put("app_version", app.appVersion())
                 .put("agent", agentName).put("agent_id", agent?.id)
+                .put("model", agent?.let { app.agents.get(it.id) }?.model ?: JSONObject.NULL)
                 .put("listener_uptime_seconds", (System.currentTimeMillis() - s.startedAt) / 1000)
                 .put("battery_level", level ?: JSONObject.NULL)
                 .put("charging", (bat?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0)
@@ -88,6 +89,18 @@ class StatusModule(app: BridgeApp) : Capability(app) {
                 .put("api_revision", net.finleg.bridget.api.ApiChanges.CURRENT)
                 .put("whats_new", net.finleg.bridget.api.ApiChanges.whatsNew(agent?.let { app.agents.get(it.id) }?.knownApiRevision ?: 0))
                 .put("links", net.finleg.bridget.api.ApiChanges.links()))
+        }
+        endpoint(Endpoints.ME) {
+            val model = body.optString("model", "").trim()
+            val harness = body.optString("harness", "").trim().ifEmpty { null }
+            if (model.isEmpty() || model.length > 60 || model.any { it.isISOControl() })
+                throw ErrorCatalog.error("invalid_parameter", "model must be 1-60 characters, e.g. claude-opus-5-5.")
+            if (harness != null && (harness.length > 40 || harness.any { it.isISOControl() }))
+                throw ErrorCatalog.error("invalid_parameter", "harness must be 1-40 characters, e.g. Claude Code.")
+            val a = app.agents.update(agent!!.id) { it.copy(model = model, harness = harness, modelReportedAt = System.currentTimeMillis()) }!!
+            if (agent!!.model != model || agent!!.harness != harness)
+                app.log.system("audit", "agent", "${a.name} says it runs on ${a.modelLabel}")
+            Reply.Json(JSONObject().put("agent", a.name).put("model", model).put("harness", harness ?: JSONObject.NULL))
         }
         endpoint(Endpoints.CAPABILITIES) {
             val out = JSONObject()

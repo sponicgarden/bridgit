@@ -66,6 +66,7 @@ object SetupPrompt {
         sb.appendLine("START HERE")
         sb.appendLine("- GET /v1/guide - what's switched on right now, every endpoint, every error code.")
         sb.appendLine("- After Bridget updates, replies carry X-Bridget-Whats-New: read GET /v1/changes?since=<revision> to learn new features.")
+        sb.appendLine("- Bridget never calls you: loop on GET /v1/events?since=<id>&wait=55 (see the guide).")
         sb.appendLine()
         sb.appendLine("MOST USEFUL CALLS")
         sb.appendLine("- GET  /v1/health                                   is Bridget up, which agent you are")
@@ -85,7 +86,9 @@ object SetupPrompt {
         sb.appendLine("4. Timeouts: 30 s; 60 s for anything with wait=; mic: duration + 30 s.")
         sb.appendLine()
         sb.appendLine("FIRST TEST")
-        sb.append("Call /v1/health, then tell Rahul you're connected and which features are on.")
+        sb.appendLine("1. Call /v1/health.")
+        sb.appendLine("2. POST /v1/me {\"model\":\"<your model id>\",\"harness\":\"<e.g. Claude Code>\"} so your card shows your model.")
+        sb.append("3. Tell Rahul you're connected and which features are on.")
         return sb.toString()
     }
 
@@ -141,6 +144,19 @@ object Guide {
             if (e.idempotent) sb.appendLine("Accepts `Idempotency-Key`.")
             sb.appendLine("Example: `${e.example}`")
         }
+        sb.appendLine()
+        sb.appendLine("## Hearing from the phone")
+        sb.appendLine("Bridget never calls you: it queues events for you. Loop on `GET /v1/events?since=<last id>&wait=55` with a 60 s timeout.")
+        sb.appendLine("If your harness only acts during a turn (for example a Claude Code chat session), run the wait as a background command so each event wakes you, answer, and start the next wait.")
+        sb.appendLine("Each event costs you one turn; keep answers short.")
+        sb.appendLine()
+        sb.appendLine("## Your model")
+        sb.appendLine("Send `POST /v1/me {\"model\",\"harness\"}` once after pairing and whenever it changes. Rahul sees it on your agent card; until then the card says \"Model not reported\".")
+        sb.appendLine()
+        sb.appendLine("## City tour")
+        sb.appendLine("When Rahul starts a tour with you, you get `tour.started` (with `brief`), then `tour.tick` every interval, `tour.question` when he asks, `tour.photo` when he takes a photo for you (fetch `/v1/tour/photo/{n}`), and `tour.ended`. The brief for all topics:")
+        sb.appendLine()
+        net.finleg.bridget.tour.TourKinds.brief(net.finleg.bridget.tour.TourKinds.all).lines().forEach { sb.appendLine("> $it") }
         sb.appendLine()
         sb.appendLine("## Conventions")
         sb.appendLine("- Times are ISO-8601 with offset. Durations are seconds unless the name ends in `_ms`.")

@@ -712,6 +712,10 @@ under a minute, with nothing typed except the name.
   status (section 11). This is a single bit, not the full per-agent
   permission model (section 15), because feedback contains screenshots of
   Rahul's phone.
+- **AGT-16** (owner, 27 Oct 2026) Agents report their model and harness
+  with `POST /v1/me`; agent cards show it in place of the connection
+  ("Model not reported" until then). It is the agent's own claim, not
+  verified.
 
 ---
 
@@ -1487,6 +1491,15 @@ one purpose, started by Rahul and run together with one agent. The first is
   one-hour walk.
 - **TOUR-05** Later applications reuse the same session engine (for
   example "Museum guide" with the camera, "Run coach" with sensors).
+- **TOUR-06** (owner, 27 Oct 2026) The agent gets a **brief** with
+  `tour.started` and `GET /v1/tour`: speak briefly, give directions
+  relative to Rahul's heading, and when nothing more of interest is right
+  here, name the 2-3 nearest interesting places with direction and
+  distance. Ticks carry only data.
+- **TOUR-07** (owner, 27 Oct 2026) **Take photo** on the tour screen opens
+  Android's camera; the photo is saved to Pictures/Bridget and sent at once
+  as `tour.photo`; the agent fetches it with `GET /v1/tour/photo/{n}` (its
+  own tour only, no Gallery switch needed).
 
 ### 8.22 Communications (not scheduled)
 

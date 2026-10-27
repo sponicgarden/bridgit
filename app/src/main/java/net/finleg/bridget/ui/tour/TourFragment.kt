@@ -2,9 +2,11 @@ package net.finleg.bridget.ui.tour
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.ContentValues
 import android.content.Intent
 import android.os.Bundle
 import android.os.SystemClock
+import android.provider.MediaStore
 import android.provider.Settings as SysSettings
 import android.text.InputType
 import android.view.LayoutInflater
@@ -13,6 +15,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.FrameLayout
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.os.bundleOf
 import androidx.core.view.AccessibilityDelegateCompat
 import androidx.core.view.ViewCompat
@@ -46,6 +49,7 @@ import net.finleg.bridget.databinding.TourRowAgentBinding
 import net.finleg.bridget.databinding.TourRowNeededBinding
 import net.finleg.bridget.tour.Tour
 import net.finleg.bridget.tour.TourKinds
+import net.finleg.bridget.ui.common.modelText
 import net.finleg.bridget.ui.common.Fmt
 import net.finleg.bridget.ui.common.dp
 import net.finleg.bridget.ui.common.themeColor
@@ -68,6 +72,21 @@ class TourFragment : Fragment() {
     private val app get() = requireActivity().application as BridgeApp
 
     private val perms = PermissionAsker(this) { requestRender() }
+
+    /** Take photo (TOUR-07): Android's camera saves into Rahul's gallery, then the photo goes to the agent. */
+    private var pendingShot: android.net.Uri? = null
+    private val takePhoto = registerForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+        val uri = pendingShot ?: return@registerForActivityResult
+        pendingShot = null
+        val ctx = context ?: return@registerForActivityResult
+        if (ok) {
+            val tours = app.tours
+            lifecycleScope.launch {
+                tours.photoTaken(uri)
+                view?.let { Snackbar.make(it, getString(R.string.tour_photo_sent, tours.current()?.agent ?: ""), Snackbar.LENGTH_SHORT).show() }
+            }
+        } else runCatching { ctx.contentResolver.delete(uri, null, null) }
+    }
 
     /** Bumped by settings, agents and speaker listeners (any thread); collected on main. */
     private val dirty = MutableStateFlow(0)
@@ -102,6 +121,7 @@ class TourFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         savedInstanceState?.let { s ->
             s.getStringArrayList(KEY_KINDS)?.let { kinds.clear(); kinds.addAll(it) }
+            pendingShot = androidx.core.os.BundleCompat.getParcelable(s, KEY_SHOT, android.net.Uri::class.java)
             agentId = s.getString(KEY_AGENT)
             intervalS = s.getInt(KEY_INTERVAL, DEFAULT_INTERVAL)
         }
@@ -156,6 +176,7 @@ class TourFragment : Fragment() {
         outState.putStringArrayList(KEY_KINDS, ArrayList(kinds))
         outState.putString(KEY_AGENT, agentId)
         outState.putInt(KEY_INTERVAL, intervalS)
+        outState.putParcelable(KEY_SHOT, pendingShot)
     }
 
     override fun onDestroyView() {
@@ -232,7 +253,7 @@ class TourFragment : Fragment() {
         if (agentId == null && agents.size == 1) agentId = agents.first().id
         s.noAgents.isVisible = agents.isEmpty()
         s.addAgent.isVisible = agents.isEmpty()
-        val key = agents.joinToString("|") { "${it.id}/${it.name}/${it.connection}" } + "#" + agentId
+        val key = agents.joinToString("|") { "${it.id}/${it.name}/${it.modelLabel}" } + "#" + agentId
         if (key == agentsKey) return
         agentsKey = key
         s.agents.removeAllViews()
@@ -241,11 +262,11 @@ class TourFragment : Fragment() {
             val checked = a.id == agentId
             r.avatar.setAgent(a.name)
             r.name.text = a.name
-            r.connection.text = a.connection.label
+            r.connection.text = a.modelText(requireContext())
             r.radio.isChecked = checked
             r.root.isChecked = false
             r.root.strokeWidth = if (checked) requireContext().dp(2) else 0
-            r.root.contentDescription = getString(R.string.tour_cd_agent, a.name, a.connection.label)
+            r.root.contentDescription = getString(R.string.tour_cd_agent, a.name, a.modelText(requireContext()))
             ViewCompat.setAccessibilityDelegate(r.root, object : AccessibilityDelegateCompat() {
                 override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfoCompat) {
                     super.onInitializeAccessibilityNodeInfo(host, info)
@@ -396,12 +417,32 @@ class TourFragment : Fragment() {
         // TalkBack and switch access can't hold: a click toggles listening.
         r.ask.setOnClickListener { if (speech?.listening == true) finishAsk() else beginAsk() }
         r.type.setOnClickListener { typeDialog() }
+        r.photo.setOnClickListener { startPhoto() }
         r.pause.setOnClickListener {
             val t = app.tours.current() ?: return@setOnClickListener
             app.tours.setPaused(!t.paused)
         }
         r.skip.setOnClickListener { app.speaker.skip() }
         r.end.setOnClickListener { confirmEnd() }
+    }
+
+    private fun startPhoto() {
+        val v = view ?: return
+        val values = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, "Bridget tour ${System.currentTimeMillis()}.jpg")
+            put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Bridget")
+        }
+        val uri = runCatching { requireContext().contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) }.getOrNull()
+            ?: run { Snackbar.make(v, R.string.tour_photo_failed, Snackbar.LENGTH_LONG).show(); return }
+        pendingShot = uri
+        // Bridget declares CAMERA, so Android refuses ACTION_IMAGE_CAPTURE until it's granted.
+        if (!requireContext().granted(Manifest.permission.CAMERA)) { perms.request(Manifest.permission.CAMERA); pendingShot = null
+            runCatching { requireContext().contentResolver.delete(uri, null, null) }; return }
+        runCatching { takePhoto.launch(uri) }.onFailure {
+            pendingShot = null; runCatching { requireContext().contentResolver.delete(uri, null, null) }
+            Snackbar.make(v, R.string.tour_photo_no_camera, Snackbar.LENGTH_LONG).show()
+        }
     }
 
     private fun renderRunning(t: Tour) {
@@ -607,5 +648,6 @@ class TourFragment : Fragment() {
         private const val KEY_KINDS = "tour_kinds"
         private const val KEY_AGENT = "tour_agent"
         private const val KEY_INTERVAL = "tour_interval"
+        private const val KEY_SHOT = "tour_shot"
     }
 }
