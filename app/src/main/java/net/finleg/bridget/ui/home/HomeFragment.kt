@@ -45,6 +45,8 @@ import net.finleg.bridget.databinding.FragmentHomeBinding
 import net.finleg.bridget.databinding.HomeAgentRowBinding
 import net.finleg.bridget.databinding.HomeBannerBinding
 import net.finleg.bridget.databinding.HomeSwitchCardBinding
+import net.finleg.bridget.databinding.TourHomeCardBinding
+import net.finleg.bridget.tour.TourKinds
 import net.finleg.bridget.log.LogQuery
 import net.finleg.bridget.ui.common.Fmt
 import net.finleg.bridget.ui.common.themeColor
@@ -74,6 +76,7 @@ class HomeFragment : Fragment() {
     private var bannerKey = ""
     private var agentsKey = ""
     private val switchCards = mutableListOf<Pair<Capability, HomeSwitchCardBinding>>()
+    private var tourCard: TourHomeCardBinding? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         _b = FragmentHomeBinding.inflate(inflater, container, false)
@@ -107,14 +110,17 @@ class HomeFragment : Fragment() {
         b.address.setOnClickListener { copyAddress() }
         heroAccessibility()
 
-        b.seeAll.setOnClickListener { goTab(R.id.agents) }
+        // Agents is no longer a tab (Applets took its place), so a plain navigate with Back.
+        b.seeAll.setOnClickListener { findNavController().navigate(R.id.agents) }
         b.addAgent.setOnClickListener { findNavController().navigate(R.id.addAgent) }
         b.today.setOnClickListener { goTab(R.id.activity) }
         buildQuickSwitches()
+        buildTourCard()
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { app.listener.collect { render() } }
+                launch { app.tours.state.collect { renderTourCard() } }
                 launch { dirty.collect { render(); delay(300) } }
                 launch { app.log.latestId.collectLatest { delay(400); loadCounts() } }
                 launch { while (true) { tickUptime(); delay(1000) } }
@@ -142,6 +148,7 @@ class HomeFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         switchCards.clear()
+        tourCard = null
         bannerKey = ""; agentsKey = ""; heroDescription = ""
         _b = null
     }
@@ -262,6 +269,29 @@ class HomeFragment : Fragment() {
 
     private fun batteryPercent(): Int? = requireContext().getSystemService(BatteryManager::class.java)
         ?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)?.takeIf { it in 0..100 }
+
+    // ---- City tour (8.25): a card at the top while a tour runs ----
+
+    /** Inserted in code above the hero card (fragment_home.xml belongs to the Home slice). */
+    private fun buildTourCard() {
+        val parent = b.hero.parent as ViewGroup
+        val c = TourHomeCardBinding.inflate(layoutInflater, parent, false)
+        parent.addView(c.root, parent.indexOfChild(b.hero))
+        c.root.setOnClickListener { findNavController().navigate(R.id.tour) }
+        c.tourOpen.setOnClickListener { findNavController().navigate(R.id.tour) }
+        tourCard = c
+        renderTourCard()
+    }
+
+    private fun renderTourCard() {
+        val c = tourCard ?: return
+        val t = app.tours.current()
+        c.root.isVisible = t != null
+        if (t == null) return
+        var text = getString(R.string.tour_home_card, t.agent, t.kinds.joinToString(", ") { TourKinds.labels[it] ?: it })
+        if (t.paused) text += " · " + getString(R.string.tour_home_paused)
+        if (c.tourText.text.toString() != text) c.tourText.text = text
+    }
 
     // ---- Banners (UI-10) ----
 
