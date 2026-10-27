@@ -92,6 +92,40 @@ per agent and 30 per address, 4 open `wait` requests per agent.
 The log setting **Agents can read: all entries / only their own** (Settings
 → Privacy) applies to every log endpoint. Developer agents always see all.
 
+### Use Bridget from Claude Code over MCP
+
+`POST /v1/mcp` speaks MCP (Streamable HTTP, JSON replies, no SSE, no
+session id) with the agent's normal key. Put this in the project's
+`.mcp.json` and export the key as `BRIDGET_KEY` (never paste it into the
+file):
+
+```json
+{
+  "mcpServers": {
+    "bridget": {
+      "type": "http",
+      "url": "http://<phone>:8734/v1/mcp",
+      "headers": { "Authorization": "Bearer ${BRIDGET_KEY}" }
+    }
+  }
+}
+```
+
+`<phone>` is the MagicDNS name or Tailscale IP from Home (debug builds: port
+8735). Every endpoint the agent may use is a tool named from its path:
+`camera_snapshot`, `image_last`, `gallery_photo` (`id` argument),
+`interactions_send`, `interactions_get` (`wait` up to 55), `speaker_say`, …
+Left out: `/mcp`, `/pair`, `/tools/bridget`, `/openapi.json`; developer-only
+tools appear only for developer agents. Tools whose switch is off are still
+listed, with a "switched off" note, and fail with `capability_disabled`.
+Images and clips come back as MCP image/audio content; errors as
+`isError: true` with the usual error JSON. Side-effecting tools take an
+`idempotency_key` argument. `speaker_play` takes a `url` only (send raw audio
+bytes to the HTTP endpoint). Each tool call is checked like a direct call
+(switch, developer, capture and rate limits) and gets its own log entry for
+the real endpoint, marked `via: mcp`. Requests with a browser `Origin`
+header are refused (403); batches get 400.
+
 ## Security model
 
 - Listens only on the phone's Tailscale addresses (IPv4 100.64.0.0/10 and

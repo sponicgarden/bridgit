@@ -66,6 +66,7 @@ object SetupPrompt {
         sb.appendLine("START HERE")
         sb.appendLine("- GET /v1/guide - what's switched on right now, every endpoint, every error code.")
         sb.appendLine("- After Bridget updates, replies carry X-Bridget-Whats-New: read GET /v1/changes?since=<revision> to learn new features.")
+        sb.appendLine("- MCP: ${addr.baseUrl}/mcp (type http, same Bearer header) makes every endpoint a tool.")
         sb.appendLine()
         sb.appendLine("MOST USEFUL CALLS")
         sb.appendLine("- GET  /v1/health                                   is Bridget up, which agent you are")
@@ -107,6 +108,8 @@ object Guide {
             (addr.ipBaseUrl?.takeIf { addr.magicDns != null }?.let { " (IP fallback `$it`)" } ?: "") + ".")
         sb.appendLine("Send `Authorization: Bearer <your key>` on every call except `GET /v1/tools/bridget` and `POST /v1/pair`.")
         sb.appendLine("Every response has a `request_id` (also the `X-Request-Id` header) that matches a log entry.")
+        sb.appendLine("MCP clients can use `${addr.baseUrl}/mcp` (Streamable HTTP, JSON replies, same Bearer key): every endpoint below is a tool, " +
+            "e.g. `camera_snapshot`, `image_last`, `interactions_send`; side-effecting tools take an `idempotency_key` argument.")
         sb.appendLine()
         sb.appendLine("API revision ${ApiChanges.CURRENT} (app $appVersion). Every reply carries `X-Bridget-API-Revision`; after Bridget is updated,")
         sb.appendLine("replies carry `X-Bridget-Whats-New` until you read this guide or `GET /v1/changes?since=<your revision>`.")
