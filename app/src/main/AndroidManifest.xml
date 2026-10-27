@@ -50,6 +50,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Bridget">
 
+        <!-- D32: CrashReports.start() initialises Sentry itself, after checking the Settings switch. -->
+        <meta-data android:name="io.sentry.auto-init" android:value="false" />
+
         <activity
             android:name=".ui.MainActivity"
             android:exported="true"

@@ -54,6 +54,7 @@ class BridgeApp : Application() {
     override fun onCreate() {
         super.onCreate()
         instance = this
+        net.finleg.bridget.core.CrashReports.start(this)
         settings = Settings(this)
         agents = AgentRegistry(settings.agentStorage(this))
         log = LogStore(this) { settings.retention() }

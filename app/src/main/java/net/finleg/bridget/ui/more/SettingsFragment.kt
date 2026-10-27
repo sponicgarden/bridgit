@@ -44,6 +44,7 @@ import java.text.NumberFormat
  * Listener, Privacy (log visibility, lock-screen question text, urgent read-aloud in DND),
  * Log, Notifications, Appearance, About.
  * Allow internet callbacks (EVT-05) sits under Listener.
+ * Send crash reports (D32) sits under Privacy.
  * Not shown yet (later phases): Screenshots, Feedback,
  * precise locations, address lookup, Licences, and the Files / Feedback notification channels.
  */
@@ -83,6 +84,7 @@ class SettingsFragment : Fragment() {
             InteractionNotifier.PREF_LOCKSCREEN_TEXT, R.string.settings_changed_lockscreen)
         prefSwitch(b.speakUrgent, R.string.settings_speak_urgent, R.string.settings_speak_urgent_desc,
             InteractionNotifier.PREF_SPEAK_URGENT_IN_DND, R.string.settings_changed_speak_urgent)
+        crashSwitch()
 
         // Log
         row(b.keep, R.string.settings_keep) { askKeep() }
@@ -184,6 +186,24 @@ class SettingsFragment : Fragment() {
             prefs().edit().putBoolean(key, on).apply()
             r.toggle.isChecked = on
             audit(getString(changed, getString(if (on) R.string.home_on else R.string.home_off)))
+        }
+    }
+
+    /** D32: crash reports are on unless turned off, so this switch reads the inverted pref. */
+    private fun crashSwitch() {
+        val r = b.crashReports
+        val key = net.finleg.bridget.core.CrashReports.PREF
+        r.title.setText(R.string.settings_crash_reports)
+        r.value.setText(R.string.settings_crash_reports_desc)
+        r.root.contentDescription = getString(R.string.settings_crash_reports) + ", " + getString(R.string.settings_crash_reports_desc)
+        UiActions.asSwitch(r.root) { !prefs().getBoolean(key, false) }
+        r.root.setOnClickListener {
+            val on = prefs().getBoolean(key, false) // currently off, so this turns it on
+            prefs().edit().putBoolean(key, !on).apply()
+            r.toggle.isChecked = on
+            if (on) net.finleg.bridget.core.CrashReports.start(requireContext().applicationContext)
+            else net.finleg.bridget.core.CrashReports.stop()
+            audit(getString(R.string.settings_changed_crash_reports, getString(if (on) R.string.home_on else R.string.home_off)))
         }
     }
 
