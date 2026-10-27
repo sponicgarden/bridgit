@@ -22,8 +22,12 @@ data class Address(val magicDns: String?, val ip: String?, val port: Int) {
  * order; "most useful calls" built from the switches that are on now (AGT-07).
  */
 object SetupPrompt {
+    /**
+     * [callbackSecret] is set when Rahul has set a callback URL for this agent (AGT-09 item 9, EVT-06):
+     * a refreshed prompt carries the existing secret so the agent can verify signatures.
+     */
     fun build(agentName: String, key: String, connection: Connection, addr: Address, deviceModel: String,
-              caps: List<CapInfo>, helperSource: String?): String {
+              caps: List<CapInfo>, helperSource: String?, callbackSecret: String? = null): String {
         val on = caps.filter { it.enabled }.map { it.id }.toSet()
         val sb = StringBuilder()
         sb.appendLine("You now have access to Bridget, an Android app on Rahul's phone ($deviceModel) that lets AI agents use")
@@ -38,8 +42,7 @@ object SetupPrompt {
         sb.appendLine()
         sb.appendLine("YOUR KEY")
         sb.appendLine("- $key")
-        sb.appendLine("- Store it in your secret/credential store. Never print, log or repeat it, and never put it on a command")
-        sb.appendLine("  line (shell history and process lists show command lines).")
+        sb.appendLine("- Keep it in your secret store. Never print or log it, or put it on a command line.")
         sb.appendLine()
         sb.appendLine("HOW TO CALL")
         when (connection) {
@@ -64,9 +67,9 @@ object SetupPrompt {
         }
         sb.appendLine()
         sb.appendLine("START HERE")
-        sb.appendLine("- GET /v1/guide - what's switched on right now, every endpoint, every error code.")
-        sb.appendLine("- After Bridget updates, replies carry X-Bridget-Whats-New: read GET /v1/changes?since=<revision> to learn new features.")
-        sb.appendLine("- Bridget never calls you: loop on GET /v1/events?since=<id>&wait=55 (see the guide).")
+        sb.appendLine("- GET /v1/guide: what's on, every endpoint and error. X-Bridget-Whats-New on a reply? Read /v1/changes.")
+        sb.appendLine("- MCP: ${addr.baseUrl}/mcp (type http, same Bearer header) makes every endpoint a tool.")
+        sb.appendLine("- No callback URL set? Loop on GET /v1/events?since=<id>&wait=55 for answers.")
         sb.appendLine()
         sb.appendLine("MOST USEFUL CALLS")
         sb.appendLine("- GET  /v1/health                                   is Bridget up, which agent you are")
@@ -85,6 +88,11 @@ object SetupPrompt {
         sb.appendLine("   \"pending\": true means \"not done yet\": poll its poll_url.")
         sb.appendLine("4. Timeouts: 30 s; 60 s for anything with wait=; mic: duration + 30 s.")
         sb.appendLine()
+        if (callbackSecret != null) {
+            // One line for the AGT-10 budget; the guide's Conventions explain how to verify.
+            sb.appendLine("CALLBACK SECRET (verify: /v1/guide): $callbackSecret")
+            sb.appendLine()
+        }
         sb.appendLine("FIRST TEST")
         sb.appendLine("1. Call /v1/health.")
         sb.appendLine("2. POST /v1/me {\"model\":\"<your model id>\",\"harness\":\"<e.g. Claude Code>\"} so your card shows your model.")
@@ -96,7 +104,7 @@ object SetupPrompt {
     fun qrPayload(agentName: String, key: String, addr: Address): String =
         JSONObject().put("bridget", 1).put("agent", agentName).put("base_url", addr.baseUrl).put("key", key).toString()
 
-    private val CAPTURE_IDS = setOf("camera", "mic", "gallery")
+    private val CAPTURE_IDS = setOf("camera", "mic", "gallery", "screen")
 }
 
 /** `GET /v1/guide`: Markdown for an AI agent, generated live (API-09). */
@@ -110,6 +118,8 @@ object Guide {
             (addr.ipBaseUrl?.takeIf { addr.magicDns != null }?.let { " (IP fallback `$it`)" } ?: "") + ".")
         sb.appendLine("Send `Authorization: Bearer <your key>` on every call except `GET /v1/tools/bridget` and `POST /v1/pair`.")
         sb.appendLine("Every response has a `request_id` (also the `X-Request-Id` header) that matches a log entry.")
+        sb.appendLine("MCP clients can use `${addr.baseUrl}/mcp` (Streamable HTTP, JSON replies, same Bearer key): every endpoint below is a tool, " +
+            "e.g. `camera_snapshot`, `image_last`, `interactions_send`; side-effecting tools take an `idempotency_key` argument.")
         sb.appendLine()
         sb.appendLine("API revision ${ApiChanges.CURRENT} (app $appVersion). Every reply carries `X-Bridget-API-Revision`; after Bridget is updated,")
         sb.appendLine("replies carry `X-Bridget-Whats-New` until you read this guide or `GET /v1/changes?since=<your revision>`.")
@@ -165,6 +175,10 @@ object Guide {
         sb.appendLine("- Lists page with `next_cursor`; pass it back as `cursor`.")
         sb.appendLine("- POSTs with side effects accept `Idempotency-Key: <uuid>`. A repeat within 24 h returns the first result (409 `in_progress` while it runs). Photos and clips are kept only 15 min, after that a repeat gets 409 `idempotency_expired` instead of a second capture.")
         sb.appendLine("- 202 with `\"pending\": true` means accepted but not done: poll `poll_url` (`{pending, code, id, poll_url, retry_after_s}`). Nothing returns this yet; screen-share consent and relay jobs will.")
+        sb.appendLine("- Callbacks (if Rahul set a URL for you): every event is POSTed as `{\"event\":{id,type,at,data},\"agent\"}` with " +
+            "`X-Bridget-Timestamp`, `X-Bridget-Event-Id` and `X-Bridget-Signature: sha256=<hex HMAC-SHA256(secret, \"<timestamp>.<raw body>\")>`. " +
+            "Check the signature, reject timestamps over 5 min off and event ids you've seen. Retries at 10 s, 60 s, 5 min; " +
+            "`/v1/events` always has them. `POST /v1/callback/test` sends one now.")
         sb.appendLine("- The log: you can read " + (if (developer || logVisibility == "all") "every agent's entries" else "only your own entries") +
             ". It never contains keys, media or full texts.")
         sb.appendLine()

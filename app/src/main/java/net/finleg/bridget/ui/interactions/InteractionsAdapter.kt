@@ -13,7 +13,10 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import net.finleg.bridget.R
 import net.finleg.bridget.databinding.InteractionsRowBinding
+import com.google.android.material.button.MaterialButton
 import net.finleg.bridget.interact.Control
+import net.finleg.bridget.interact.IKind
+import net.finleg.bridget.ui.common.dp
 import net.finleg.bridget.interact.Interaction
 import net.finleg.bridget.ui.common.Fmt
 
@@ -101,6 +104,18 @@ class InteractionsAdapter(
         }
 
         InteractionUi.buildControls(b.controls, i, drafts, { button, values -> onAnswer(i, button, values) }, onLink)
+        if (i.kind == IKind.HTML || i.kind == IKind.TEXT) {
+            // CAP-34 cards open in the detail screen; D26 text panels in the lower half.
+            val open = MaterialButton(ctx, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+                setText(if (i.kind == IKind.HTML) R.string.interactions_card_open else R.string.interactions_text_open)
+                minHeight = ctx.dp(48)
+                contentDescription = text.toString() + ", " + headline
+                setOnClickListener { onOpen(i) }
+            }
+            b.controls.addView(open, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+                .apply { topMargin = ctx.dp(8) })
+            b.controls.isVisible = true
+        }
 
         val summary = InteractionUi.answerSummary(ctx, i)
         b.answer.isVisible = summary != null

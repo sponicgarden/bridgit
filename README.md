@@ -78,6 +78,7 @@ needs `Authorization: Bearer brg_...`. Every response has a `request_id`
 | `GET /gallery/recent?limit=20` | Newest images, metadata only |
 | `GET /gallery/photo/{id}` | One image; `size=`, `raw=1` |
 | `GET /image/last?type=any\|screenshot\|photo` | Newest image, sized for AI vision (1568 px, q85); `since=&wait=55` waits for the next one |
+| `POST /screen/capture` | What's on screen now, same sizing, nothing saved. Needs More > Access > Screenshots (Android Accessibility, "Bridget screenshots") and the Screenshots switch in Features |
 | `GET /log` | The log, with filters; `order=asc&since=<id>&wait=55` follows it live |
 | `GET /log/{id}`, `/log/stats`, `/log/export?format=jsonl\|csv` | One entry, stats, export |
 | `POST /log` | `{"message":"..."}`: a note in the agent channel |
@@ -91,6 +92,64 @@ per agent and 30 per address, 4 open `wait` requests per agent.
 
 The log setting **Agents can read: all entries / only their own** (Settings
 → Privacy) applies to every log endpoint. Developer agents always see all.
+
+### Use Bridget from Claude Code over MCP
+
+`POST /v1/mcp` speaks MCP (Streamable HTTP, JSON replies, no SSE, no
+session id) with the agent's normal key. Put this in the project's
+`.mcp.json` and export the key as `BRIDGET_KEY` (never paste it into the
+file):
+
+```json
+{
+  "mcpServers": {
+    "bridget": {
+      "type": "http",
+      "url": "http://<phone>:8734/v1/mcp",
+      "headers": { "Authorization": "Bearer ${BRIDGET_KEY}" }
+    }
+  }
+}
+```
+
+`<phone>` is the MagicDNS name or Tailscale IP from Home (debug builds: port
+8735). Every endpoint the agent may use is a tool named from its path:
+`camera_snapshot`, `image_last`, `gallery_photo` (`id` argument),
+`interactions_send`, `interactions_get` (`wait` up to 55), `speaker_say`, …
+Left out: `/mcp`, `/pair`, `/tools/bridget`, `/openapi.json`; developer-only
+tools appear only for developer agents. Tools whose switch is off are still
+listed, with a "switched off" note, and fail with `capability_disabled`.
+Images and clips come back as MCP image/audio content; errors as
+`isError: true` with the usual error JSON. Side-effecting tools take an
+`idempotency_key` argument. `speaker_play` takes a `url` only (send raw audio
+bytes to the HTTP endpoint). Each tool call is checked like a direct call
+(switch, developer, capture and rate limits) and gets its own log entry for
+the real endpoint, marked `via: mcp`. Requests with a browser `Origin`
+header are refused (403); batches get 400. The whole JSON-RPC message is
+capped at 2 MB, so base64 images sent with `interactions_send` or
+`feedback_file` must be smaller over MCP than over HTTP.
+
+### Callbacks
+
+Rahul can give an agent a **Callback URL** in its agent screen (tailnet
+addresses only, unless Settings > Allow internet callbacks is on; then a public
+`https://` URL works too). Bridget then POSTs every event for that agent as
+`{"event": {id, type, at, data}, "agent": "<name>"}`, retrying at 10 s, 60 s and
+5 min (`GET /v1/events` always has them). The callback secret (`cbs_…`) is shown
+once when the URL is saved. Check the signature like this:
+
+```python
+import hmac, hashlib, time
+def verify(secret: str, headers, raw_body: bytes) -> bool:
+    ts = headers["X-Bridget-Timestamp"]
+    want = "sha256=" + hmac.new(secret.encode(), ts.encode() + b"." + raw_body, hashlib.sha256).hexdigest()
+    fresh = abs(time.time() - int(ts)) <= 300  # also drop X-Bridget-Event-Id values you've already seen
+    return fresh and hmac.compare_digest(want, headers["X-Bridget-Signature"])
+```
+
+`POST /v1/callback/test` sends a signed `callback.test` event right away and
+returns `{delivered, http_status, host}` (502 `callback_failed` if the
+receiver didn't answer 2xx).
 
 ## Security model
 

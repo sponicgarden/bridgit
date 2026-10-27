@@ -49,9 +49,8 @@ class AccessFragment : Fragment() {
         PARTLY(R.string.access_status_partly),
         /**
          * UI-27 "Restricted setting": Android blocks some special access for apps installed from a file.
-         * No P1a row can be blocked (it only affects notification access and Accessibility, which
-         * arrive in P2/P6), so nothing reports BLOCKED yet; the row and sort order already support it.
-         * The expanded card with the three steps (ui-spec 5.9) is added with those rows.
+         * Android doesn't say whether the block is on, so the Screenshots row shows Off and its
+         * Show me how steps cover allowing restricted settings.
          */
         BLOCKED(R.string.access_status_blocked),
     }
@@ -129,6 +128,7 @@ class AccessFragment : Fragment() {
             granted(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) -> Status.PARTLY
             else -> Status.OFF
         }
+        val screenshots = if (net.finleg.bridget.capability.ScreenshotService.isEnabled(ctx)) Status.ON else Status.OFF
         val installs = if (UpdateInstaller.canRequestInstalls(ctx)) Status.ON else Status.OFF
         val battery = if (ctx.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(ctx.packageName) == true)
             Status.ON else Status.OFF
@@ -150,6 +150,9 @@ class AccessFragment : Fragment() {
                 if (photos == Status.PARTLY) openAppInfo()
                 else request(arrayOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED))
             },
+            // 8.10 (CAP-26c): sideloaded installs hit "Restricted setting" here; step 3 of Show me how covers it.
+            Item("screenshots", R.string.access_screenshots, R.string.access_screenshots_unlocks, screenshots,
+                R.string.access_btn_turn_on, R.array.access_how_screenshots) { openScreenshotService() },
             Item("battery", R.string.access_battery, R.string.access_battery_unlocks, battery,
                 R.string.access_btn_turn_on, R.array.access_how_battery) {
                 open(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${ctx.packageName}")))
@@ -246,6 +249,16 @@ class AccessFragment : Fragment() {
         permFallback = fallback
         requestedAt = android.os.SystemClock.elapsedRealtime()
         permLauncher.launch(perms)
+    }
+
+    /** Bridget's own page in Accessibility settings, else the Accessibility list. */
+    private fun openScreenshotService() {
+        val ctx = requireContext()
+        val cn = android.content.ComponentName(ctx, net.finleg.bridget.capability.ScreenshotService::class.java)
+        runCatching {
+            startActivity(Intent("android.settings.ACCESSIBILITY_DETAILS_SETTINGS")
+                .putExtra(Intent.EXTRA_COMPONENT_NAME, cn.flattenToString()))
+        }.onFailure { open(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
     }
 
     private fun openNotificationSettings() =

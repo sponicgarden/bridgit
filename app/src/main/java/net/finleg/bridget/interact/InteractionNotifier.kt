@@ -9,7 +9,6 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
-import android.media.AudioManager
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.StyleSpan
@@ -55,11 +54,11 @@ object NotifRules {
     }
 
     /**
-     * CAP-31 speak: never unless the agent asked; when the phone is quiet (silent, vibrate, DND or a call)
-     * only an urgent one, and only if Rahul allowed it in Settings.
+     * CAP-31 speak: never unless the agent asked; never during a phone call (SPK-03), urgent or not; when the
+     * phone is silent, vibrate or DND only an urgent one, and only if Rahul allowed it in Settings.
      */
-    fun shouldSpeak(speak: Boolean, quiet: Boolean, urgent: Boolean, urgentInQuietAllowed: Boolean): Boolean =
-        speak && (!quiet || (urgent && urgentInQuietAllowed))
+    fun shouldSpeak(speak: Boolean, inCall: Boolean, quiet: Boolean, urgent: Boolean, urgentInQuietAllowed: Boolean): Boolean =
+        speak && !inCall && (!quiet || (urgent && urgentInQuietAllowed))
 
     enum class LinkOpen { VIEW, DIAL, LAUNCH, NONE }
 
@@ -93,7 +92,7 @@ object InteractionNotifier {
             when (what) {
                 "created" -> { post(ctx, i); maybeSpeak(ctx, i) }
                 "answered", "dismissed", "expired", "cancelled" -> cancel(ctx, i.id)
-                "seen" -> if (i.kind == IKind.NOTICE) cancel(ctx, i.id)
+                "seen" -> if (i.kind == IKind.NOTICE || i.kind == IKind.TEXT) cancel(ctx, i.id)
             }
         }.onFailure { app.log.system("diagnostic", "interaction", "Couldn't update the notification for interaction ${i.id}: ${it.javaClass.simpleName}", level = "error") }
     }
@@ -102,12 +101,17 @@ object InteractionNotifier {
         ctx.getSystemService(NotificationManager::class.java).cancel(notifId(interactionId))
 
     private fun post(ctx: Context, i: Interaction) {
-        if (i.kind != IKind.QUESTION && i.kind != IKind.NOTICE) return
         val app = ctx.applicationContext as BridgeApp
         val nid = notifId(i.id)
-        val question = i.kind == IKind.QUESTION
+        // Questions and HTML cards wait for Rahul's answer; notices and text panels only tell him.
+        val question = i.kind == IKind.QUESTION || i.kind == IKind.HTML
         val title = SpannableStringBuilder().apply {
-            val head = if (question) ctx.getString(R.string.interact_notif_asks, i.agent) else ctx.getString(R.string.interact_notif_notice, i.agent)
+            val head = ctx.getString(when (i.kind) {
+                IKind.QUESTION -> R.string.interact_notif_asks
+                IKind.NOTICE -> R.string.interact_notif_notice
+                IKind.HTML -> R.string.interact_notif_card // CAP-34: "<Agent> sent a card: <title>", opens the detail
+                IKind.TEXT -> R.string.interact_notif_streaming // D26: "<Agent> is streaming: <title>", opens the panel
+            }, i.agent)
             append(head, StyleSpan(Typeface.BOLD), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             append(" ").append(i.title)
         }
@@ -157,7 +161,12 @@ object InteractionNotifier {
         else b.setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setPublicVersion(
             NotificationCompat.Builder(ctx, if (question) CHANNEL_QUESTIONS else CHANNEL_NOTICES)
                 .setSmallIcon(R.drawable.ic_notif).setColor(ctx.getColor(R.color.brand_primary))
-                .setContentTitle(ctx.getString(if (question) R.string.interact_public_question else R.string.interact_public_notice, i.agent))
+                .setContentTitle(ctx.getString(when (i.kind) {
+                    IKind.QUESTION -> R.string.interact_public_question
+                    IKind.NOTICE -> R.string.interact_public_notice
+                    IKind.HTML -> R.string.interact_public_card
+                    IKind.TEXT -> R.string.interact_public_streaming
+                }, i.agent))
                 .setContentIntent(open).setAutoCancel(true)
                 .build())
 
@@ -166,16 +175,15 @@ object InteractionNotifier {
 
     private fun maybeSpeak(ctx: Context, i: Interaction) {
         if (!i.speak) return
-        val am = ctx.getSystemService(AudioManager::class.java)
-        val nm = ctx.getSystemService(NotificationManager::class.java)
-        val quiet = am.ringerMode != AudioManager.RINGER_MODE_NORMAL ||
-            nm.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL ||
-            am.mode == AudioManager.MODE_IN_CALL || am.mode == AudioManager.MODE_IN_COMMUNICATION
+        val app = ctx.applicationContext as BridgeApp
+        val speaker = app.speaker
+        val quiet = speaker.silenced()
         val allowed = prefs(ctx).getBoolean(PREF_SPEAK_URGENT_IN_DND, false)
-        if (!NotifRules.shouldSpeak(true, quiet, i.priority == "urgent", allowed)) return
-        Speaker.speak(ctx, i.agent, i.title, i.text)
+        if (!NotifRules.shouldSpeak(true, speaker.inCall(), quiet, i.priority == "urgent", allowed)) return
+        // SPK-01: the shared speaker queue, so the volume ceiling, the 5-item queue and Stop apply.
+        speaker.speakText(i.agentId, i.agent, NotifRules.utterance(i.agent, i.title, i.text), allowInQuiet = quiet)
         val what = if (i.kind == IKind.QUESTION) "question" else "notice"
-        (ctx.applicationContext as BridgeApp).log.system("audit", "interaction", "Read aloud: ${i.agent}'s $what")
+        app.log.system("audit", "interaction", "Read aloud: ${i.agent}'s $what")
     }
 
     /** A circle with the agent's initial, in the same colours as AgentAvatarView. */

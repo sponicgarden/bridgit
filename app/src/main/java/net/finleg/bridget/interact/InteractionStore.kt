@@ -54,6 +54,7 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
                 put("controls_json", JSONArray(d.controls.map { it.toJson() }).toString()); put("html", d.html)
                 put("priority", d.priority); put("speak", if (d.speak) 1 else 0); put("status", IStatus.PENDING.id)
                 put("created_at", now); put("expires_at", now + d.expiresInS * 1000)
+                if (d.kind == IKind.TEXT) { put("stream_text", TextPanelRules.keepTail(d.text ?: "")); put("stream_done", 0) }
             })
             if (imageJpeg != null) {
                 imageName = "$id.jpg"
@@ -119,6 +120,45 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
         return get(id)!!.also { tell(it, "answered") }
     }
 
+    /**
+     * An HTML card's page called Bridget.respond(json) (CAP-34). Completes it like a button answer: status
+     * answered, `interaction.answered` with `answer.data`, waits return. Refused once the card isn't open.
+     */
+    @Synchronized
+    fun answerCard(id: Long, data: Any): Interaction {
+        val i = get(id) ?: throw InteractionError("not_found", "No interaction $id.")
+        if (i.kind != IKind.HTML) throw InteractionError("invalid_parameter", "Only html cards take a card answer.")
+        if (!i.status.open) throw InteractionError("conflict", "This card is already ${i.status.id}.")
+        val ans = JSONObject().put("button", JSONObject.NULL).put("values", JSONObject()).put("data", data)
+        val now = clock()
+        update(id, ContentValues().apply { put("status", IStatus.ANSWERED.id); put("answer_json", ans.toString()); put("answered_at", now); put("closed_at", now) })
+        event(i.agentId, "interaction.answered", JSONObject().put("interaction_id", id).put("answer", ans))
+        return get(id)!!.also { tell(it, "answered") }
+    }
+
+    /**
+     * D26: adds [append] to the agent's own text panel and keeps the last 200 KB; [done] finishes it.
+     * not_found for another agent's or a missing one, conflict once it is finished, closed or cancelled.
+     * No listener call per append (only [changed] bumps), so notifications stay quiet.
+     */
+    @Synchronized
+    fun appendText(agentId: String, id: Long, append: String, done: Boolean): Interaction {
+        val i = getFor(agentId, id) ?: throw InteractionError("not_found", "No interaction $id of yours.")
+        if (i.kind != IKind.TEXT) throw InteractionError("invalid_parameter", "Interaction $id is a ${i.kind.id}, not a text panel.")
+        if (!i.status.open) throw InteractionError("conflict", "This text panel is ${i.status.id}; create a new one.")
+        if (i.streamDone) throw InteractionError("conflict", "This text panel is finished (done was sent); create a new one.")
+        val text = if (append.isEmpty()) i.streamText else TextPanelRules.keepTail(i.streamText + append)
+        update(id, ContentValues().apply { put("stream_text", text); if (done) put("stream_done", 1) })
+        return get(id)!!.also { if (done) tell(it, "stream_done") }
+    }
+
+    /** The newest open text panel (D26), for the phone's panel when Rahul hasn't picked one. */
+    fun latestOpenText(): Interaction? {
+        expireDue()
+        return db.query("interactions", null, "kind = 'text' AND status IN ('pending','seen')", null, null, null, "id DESC", "1")
+            .use { c -> if (c.moveToFirst()) row(c) else null }
+    }
+
     /** Rahul closed it (D26); the agent is told `dismissed`. */
     @Synchronized
     fun dismiss(id: Long): Interaction? = close(id, IStatus.DISMISSED, "interaction.dismissed")
@@ -154,23 +194,64 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
             val old = db.query("interactions", arrayOf("id", "image"), "status NOT IN ('pending','seen') AND closed_at < ?",
                 arrayOf((now - 30L * 86_400_000).toString()), null, null, null).use { c -> buildList { while (c.moveToNext()) add(c.getLong(0) to c.getString(1)) } }
             old.forEach { (id, img) -> img?.let { File(dir, it).delete() }; db.delete("interactions", "id = ?", arrayOf(id.toString())) }
-            db.delete("events", "at < ?", arrayOf((now - 7L * 86_400_000).toString()))
-            db.execSQL("DELETE FROM events WHERE id IN (SELECT id FROM events e WHERE (SELECT COUNT(*) FROM events f WHERE f.agent_id = e.agent_id AND f.id > e.id) >= 1000)")
+            // Events are also pruned on every insert (count and age); this catches age when nothing new arrives.
+            db.delete("events", "at < ?", arrayOf((now - EVENT_KEEP_MS).toString()))
         }
     }
     private var lastPrune = 0L
+    private var lastEventAgePrune = 0L
 
     // ---- events (section 9) -----------------------------------------------------------------------
 
-    /** Adds an event for one agent ([agentId]) or, with null, for every agent in [allAgents]. */
-    fun event(agentId: String, type: String, data: JSONObject) {
-        db.insert("events", null, ContentValues().apply { put("agent_id", agentId); put("type", type); put("at", clock()); put("data", data.toString()) })
+    /**
+     * Adds an event for [agentId]. Retention (7 days, the newest [EVENTS_PER_AGENT] per agent) is enforced
+     * here on every insert, so a tour- or events-only workload can't grow the table without bound.
+     */
+    @Synchronized
+    fun event(agentId: String, type: String, data: JSONObject): Event {
+        val now = clock()
+        val id = db.insert("events", null, ContentValues().apply { put("agent_id", agentId); put("type", type); put("at", now); put("data", data.toString()) })
+        // Count cap for this agent: everything older than its 1,000th newest event goes (uses the (agent_id, id) index).
+        db.execSQL("DELETE FROM events WHERE agent_id = ? AND id <= (SELECT id FROM events WHERE agent_id = ? ORDER BY id DESC LIMIT 1 OFFSET $EVENTS_PER_AGENT)",
+            arrayOf(agentId, agentId))
+        // Age limit for everyone, at most once a minute.
+        if (now - lastEventAgePrune > 60_000L) {
+            lastEventAgePrune = now
+            db.delete("events", "at < ?", arrayOf((now - EVENT_KEEP_MS).toString()))
+        }
         bump()
+        // Callbacks (EVT-06): listeners only enqueue; this runs under the store's lock.
+        return Event(id, agentId, type, now, data).also { e -> synchronized(eventListeners) { eventListeners.toList() }.forEach { runCatching { it(e) } } }
+    }
+
+    private val eventListeners = mutableListOf<(Event) -> Unit>()
+
+    /** Called with every new event, on the inserting thread. Must not block. */
+    fun addEventListener(l: (Event) -> Unit) = synchronized(eventListeners) { eventListeners += l }
+
+    /**
+     * TOUR-02: once tour [tourId] ends, its stored tick and question events lose location, compass and photo
+     * links ([TourPrivacy.scrub]); the shells (type, tour_id, time) stay so cursors and history still work.
+     */
+    @Synchronized
+    fun scrubTourEvents(agentId: String, tourId: String) {
+        val types = net.finleg.bridget.tour.TourPrivacy.EVENT_TYPES.toList()
+        val rows = db.query("events", arrayOf("id", "data"),
+            "agent_id = ? AND type IN (${types.joinToString(",") { "?" }}) AND data LIKE ?",
+            (listOf(agentId) + types + "%$tourId%").toTypedArray(), null, null, null)
+            .use { c -> buildList { while (c.moveToNext()) add(c.getLong(0) to c.getString(1)) } }
+        for ((id, json) in rows) {
+            val data = runCatching { JSONObject(json) }.getOrNull() ?: continue
+            if (data.optString("tour_id") != tourId) continue
+            val clean = net.finleg.bridget.tour.TourPrivacy.scrub(data) ?: continue
+            db.update("events", ContentValues().apply { put("data", clean.toString()) }, "id = ?", arrayOf(id.toString()))
+        }
     }
 
     /** The agent's events after [sinceId] (oldest first), or its last 50 when [sinceId] is null. */
     fun eventsFor(agentId: String, sinceId: Long?, types: Set<String>, limit: Int = 100): List<Event> {
-        val where = StringBuilder("agent_id = ?"); val args = mutableListOf(agentId)
+        // Never older than the retention window, even before the next prune has run.
+        val where = StringBuilder("agent_id = ? AND at >= ?"); val args = mutableListOf(agentId, (clock() - EVENT_KEEP_MS).toString())
         sinceId?.let { where.append(" AND id > ?"); args += it.toString() }
         if (types.isNotEmpty()) { where.append(" AND type IN (${types.joinToString(",") { "?" }})"); args += types }
         val order = if (sinceId == null) "id DESC" else "id ASC"
@@ -199,6 +280,11 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
             (0 until ctr.length()).map { Control.fromJson(ctr.getJSONObject(it)) }, s("html"), s("priority") ?: "normal", l("speak") == 1L,
             IStatus.of(s("status"))!!, s("answer_json")?.let { JSONObject(it) }, l("created_at")!!, l("expires_at")!!,
             l("seen_at"), l("answered_at"), l("closed_at"), s("stream_text") ?: "", l("stream_done") == 1L)
+    }
+
+    companion object {
+        const val EVENTS_PER_AGENT = 1000
+        const val EVENT_KEEP_MS = 7L * 86_400_000
     }
 
     private class Helper(ctx: Context) : SQLiteOpenHelper(ctx, "interactions.db", null, 1) {

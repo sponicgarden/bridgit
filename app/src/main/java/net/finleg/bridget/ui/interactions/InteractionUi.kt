@@ -90,7 +90,12 @@ object InteractionUi {
     /** "**Grok** asks: Pay this invoice?" or "**Claude**: Backup finished". */
     fun headline(ctx: Context, i: Interaction): CharSequence {
         val agent = agentName(i)
-        val s = ctx.getString(if (isQuestion(i)) R.string.interactions_asks else R.string.interactions_says, agent, i.title)
+        val s = ctx.getString(when (i.kind) {
+            IKind.HTML -> R.string.interactions_card_headline
+            IKind.TEXT -> R.string.interactions_text_headline
+            IKind.QUESTION -> R.string.interactions_asks
+            IKind.NOTICE -> R.string.interactions_says
+        }, agent, i.title)
         val out = SpannableStringBuilder(s)
         val at = s.indexOf(agent)
         if (at >= 0) out.setSpan(StyleSpan(Typeface.BOLD), at, at + agent.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -111,6 +116,8 @@ object InteractionUi {
             val p = out.indexOf(l)
             if (p >= 0) out.setSpan(StyleSpan(Typeface.BOLD), p, p + l.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
+        // CAP-34: what an HTML card sent with Bridget.respond, shortened.
+        if (a != null && a.has("data")) out.append("\n").append(ctx.getString(R.string.interactions_card_sent, a.opt("data").toString().take(200)))
         val values = a?.optJSONObject("values")
         values?.keys()?.forEach { k ->
             val label = i.controls.firstOrNull { it.id == k }?.label ?: k

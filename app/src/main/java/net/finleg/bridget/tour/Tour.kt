@@ -2,6 +2,7 @@ package net.finleg.bridget.tour
 
 import android.location.Location
 import io.ktor.server.routing.Route
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -73,6 +74,8 @@ data class Tour(
     val startedAt: Long, val paused: Boolean = false, val lastTickAt: Long = 0, val ticks: Int = 0,
     val distanceM: Double = 0.0, val lastLat: Double? = null, val lastLon: Double? = null, val photos: Int = 0,
     val heading: Double? = null, val caption: String? = null, val said: List<Said> = emptyList(),
+    /** TOUR-04: battery percentage at the start; [charged] once the phone was seen charging during the tour. */
+    val batteryStartPct: Int? = null, val charged: Boolean = false,
     /** Photos Rahul took with Take photo on this tour, in order; /v1/tour/photo/{n} is 1-based. */
     val shots: List<Shot> = emptyList(),
 ) {
@@ -83,18 +86,115 @@ data class Tour(
 }
 
 /**
+ * The running tour, every change made under one lock. Pure (no Android), unit-tested.
+ * [update] changes the tour only while [Tour.id] is still the current one and always starts from the
+ * current value, so a concurrent Pause, End or replacement is never undone by a stale snapshot.
+ */
+class TourState {
+    private val _state = MutableStateFlow<Tour?>(null)
+    val flow: StateFlow<Tour?> get() = _state
+
+    fun current(): Tour? = _state.value
+
+    /** Runs [block] with the lock held. Tour-event emission and End use it, so nothing is sent after End. */
+    @Synchronized fun <R> locked(block: () -> R): R = block()
+
+    /** Makes [t] the running tour; returns the one it replaced (the caller ends that first). */
+    @Synchronized fun begin(t: Tour): Tour? = _state.value.also { _state.value = t }
+
+    /** Applies [f] to the current tour if it is [tourId]; a no-op returning null otherwise. [f] may not change the id. */
+    @Synchronized fun update(tourId: String, f: (Tour) -> Tour): Tour? {
+        val cur = _state.value?.takeIf { it.id == tourId } ?: return null
+        val next = f(cur)
+        require(next.id == cur.id) { "update can't replace the tour" }
+        _state.value = next
+        return next
+    }
+
+    /** Pauses or resumes the current tour (only if it is [tourId], when given). */
+    @Synchronized fun setPaused(p: Boolean, tourId: String? = null): Tour? {
+        val cur = _state.value ?: return null
+        if (tourId != null && cur.id != tourId) return null
+        return cur.copy(paused = p).also { _state.value = it }
+    }
+
+    /** Clears the current tour (only if it is [tourId], when given) and returns it. */
+    @Synchronized fun take(tourId: String? = null): Tour? {
+        val cur = _state.value ?: return null
+        if (tourId != null && cur.id != tourId) return null
+        _state.value = null
+        return cur
+    }
+
+    /** Clears the current tour only if [agentId] runs it (and it is [tourId], when given): check and end in one step. */
+    @Synchronized fun takeIfOwned(agentId: String, tourId: String? = null): Tour? {
+        val cur = _state.value ?: return null
+        if (cur.agentId != agentId || (tourId != null && cur.id != tourId)) return null
+        _state.value = null
+        return cur
+    }
+}
+
+/** TOUR-04: battery used so far. Pure, unit-tested. */
+object TourBattery {
+    /** Percentage points used since the start, or null when unknown or the phone charged during the tour. */
+    fun used(startPct: Int?, nowPct: Int?, charged: Boolean): Int? {
+        if (charged || startPct == null || nowPct == null) return null
+        return (startPct - nowPct).coerceAtLeast(0)
+    }
+}
+
+/** TOUR-02: what an ended tour's stored events keep. Pure, unit-tested. */
+object TourPrivacy {
+    val EVENT_TYPES = setOf("tour.tick", "tour.question", "tour.photo")
+    /** Location, compass and photo ids with their fetch links: removed once the tour ends. */
+    val SENSITIVE = setOf("location", "compass", "latest_photo", "new_photos", "fetch")
+
+    /** [data] without the [SENSITIVE] fields (the event shell stays), or null if there is nothing to remove. */
+    fun scrub(data: JSONObject): JSONObject? {
+        if (SENSITIVE.none { data.has(it) }) return null
+        val out = JSONObject(data.toString())
+        (out.opt("new_photos") as? JSONArray)?.let { out.put("new_photos_count", it.length()) }
+        SENSITIVE.forEach { out.remove(it) }
+        return out.put("removed", "The tour ended; its location, compass and photos are not kept (TOUR-02).")
+    }
+}
+
+/**
  * Runs one tour at a time. Ticks go to the tour's agent as `tour.tick` events (section 9), the
  * agent answers with /v1/speaker (tour_id). Rahul's questions go as `tour.question`.
- * Location is sent only to that agent, only during the tour (TOUR-02).
+ * Location is sent only to that agent, only during the tour (TOUR-02): every tour event is emitted
+ * under the lock End takes, End strips location from that tour's stored events, and the Location
+ * switch is re-checked right before each tick or question is built.
  */
 class TourManager(private val app: BridgeApp) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var job: Job? = null
-    private val _state = MutableStateFlow<Tour?>(null)
-    val state: StateFlow<Tour?> get() = _state
+    private val tour = TourState()
+    val state: StateFlow<Tour?> get() = tour.flow
     private val reader = LocationReader(app)
 
-    fun current(): Tour? = _state.value
+    fun current(): Tour? = tour.current()
+
+    init {
+        // The ongoing tour notification (8.25 step 5) follows the state; it goes when the tour ends.
+        scope.launch { TourNotifier.follow(app, tour.flow) }
+    }
+
+    private val battery get() = app.getSystemService(android.os.BatteryManager::class.java)
+
+    /** Battery level 0-100, or null if Android doesn't say. */
+    fun batteryPct(): Int? = runCatching { battery?.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY) }
+        .getOrNull()?.takeIf { it in 0..100 }
+
+    fun charging(): Boolean = runCatching { battery?.isCharging == true }.getOrDefault(false)
+
+    /** TOUR-04: battery used so far by tour [t], or null (unknown, or charged during the tour). Notes charging it sees. */
+    fun batteryUsed(t: Tour): Int? {
+        val chargingNow = charging()
+        val cur = if (chargingNow && !t.charged) tour.update(t.id) { it.copy(charged = true) } ?: t.copy(charged = true) else t
+        return TourBattery.used(cur.batteryStartPct, batteryPct(), cur.charged || chargingNow)
+    }
 
     /** What's missing before a tour can start (TOUR-01); empty = ready. */
     fun missing(): List<String> = buildList {
@@ -105,108 +205,158 @@ class TourManager(private val app: BridgeApp) {
         if (!app.captureNotificationsOn()) add("Notifications")
     }
 
-    @Synchronized
     fun start(agentId: String, kinds: List<String>, intervalS: Int): Tour {
         val a = app.agents.get(agentId) ?: throw IllegalArgumentException("No such agent")
         require(kinds.isNotEmpty() && kinds.all { it in TourKinds.all }) { "Pick at least one kind of tour" }
         require(intervalS in TourKinds.intervals) { "Bad interval" }
-        end("a new tour started")
-        val t = Tour("t" + UUID.randomUUID().toString().replace("-", "").take(10), a.id, a.name, kinds, intervalS, System.currentTimeMillis())
-        _state.value = t
-        app.interactions.event(a.id, "tour.started", JSONObject().put("tour_id", t.id).put("kinds", JSONArray(kinds))
-            .put("interval_s", intervalS).put("brief", TourKinds.brief(kinds))
-            .put("how_to_reply", "POST /v1/speaker/say {\"text\",\"tour_id\"} or /v1/speaker/play; newer narration replaces queued")
-            .put("report_model", if (a.model == null) "Tell Rahul which model you are: POST /v1/me {\"model\",\"harness\"}" else JSONObject.NULL))
+        val t = Tour("t" + UUID.randomUUID().toString().replace("-", "").take(10), a.id, a.name, kinds, intervalS, System.currentTimeMillis(),
+            batteryStartPct = batteryPct(), charged = charging())
+        tour.locked {
+            tour.take()?.let { finish(it, "a new tour started") }
+            tour.begin(t)
+            app.interactions.event(a.id, "tour.started", JSONObject().put("tour_id", t.id).put("kinds", JSONArray(kinds))
+                .put("interval_s", intervalS).put("brief", TourKinds.brief(kinds))
+                .put("how_to_reply", "POST /v1/speaker/say {\"text\",\"tour_id\"} or /v1/speaker/play; newer narration replaces queued")
+                .put("report_model", if (a.model == null) "Tell Rahul which model you are: POST /v1/me {\"model\",\"harness\"}" else JSONObject.NULL))
+            job = scope.launch { loop(t.id) }
+        }
         app.log.system("audit", "agent", "You started a ${kinds.joinToString("/")} city tour with ${a.name}")
-        job = scope.launch { loop(t.id) }
         return t
     }
 
     private suspend fun loop(id: String) {
         while (scope.isActive) {
-            val t = _state.value?.takeIf { it.id == id } ?: return
-            if (System.currentTimeMillis() - t.startedAt > TourKinds.MAX_HOURS * 3_600_000L) { end("time limit"); return }
-            if (!t.paused) runCatching { tick(t) }.onFailure {
-                app.log.system("diagnostic", "service", "Tour tick failed: ${it.javaClass.simpleName}", level = "warn")
+            val t = tour.current()?.takeIf { it.id == id } ?: return
+            if (System.currentTimeMillis() - t.startedAt > TourKinds.MAX_HOURS * 3_600_000L) { endTour(id, "time limit"); return }
+            if (!t.paused) {
+                try { tick(id) } catch (e: CancellationException) { throw e } catch (e: Exception) {
+                    app.log.system("diagnostic", "service", "Tour tick failed: ${e.javaClass.simpleName}", level = "warn")
+                }
             }
             delay(t.intervalS * 1000L)
         }
     }
 
-    private suspend fun tick(t: Tour) {
+    /** False, and the tour ended, once the Location switch is off (TOUR-02 consent). */
+    private fun locationStillOn(id: String): Boolean {
+        if (app.settings.isOn("location")) return true
+        endTour(id, "location switched off")
+        return false
+    }
+
+    private suspend fun tick(id: String) {
+        if (!locationStillOn(id)) return
+        val t = tour.current()?.takeIf { it.id == id && !it.paused } ?: return
         val fix: Location? = reader.fresh(high = false, timeoutMs = 10_000) ?: reader.lastKnown()
         val compass = Compass.read(app)
+        val chargingNow = charging()
         val since = if (t.lastTickAt > 0) t.lastTickAt else t.startedAt
         val photos = if (app.settings.isOn("gallery") && Gallery(app).accessMode() != null)
             Gallery(app).recent(20).filter { it.addedAt > since }.take(10) else emptyList()
-        var moved = 0.0
-        if (fix != null && t.lastLat != null && t.lastLon != null) {
-            val r = FloatArray(1); Location.distanceBetween(t.lastLat, t.lastLon, fix.latitude, fix.longitude, r); moved = r[0].toDouble()
+        tour.locked {
+            // After the suspensions: still this tour, still running, still allowed to send location?
+            val cur = tour.current()?.takeIf { it.id == id && !it.paused } ?: return@locked
+            if (!locationStillOn(id)) return@locked
+            var moved = 0.0
+            if (fix != null && cur.lastLat != null && cur.lastLon != null) {
+                val r = FloatArray(1); Location.distanceBetween(cur.lastLat, cur.lastLon, fix.latitude, fix.longitude, r); moved = r[0].toDouble()
+            }
+            val data = JSONObject().put("tour_id", id).put("kinds", JSONArray(cur.kinds)).put("tick", cur.ticks + 1)
+                .put("location", fix?.let { LocationReader.json(it, reader.precision() ?: "none", ::isoAt) } ?: JSONObject.NULL)
+                .put("compass", compass?.let { Compass.json(it) } ?: JSONObject.NULL)
+                .put("moved_m", Math.round(moved))
+                .put("new_photos", JSONArray(photos.map { p -> JSONObject().put("id", p.id.toString()).put("taken_at", isoAt(p.takenAt))
+                    .put("fetch", "/v1/gallery/photo/${p.id}?size=agent") }))
+                .put("playing", app.speaker.current?.takeIf { it.agentId == cur.agentId }?.caption ?: JSONObject.NULL)
+            app.interactions.event(cur.agentId, "tour.tick", data)
+            tour.update(id) { c -> c.copy(lastTickAt = System.currentTimeMillis(), ticks = c.ticks + 1,
+                distanceM = c.distanceM + moved, lastLat = fix?.latitude ?: c.lastLat, lastLon = fix?.longitude ?: c.lastLon,
+                photos = c.photos + photos.size, heading = compass?.azimuthDeg ?: c.heading, charged = c.charged || chargingNow) }
+            Unit
         }
-        val data = JSONObject().put("tour_id", t.id).put("kinds", JSONArray(t.kinds)).put("tick", t.ticks + 1)
-            .put("location", fix?.let { LocationReader.json(it, reader.precision() ?: "none", ::isoAt) } ?: JSONObject.NULL)
-            .put("compass", compass?.let { Compass.json(it) } ?: JSONObject.NULL)
-            .put("moved_m", Math.round(moved))
-            .put("new_photos", JSONArray(photos.map { p -> JSONObject().put("id", p.id.toString()).put("taken_at", isoAt(p.takenAt))
-                .put("fetch", "/v1/gallery/photo/${p.id}?size=agent") }))
-            .put("playing", app.speaker.current?.takeIf { it.agentId == t.agentId }?.caption ?: JSONObject.NULL)
-        app.interactions.event(t.agentId, "tour.tick", data)
-        _state.value = _state.value?.takeIf { it.id == t.id }?.copy(lastTickAt = System.currentTimeMillis(), ticks = t.ticks + 1,
-            distanceM = t.distanceM + moved, lastLat = fix?.latitude ?: t.lastLat, lastLon = fix?.longitude ?: t.lastLon,
-            photos = t.photos + photos.size, heading = compass?.azimuthDeg ?: t.heading)
     }
 
     /** The agent's narration arrived (for the caption and history). */
     fun narrated(tourId: String, text: String?) {
-        val t = _state.value?.takeIf { it.id == tourId } ?: return
         if (text.isNullOrBlank()) return
-        _state.value = t.copy(caption = text, said = (t.said + Said(System.currentTimeMillis(), t.agent, text)).takeLast(100))
+        tour.update(tourId) { t -> t.copy(caption = text, said = (t.said + Said(System.currentTimeMillis(), t.agent, text)).takeLast(100)) }
     }
 
     /** Rahul's question (TOUR, owner request): typed, or the transcript of what he said. */
     suspend fun ask(text: String, spoken: Boolean) {
-        val t = _state.value ?: return
+        val t = tour.current() ?: return
         val q = text.trim().take(1000).ifEmpty { return }
+        if (!locationStillOn(t.id)) return
         val fix = reader.lastKnown()
         val compass = Compass.read(app)
         val latest = if (app.settings.isOn("gallery") && Gallery(app).accessMode() != null) Gallery(app).recent(1).firstOrNull() else null
-        app.interactions.event(t.agentId, "tour.question", JSONObject().put("tour_id", t.id).put("question", q).put("spoken", spoken)
-            .put("location", fix?.let { LocationReader.json(it, reader.precision() ?: "none", ::isoAt) } ?: JSONObject.NULL)
-            .put("compass", compass?.let { Compass.json(it) } ?: JSONObject.NULL)
-            .put("latest_photo", latest?.let { JSONObject().put("id", it.id.toString()).put("fetch", "/v1/gallery/photo/${it.id}?size=agent") } ?: JSONObject.NULL)
-            .put("how_to_answer", "POST /v1/speaker/say {\"text\",\"tour_id\",\"urgent\":true}"))
-        _state.value = t.copy(said = (t.said + Said(System.currentTimeMillis(), "You", q)).takeLast(100))
-        app.log.system("audit", "agent", "You asked ${t.agent} a question on the tour")
+        val sent = tour.locked {
+            val cur = tour.current()?.takeIf { it.id == t.id } ?: return@locked false
+            if (!locationStillOn(cur.id)) return@locked false
+            app.interactions.event(cur.agentId, "tour.question", JSONObject().put("tour_id", cur.id).put("question", q).put("spoken", spoken)
+                .put("location", fix?.let { LocationReader.json(it, reader.precision() ?: "none", ::isoAt) } ?: JSONObject.NULL)
+                .put("compass", compass?.let { Compass.json(it) } ?: JSONObject.NULL)
+                .put("latest_photo", latest?.let { JSONObject().put("id", it.id.toString()).put("fetch", "/v1/gallery/photo/${it.id}?size=agent") } ?: JSONObject.NULL)
+                .put("how_to_answer", "POST /v1/speaker/say {\"text\",\"tour_id\",\"urgent\":true}"))
+            tour.update(cur.id) { c -> c.copy(said = (c.said + Said(System.currentTimeMillis(), "You", q)).takeLast(100)) }
+            true
+        }
+        if (sent) app.log.system("audit", "agent", "You asked ${t.agent} a question on the tour")
     }
 
     /** Rahul took a photo with Take photo (TOUR-07): it goes to the agent now, not at the next tick. */
     suspend fun photoTaken(uri: android.net.Uri) {
-        val t = _state.value ?: return
-        val shot = Shot(uri, System.currentTimeMillis())
-        val n = t.shots.size + 1
+        val t = tour.current() ?: return
+        if (!locationStillOn(t.id)) return
+        val at = System.currentTimeMillis()
         val fix = reader.lastKnown()
         val compass = Compass.read(app)
-        app.interactions.event(t.agentId, "tour.photo", JSONObject().put("tour_id", t.id).put("n", n).put("taken_at", isoAt(shot.at))
-            .put("fetch", "/v1/tour/photo/$n?size=agent")
-            .put("location", fix?.let { LocationReader.json(it, reader.precision() ?: "none", ::isoAt) } ?: JSONObject.NULL)
-            .put("compass", compass?.let { Compass.json(it) } ?: JSONObject.NULL)
-            .put("how_to_answer", "GET the photo, then POST /v1/speaker/say {\"text\",\"tour_id\",\"urgent\":true}"))
-        _state.value = t.copy(shots = t.shots + shot, photos = t.photos + 1,
-            said = (t.said + Said(shot.at, "You", app.getString(R.string.tour_said_photo))).takeLast(100))
-        app.log.system("audit", "agent", "You sent ${t.agent} a photo on the tour")
+        val sent = tour.locked {
+            val cur = tour.current()?.takeIf { it.id == t.id } ?: return@locked false
+            if (!locationStillOn(cur.id)) return@locked false
+            val n = cur.shots.size + 1
+            app.interactions.event(cur.agentId, "tour.photo", JSONObject().put("tour_id", cur.id).put("n", n).put("taken_at", isoAt(at))
+                .put("fetch", "/v1/tour/photo/$n?size=agent")
+                .put("location", fix?.let { LocationReader.json(it, reader.precision() ?: "none", ::isoAt) } ?: JSONObject.NULL)
+                .put("compass", compass?.let { Compass.json(it) } ?: JSONObject.NULL)
+                .put("how_to_answer", "GET the photo, then POST /v1/speaker/say {\"text\",\"tour_id\",\"urgent\":true}"))
+            tour.update(cur.id) { c -> c.copy(shots = c.shots + Shot(uri, at), photos = c.photos + 1,
+                said = (c.said + Said(at, "You", app.getString(R.string.tour_said_photo))).takeLast(100)) }
+            true
+        }
+        if (sent) app.log.system("audit", "agent", "You sent ${t.agent} a photo on the tour")
     }
 
-    fun setPaused(p: Boolean) { _state.value = _state.value?.copy(paused = p) }
+    /** Pause/Resume; keeps everything else as it is now. */
+    fun setPaused(p: Boolean, tourId: String? = null) { tour.setPaused(p, tourId) }
 
-    @Synchronized
-    fun end(reason: String) {
-        val t = _state.value ?: return
+    /** Ends whatever tour runs (Rahul's End, the test hook). */
+    fun end(reason: String) { tour.locked { tour.take()?.let { finish(it, reason) } } }
+
+    /** Ends tour [tourId] only if it is still the current one (the notification's End). */
+    fun endIfCurrent(tourId: String, reason: String) = endTour(tourId, reason)
+
+    /** Ends tour [tourId] only if it is still the current one. */
+    private fun endTour(tourId: String, reason: String) { tour.locked { tour.take(tourId)?.let { finish(it, reason) } } }
+
+    /** DELETE /v1/tour: ends the tour only if [agentId] runs it (and it is [tourId], when given), in one step. */
+    fun endIfOwned(agentId: String, tourId: String?, reason: String): Tour? =
+        tour.locked { tour.takeIfOwned(agentId, tourId)?.also { finish(it, reason) } }
+
+    /** With the lock held, after [t] was cleared from the state. */
+    private fun finish(t: Tour, reason: String) {
         job?.cancel(); job = null
-        _state.value = null
         app.speaker.stop(t.agentId)
+        // TOUR-02: nothing kept after the tour; the event shells stay so cursors and history still make sense.
+        runCatching { app.interactions.scrubTourEvents(t.agentId, t.id) }.onFailure {
+            app.log.system("diagnostic", "service", "Couldn't clear the tour's locations: ${it.javaClass.simpleName}", level = "warn")
+        }
+        val chargingNow = charging()
+        val used = TourBattery.used(t.batteryStartPct, batteryPct(), t.charged || chargingNow)
         app.interactions.event(t.agentId, "tour.ended", JSONObject().put("tour_id", t.id).put("reason", reason)
             .put("duration_s", (System.currentTimeMillis() - t.startedAt) / 1000).put("distance_m", Math.round(t.distanceM))
-            .put("ticks", t.ticks).put("photos_sent", t.photos))
+            .put("ticks", t.ticks).put("photos_sent", t.photos)
+            .put("battery_used_pct", used ?: JSONObject.NULL).put("charged_during_tour", t.charged || chargingNow))
         app.log.system("audit", "agent", "City tour with ${t.agent} ended ($reason)")
     }
 }
@@ -235,8 +385,9 @@ class TourModule(app: BridgeApp) : Capability(app) {
             else Reply.Json(envelope(img, isoAt(shot.at), "taken_at", null).put("source", "tour").put("n", n))
         }
         endpoint(Endpoints.TOUR_END) {
-            val t = app.tours.current()?.takeIf { it.agentId == agent!!.id } ?: throw ErrorCatalog.error("not_found", "You have no tour running.")
-            app.tours.end("ended by ${agentName}")
+            // One step: a tour Rahul replaced meanwhile (another agent's) is never ended by this request.
+            val t = app.tours.endIfOwned(agent!!.id, query("tour_id")?.takeIf { it.isNotBlank() }, "ended by $agentName")
+                ?: throw ErrorCatalog.error("not_found", "You have no tour running.")
             Reply.Json(JSONObject().put("ended", t.id))
         }
     }

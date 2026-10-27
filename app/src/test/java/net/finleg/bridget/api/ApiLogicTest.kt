@@ -53,7 +53,10 @@ class ApiLogicTest {
         assertEquals(IdempotencyCache.Claim.New, c.claim("a1", "k1"))
         assertEquals(IdempotencyCache.Claim.Running, c.claim("a1", "k1"))
         assertEquals("other agent, same key", IdempotencyCache.Claim.New, c.claim("a2", "k1"))
+        // hasResult (used to skip pre-body admission for replays): only once finished, only for that agent.
+        assertFalse("running isn't a result", c.hasResult("a1", "k1"))
         c.finish("a1", "k1", 200, "application/json", "{\"x\":1}".toByteArray(), emptyMap(), isMedia = false)
+        assertTrue(c.hasResult("a1", "k1")); assertFalse(c.hasResult("a2", "k1"))
         val d = c.claim("a1", "k1") as IdempotencyCache.Claim.Done
         assertEquals("{\"x\":1}", String(d.stored.body!!))
         now += 23 * 3600_000L
@@ -142,6 +145,18 @@ class ApiLogicTest {
         // AGT-09 order
         val order = listOf("CONNECTION", "YOUR KEY", "HOW TO CALL", "START HERE", "MOST USEFUL CALLS", "RULES", "FIRST TEST").map { p.indexOf(it) }
         assertEquals(order.sorted(), order)
+    }
+
+    @Test fun setupPromptWithCallback() {
+        val key = Keys.generate()
+        val secret = net.finleg.bridget.core.CallbackRules.newSecret()
+        val p = SetupPrompt.build("Grok", key, Connection.DIRECT, addr, "Pixel 10 Pro XL", caps("gallery", "camera"), null,
+            secret)
+        assertEquals("secret exactly once", 1, Regex(Regex.escape(secret)).findAll(p).count())
+        assertTrue(p.contains("CALLBACK SECRET (verify: /v1/guide): $secret"))
+        assertTrue("AGT-10 budget: ${p.length}", p.length < 2500)
+        assertTrue(p.indexOf("CALLBACK SECRET") in p.indexOf("RULES")..p.indexOf("FIRST TEST"))
+        assertFalse(SetupPrompt.build("Grok", key, Connection.DIRECT, addr, "Pixel", caps(), null).contains("CALLBACK"))
     }
 
     @Test fun setupPromptNothingOnAndUserspace() {

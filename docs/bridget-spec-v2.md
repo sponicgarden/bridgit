@@ -104,6 +104,7 @@ should treat these as settled unless a serious problem is found.
 | D15 | 27 Oct 2026 | Screens use **native Kotlin Android Views with Material 3 components**, with a "techie but friendly" look (section 12). | Decided |
 | D16 | 27 Oct 2026 | Spec **"maximum capabilities"**: describe everything Android allows that's useful to a personal agent, phased (section 16). | Decided |
 | D17 | 27 Oct 2026 | **Screenshots use an Accessibility service**, with no per-screenshot approval (replaces D10's approve-each-time design). Default mode: a private in-memory copy; optional mode: Android's normal screenshot, saved to the gallery. The screen-share grant flow (once / 1 h / 16 h) stays only as the fallback when Accessibility is off. | Decided |
+| D31 | 27 Oct 2026 | **Screenshots ship in 1.5.2, private mode only** (owner asked for screenshots on request while testing). CAP-25 private mode, CAP-25b limits, CAP-26 and CAP-26a move from 1.6 to 1.5.2: `POST /v1/screen/capture`, Accessibility service off until Rahul turns it on, Screenshots switch off by default. System mode, the CAP-25a after-capture notification (the ongoing capture notification shows instead) and the CAP-26b screen-share fallback stay where they were. | Decided |
 | D30 | 27 Oct 2026 | **Bridget applications; first: City tour** (owner). Rahul picks the kind of tour; every minute Bridget sends the agent location, compass and new photos; the agent narrates with audio that keeps changing as he moves; he can ask spoken questions. Pulls forward a minimal location (8.8), compass (8.21) and speaker (CAP-51/53) for it. Section 8.25, prototype in 1.5.x. | Decided |
 | D29 | 27 Oct 2026 | **Playing mirrors listening, and video goes with audio** (owner): play an audio file, stream audio to the speaker (two-way voice with the mic stream), speak text, play a video on screen, and a **live camera video stream** with optional audio; the video clip (8.3) moves to P2. Section 8.24, all in 1.6. | Decided |
 | D28 | 27 Oct 2026 | **Relay mode: yes** (owner; resolves Q10). Built in P2 as 1.7. Two ways in per agent: **sealed** (end-to-end encrypted; the relay can't read anything) and **connector** (for hosted assistants that can only speak HTTPS/MCP; the relay sees content in transit, never stores it past the job). The phone keeps an **outbound** connection to the relay while listening, so no Google push is needed (FCM optional later, Q9). Hosted on Sponic's Cloudflare account. 4.4, ARC-20..ARC-29. | Decided |
@@ -2342,7 +2343,7 @@ decided; Q18 holds the decision. Play policy statements are marked
 | POST | `/v1/phone/brightness` | Phone controls | P3 | key |
 | POST | `/v1/phone/ring` | Phone controls | P3 | key |
 | POST | `/v1/phone/wifi` | — (`not_supported`) | P3 | key |
-| POST | `/v1/screen/capture` | Screenshot | P5 | key |
+| POST | `/v1/screen/capture` | Screenshot | P2 (1.5.2, D31) | key |
 | GET | `/v1/screen/grant` | Screenshot | P5 | key |
 | GET | `/v1/screen/grants/{id}` | Screenshot | P5 | key |
 | POST | `/v1/files` | Files | P4 | key |
@@ -2473,9 +2474,11 @@ Call /v1/health, then tell Rahul you're connected and which features are on.
 | 403 | `notifications_required` | Bridget's notifications are off, so captures are refused (PRD-05) | Tell Rahul to turn notifications on |
 | 403 | `forbidden` | Not allowed for this agent (`reason`, for example `developer_only`) | Don't retry |
 | 409 | `in_progress` | Same `Idempotency-Key` still running | Wait, then retry with the same key |
+| 409 | `conflict` | The interaction isn't in a state for this, for example a text panel that is closed or finished (D26) | Read it with `GET /v1/interactions/{id}`; start a new one if needed |
 | 409 | `idempotency_expired` | Same `Idempotency-Key` already done, but its photo or clip is no longer kept (SEC-13, API-13) | Don't repeat; use a new key only if you really want a new capture |
 | 429 | `quota_exceeded` | Daily data, file storage or relay job quota used up (`limit`) | Wait until tomorrow |
 | 429 | `too_many_waits` | Too many open `wait` requests (SEC-08a) | Close some waits |
+| 502 | `callback_failed` | The agent's callback URL didn't accept the test event (EVT-06) | Check the receiver |
 | 500 | `internal_error` | Bridget bug | Report via `POST /v1/feedback` |
 | 503 | `service_start_blocked` | Android hasn't given the service this sensor | Ask Rahul to open Bridget once |
 | 504 | `capture_timeout` | Sensor didn't answer in time | Retry once |

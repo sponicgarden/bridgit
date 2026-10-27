@@ -50,6 +50,16 @@ object ApiChanges {
             Item("City tour brief in tour.started and GET /v1/tour: directions relative to him, nearest interesting places when nothing is left here", "/v1/tour"),
             Item("tour.photo: Rahul took a photo for you on the tour; fetch it", "/v1/tour/photo/{n}"),
         )),
+        Revision(7, "1.5.2", "2026-10-27", listOf(
+            Item("HTML cards: kind=html draws your own card (offline, Bridget.respond(json) answers)", "/v1/interactions"),
+            Item("Live text panel: kind=text, then stream text into it", "/v1/text/stream"),
+            Item("Callbacks: Rahul can set a callback URL for you; events are POSTed signed with HMAC-SHA256; send a test", "/v1/callback/test"),
+            Item("MCP: use Bridget as an MCP server (Streamable HTTP) with your key", "/v1/mcp"),
+            Item("Speaker status: playing shows only your own sound; busy and paused added", "/v1/speaker"),
+            Item("End tour: optional tour_id so you only end the tour you mean", "/v1/tour"),
+            Item("Screenshot on request: what's on Rahul's screen now, nothing saved (once he turns on Screenshots)", "/v1/screen/capture"),
+            Item("Gallery with \"Select photos\" access: photo_not_found and /v1/gallery/recent say how Rahul allows all", "/v1/gallery/recent"),
+        )),
     )
 
     val CURRENT: Int = revisions.maxOf { it.revision }

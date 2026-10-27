@@ -89,6 +89,7 @@ object Sentences {
             val what = when {
                 ep.endsWith("/image/last") -> when (type) { "screenshot" -> "the last screenshot"; "photo" -> "the last photo"; else -> "the last image" }
                 ep.endsWith("/camera/snapshot") -> if (ok) return "$who took a photo" else "the camera"
+                ep.endsWith("/screen/capture") -> if (ok) return "$who took a screenshot" else "a screenshot"
                 ep.endsWith("/mic/record") -> if (ok) return "$who recorded a clip" else "the microphone"
                 ep.contains("/gallery/") -> "a gallery photo"
                 ep.endsWith("/health") -> if (ok) return "$who checked in" else "the health check"

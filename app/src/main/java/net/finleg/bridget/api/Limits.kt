@@ -106,6 +106,10 @@ class IdempotencyCache(private val clock: () -> Long = System::currentTimeMillis
         return Claim.New
     }
 
+    /** True if (agent, key) already finished, so [claim] will answer Done or Expired without running anything. */
+    @Synchronized
+    fun hasResult(agentId: String, key: String): Boolean { prune(); return "$agentId\u0000$key" in done }
+
     /** Stores a 2xx outcome; anything else just releases the claim. */
     @Synchronized
     fun finish(agentId: String, key: String, status: Int, contentType: String, body: ByteArray,
