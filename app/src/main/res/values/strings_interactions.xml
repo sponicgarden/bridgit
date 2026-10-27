@@ -67,7 +67,6 @@
     <string name="interactions_card_dismiss">Dismiss</string>
     <string name="interactions_card_open">Open card</string>
     <string name="interactions_card_sent">Sent: %1$s</string>
-    <string name="interactions_card_closed_note">This card is closed. Its answer can\'t be sent any more.</string>
     <string name="interactions_card_crashed">This card stopped working. Dismiss it, or ask %1$s to send it again.</string>
     <string name="interactions_card_dismiss_desc">Dismiss the card from %1$s</string>
 
