@@ -29,6 +29,7 @@ import net.finleg.bridget.core.Agent
 import net.finleg.bridget.core.AgentRegistry
 import net.finleg.bridget.databinding.AgentsRowBinding
 import net.finleg.bridget.databinding.FragmentAgentsBinding
+import net.finleg.bridget.ui.common.modelText
 import net.finleg.bridget.ui.common.Fmt
 import net.finleg.bridget.ui.common.themeColor
 import net.finleg.bridget.ui.feedback.handleFeedbackMenu
@@ -142,7 +143,7 @@ class AgentsFragment : Fragment() {
             val ctx = h.b.root.context
             h.b.avatar.setAgent(a.name)
             h.b.name.text = a.name
-            h.b.connection.text = a.connection.label
+            h.b.connection.text = a.modelText(ctx)
             h.b.developer.isVisible = a.developer
             val active = AgentStats.isActive(a, r.now)
             h.b.dot.setBackgroundResource(if (active) R.drawable.agents_dot_active else R.drawable.agents_dot_idle)
@@ -160,8 +161,8 @@ class AgentsFragment : Fragment() {
                 else com.google.android.material.R.attr.colorOnSurfaceVariant))
             val dev = if (a.developer) ctx.getString(R.string.agents_card_desc_dev) else ""
             h.b.root.contentDescription = if (rotated)
-                ctx.getString(R.string.agents_card_desc_rotated, a.name, a.connection.label, status.lowercase()) + dev
-            else ctx.getString(R.string.agents_card_desc, a.name, a.connection.label,
+                ctx.getString(R.string.agents_card_desc_rotated, a.name, a.modelText(ctx), status.lowercase()) + dev
+            else ctx.getString(R.string.agents_card_desc, a.name, a.modelText(ctx),
                 lastUsed?.let { ctx.getString(R.string.agents_desc_last_used, it) }
                     ?: ctx.getString(R.string.agents_desc_not_used), r.today, status.lowercase()) + dev
             h.b.root.setOnClickListener { onClick(a) }

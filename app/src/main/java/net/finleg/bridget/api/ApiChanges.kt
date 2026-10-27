@@ -46,6 +46,11 @@ object ApiChanges {
             Item("City tour: your running tour (tour.started / tour.tick / tour.question / tour.ended events)", "/v1/tour"),
         )),
         Revision(6, "1.5.2", "2026-10-27", listOf(
+            Item("Report your model and harness; Rahul sees it on your agent card", "/v1/me"),
+            Item("City tour brief in tour.started and GET /v1/tour: directions relative to him, nearest interesting places when nothing is left here", "/v1/tour"),
+            Item("tour.photo: Rahul took a photo for you on the tour; fetch it", "/v1/tour/photo/{n}"),
+        )),
+        Revision(7, "1.5.3", "2026-10-27", listOf(
             Item("HTML cards: kind=html draws your own card (offline, Bridget.respond(json) answers)", "/v1/interactions"),
             Item("Live text panel: kind=text, then stream text into it", "/v1/text/stream"),
             Item("Callbacks: Rahul can set a callback URL for you; events are POSTed signed with HMAC-SHA256; send a test", "/v1/callback/test"),

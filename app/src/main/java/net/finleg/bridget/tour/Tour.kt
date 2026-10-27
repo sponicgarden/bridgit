@@ -18,10 +18,15 @@ import net.finleg.bridget.api.ApiServer
 import net.finleg.bridget.api.Endpoints
 import net.finleg.bridget.api.ErrorCatalog
 import net.finleg.bridget.api.Reply
+import net.finleg.bridget.api.Sizing
 import net.finleg.bridget.capability.Capability
 import net.finleg.bridget.capability.Compass
 import net.finleg.bridget.capability.Gallery
+import net.finleg.bridget.capability.ImageUtil
 import net.finleg.bridget.capability.LocationReader
+import net.finleg.bridget.capability.envelope
+import net.finleg.bridget.capability.rawReply
+import net.finleg.bridget.capability.wantsRaw
 import net.finleg.bridget.capability.isoAt
 import org.json.JSONArray
 import org.json.JSONObject
@@ -34,10 +39,35 @@ object TourKinds {
         "food" to "Food", "art" to "Art", "anything" to "Anything interesting")
     val intervals = listOf(30, 60, 120, 300)
     const val MAX_HOURS = 4
+
+    /**
+     * What the tour's agent is asked to do (TOUR-06, owner request 27 Oct 2026). Sent with
+     * tour.started and GET /v1/tour, and in the guide; ticks carry only data.
+     */
+    fun brief(kinds: List<String>): String {
+        val topics = kinds.joinToString(", ") { labels[it]?.lowercase() ?: it }
+        return listOf(
+            "You are Rahul's walking tour guide. Topics: $topics. Every tour.tick has his location, the compass " +
+                "(azimuth_deg = the way the phone points, 0 = north) and how far he moved.",
+            "Speak with POST /v1/speaker/say {\"text\",\"tour_id\"}: 2-4 short sentences per tick, spoken style, no lists. " +
+                "Don't repeat what you already said; if he hasn't moved and you have nothing new, stay silent.",
+            "Say where things are relative to him: work out the bearing from his position to the place, compare it with " +
+                "the compass and say \"ahead\", \"on your left\", \"behind you\" plus the compass direction and distance " +
+                "(\"about 200 m to your right, to the east\").",
+            "When there is nothing more of interest right here, say so in one sentence, then name the 2-3 nearest " +
+                "interesting places for these topics with their direction relative to him and distance, so he can choose where to walk.",
+            "tour.question is him asking; answer it first with \"urgent\": true. tour.photo is a photo he just took for you: " +
+                "fetch it, say what it shows and why it matters for these topics.",
+            "If location accuracy is worse than 100 m, say places are approximate. Never invent facts; say when you're not sure.",
+        ).joinToString("\n")
+    }
 }
 
 /** What was said during the tour, for the tour screen's history. */
 data class Said(val at: Long, val who: String, val text: String)
+
+/** A Take photo picture: where Android's camera saved it (in Rahul's gallery). */
+data class Shot(val uri: android.net.Uri, val at: Long)
 
 data class Tour(
     val id: String, val agentId: String, val agent: String, val kinds: List<String>, val intervalS: Int,
@@ -46,11 +76,13 @@ data class Tour(
     val heading: Double? = null, val caption: String? = null, val said: List<Said> = emptyList(),
     /** TOUR-04: battery percentage at the start; [charged] once the phone was seen charging during the tour. */
     val batteryStartPct: Int? = null, val charged: Boolean = false,
+    /** Photos Rahul took with Take photo on this tour, in order; /v1/tour/photo/{n} is 1-based. */
+    val shots: List<Shot> = emptyList(),
 ) {
     fun json(): JSONObject = JSONObject().put("tour_id", id).put("kinds", JSONArray(kinds)).put("interval_s", intervalS)
         .put("started_at", isoAt(startedAt)).put("paused", paused).put("ticks", ticks)
         .put("last_tick_at", if (lastTickAt > 0) isoAt(lastTickAt) else JSONObject.NULL)
-        .put("distance_m", Math.round(distanceM)).put("photos_sent", photos)
+        .put("distance_m", Math.round(distanceM)).put("photos_sent", photos).put("brief", TourKinds.brief(kinds))
 }
 
 /**
@@ -114,9 +146,9 @@ object TourBattery {
 
 /** TOUR-02: what an ended tour's stored events keep. Pure, unit-tested. */
 object TourPrivacy {
-    val EVENT_TYPES = setOf("tour.tick", "tour.question")
+    val EVENT_TYPES = setOf("tour.tick", "tour.question", "tour.photo")
     /** Location, compass and photo ids with their fetch links: removed once the tour ends. */
-    val SENSITIVE = setOf("location", "compass", "latest_photo", "new_photos")
+    val SENSITIVE = setOf("location", "compass", "latest_photo", "new_photos", "fetch")
 
     /** [data] without the [SENSITIVE] fields (the event shell stays), or null if there is nothing to remove. */
     fun scrub(data: JSONObject): JSONObject? {
@@ -183,7 +215,9 @@ class TourManager(private val app: BridgeApp) {
             tour.take()?.let { finish(it, "a new tour started") }
             tour.begin(t)
             app.interactions.event(a.id, "tour.started", JSONObject().put("tour_id", t.id).put("kinds", JSONArray(kinds))
-                .put("interval_s", intervalS).put("how_to_reply", "POST /v1/speaker/say {\"text\",\"tour_id\"} or /v1/speaker/play; newer narration replaces queued"))
+                .put("interval_s", intervalS).put("brief", TourKinds.brief(kinds))
+                .put("how_to_reply", "POST /v1/speaker/say {\"text\",\"tour_id\"} or /v1/speaker/play; newer narration replaces queued")
+                .put("report_model", if (a.model == null) "Tell Rahul which model you are: POST /v1/me {\"model\",\"harness\"}" else JSONObject.NULL))
             job = scope.launch { loop(t.id) }
         }
         app.log.system("audit", "agent", "You started a ${kinds.joinToString("/")} city tour with ${a.name}")
@@ -270,6 +304,29 @@ class TourManager(private val app: BridgeApp) {
         if (sent) app.log.system("audit", "agent", "You asked ${t.agent} a question on the tour")
     }
 
+    /** Rahul took a photo with Take photo (TOUR-07): it goes to the agent now, not at the next tick. */
+    suspend fun photoTaken(uri: android.net.Uri) {
+        val t = tour.current() ?: return
+        if (!locationStillOn(t.id)) return
+        val at = System.currentTimeMillis()
+        val fix = reader.lastKnown()
+        val compass = Compass.read(app)
+        val sent = tour.locked {
+            val cur = tour.current()?.takeIf { it.id == t.id } ?: return@locked false
+            if (!locationStillOn(cur.id)) return@locked false
+            val n = cur.shots.size + 1
+            app.interactions.event(cur.agentId, "tour.photo", JSONObject().put("tour_id", cur.id).put("n", n).put("taken_at", isoAt(at))
+                .put("fetch", "/v1/tour/photo/$n?size=agent")
+                .put("location", fix?.let { LocationReader.json(it, reader.precision() ?: "none", ::isoAt) } ?: JSONObject.NULL)
+                .put("compass", compass?.let { Compass.json(it) } ?: JSONObject.NULL)
+                .put("how_to_answer", "GET the photo, then POST /v1/speaker/say {\"text\",\"tour_id\",\"urgent\":true}"))
+            tour.update(cur.id) { c -> c.copy(shots = c.shots + Shot(uri, at), photos = c.photos + 1,
+                said = (c.said + Said(at, "You", app.getString(R.string.tour_said_photo))).takeLast(100)) }
+            true
+        }
+        if (sent) app.log.system("audit", "agent", "You sent ${t.agent} a photo on the tour")
+    }
+
     /** Pause/Resume; keeps everything else as it is now. */
     fun setPaused(p: Boolean, tourId: String? = null) { tour.setPaused(p, tourId) }
 
@@ -310,12 +367,22 @@ class TourModule(app: BridgeApp) : Capability(app) {
     override val titleRes = R.string.cap_tour
     override val descriptionRes = R.string.cap_tour_desc
     override val group = "apps"
-    override val endpoints = listOf(Endpoints.TOUR_GET, Endpoints.TOUR_END)
+    override val endpoints = listOf(Endpoints.TOUR_GET, Endpoints.TOUR_PHOTO, Endpoints.TOUR_END)
 
     override fun Route.install(api: ApiServer) = with(api) {
         endpoint(Endpoints.TOUR_GET) {
             val t = app.tours.current()?.takeIf { it.agentId == agent!!.id }
             Reply.Json(JSONObject().put("tour", t?.json() ?: JSONObject.NULL))
+        }
+        endpoint(Endpoints.TOUR_PHOTO) {
+            val t = app.tours.current()?.takeIf { it.agentId == agent!!.id } ?: throw ErrorCatalog.error("not_found", "You have no tour running.")
+            val n = path("n")?.toIntOrNull() ?: throw ErrorCatalog.error("invalid_parameter", "n must be the number from tour.photo.")
+            val shot = t.shots.getOrNull(n - 1) ?: throw ErrorCatalog.error("photo_not_found", "No tour photo $n; this tour has ${t.shots.size}.")
+            val bytes = runCatching { app.contentResolver.openInputStream(shot.uri)?.use { it.readBytes() } }.getOrNull()
+                ?: throw ErrorCatalog.error("photo_not_found", "That photo could not be opened (deleted?).")
+            val img = ImageUtil.prepare(bytes, "image/jpeg", Sizing.resolve({ arg(it) }, "agent"))
+            if (wantsRaw()) rawReply(img, mapOf("X-Bridget-Taken-At" to isoAt(shot.at)))
+            else Reply.Json(envelope(img, isoAt(shot.at), "taken_at", null).put("source", "tour").put("n", n))
         }
         endpoint(Endpoints.TOUR_END) {
             // One step: a tour Rahul replaced meanwhile (another agent's) is never ended by this request.

@@ -1,5 +1,7 @@
 package net.finleg.bridget.ui.tour
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -16,6 +18,7 @@ import androidx.navigation.fragment.findNavController
 import kotlinx.coroutines.launch
 import net.finleg.bridget.BridgeApp
 import net.finleg.bridget.R
+import net.finleg.bridget.api.ApiDocs
 import net.finleg.bridget.databinding.FragmentAppletsBinding
 import net.finleg.bridget.ui.feedback.handleFeedbackMenu
 
@@ -40,6 +43,16 @@ class AppletsFragment : Fragment() {
         b.toolbar.inflateMenu(R.menu.feedback_overflow) // Report a bug / Request a feature (FBK-01)
         b.toolbar.setOnMenuItemClickListener { handleFeedbackMenu(it, "Applets") }
         b.cityTour.setOnClickListener { findNavController().navigate(R.id.tour) }
+        val guide = ApiDocs.link(ApiDocs.APPLET_TITLE)
+        b.buildAppletOpen.setOnClickListener {
+            runCatching { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(guide))) }
+        }
+        b.buildAppletShare.setOnClickListener {
+            val send = Intent(Intent.ACTION_SEND).setType("text/plain")
+                .putExtra(Intent.EXTRA_SUBJECT, "Bridget: ${getString(R.string.applets_build_title)}")
+                .putExtra(Intent.EXTRA_TEXT, getString(R.string.applets_build_share_text, guide))
+            startActivity(Intent.createChooser(send, getString(R.string.applets_build_share_title)))
+        }
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
                 app.tours.state.collect { t ->

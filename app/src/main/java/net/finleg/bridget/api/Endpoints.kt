@@ -43,6 +43,11 @@ object Endpoints {
 
     val HEALTH = EndpointSpec("GET", "/health", "status", "Is Bridget up, and which agent you are",
         example = "GET /v1/health", returns = "status, app, app_version, agent, listener_uptime_seconds, battery_level, charging, bind_address, port")
+    val ME = EndpointSpec("POST", "/me", "status", "Tell Rahul which model you are and what runs you; shown on your agent card (AGT-16)",
+        body = listOf(Param("model", "string", "Your model, as exact as you know it, e.g. claude-opus-5-5 or gpt-6.1 (1-60 chars)", required = true),
+            Param("harness", "string", "The program running you, e.g. Claude Code, Codex CLI, a Python script (1-40 chars)")),
+        example = "POST /v1/me {\"model\":\"claude-opus-5-5\",\"harness\":\"Claude Code\"}", returns = "agent, model, harness",
+        errors = listOf("invalid_parameter"))
     val CAPABILITIES = EndpointSpec("GET", "/capabilities", "status", "What's switched on and ready, and why not",
         example = "GET /v1/capabilities", returns = "per capability: enabled, ready, blocked_reason, details; callback {set, host}")
     val GUIDE = EndpointSpec("GET", "/guide", "status", "This guide, generated live (Markdown)",
@@ -241,7 +246,11 @@ object Endpoints {
     val SPEAKER_STOP = EndpointSpec("DELETE", "/speaker", "speaker", "Stop your audio and clear your queue",
         example = "DELETE /v1/speaker", returns = "stopped")
     val TOUR_GET = EndpointSpec("GET", "/tour", "tour", "Your running City tour, if Rahul started one with you (D30)",
-        example = "GET /v1/tour", returns = "tour{tour_id, kinds, interval_s, started_at, ticks, last_tick_at, distance_m, photos_sent} or null")
+        example = "GET /v1/tour", returns = "tour{tour_id, kinds, interval_s, started_at, ticks, last_tick_at, distance_m, photos_sent, brief} or null")
+    val TOUR_PHOTO = EndpointSpec("GET", "/tour/photo/{n}", "tour", "A photo Rahul took with Take photo on your tour (n from tour.photo), sized for you",
+        media = true, query = sizing,
+        example = "GET /v1/tour/photo/1?size=agent", returns = "taken_at, width_px, height_px, format, size_bytes, data_base64",
+        errors = listOf("not_found", "photo_not_found", "payload_too_large"))
     val TOUR_END = EndpointSpec("DELETE", "/tour", "tour", "End your City tour",
         query = listOf(Param("tour_id", "string", "Only end this tour (it must be yours and still running)")),
         example = "DELETE /v1/tour", returns = "ended", errors = listOf("not_found"))
@@ -249,5 +258,5 @@ object Endpoints {
     val all = listOf(HEALTH, CAPABILITIES, GUIDE, OPENAPI, CHANGES, HELPER, PAIR, SNAPSHOT, MIC, GALLERY_RECENT, GALLERY_PHOTO,
         IMAGE_LAST, LOG, LOG_ENTRY, LOG_STATS, LOG_EXPORT, LOG_NOTE, AUDIT, FEEDBACK_LIST, FEEDBACK_GET, FEEDBACK_STATUS, FEEDBACK_POST,
         INTERACTION_CREATE, INTERACTION_LIST, INTERACTION_GET, INTERACTION_CANCEL, EVENTS, TEXT_STREAM, CALLBACK_TEST, MCP,
-        LOCATION, SPEAKER_PLAY, SPEAKER_SAY, SPEAKER_STATUS, SPEAKER_STOP, TOUR_GET, TOUR_END)
+        LOCATION, SPEAKER_PLAY, SPEAKER_SAY, SPEAKER_STATUS, SPEAKER_STOP, TOUR_GET, TOUR_PHOTO, TOUR_END, ME)
 }

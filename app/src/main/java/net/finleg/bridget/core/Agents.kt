@@ -27,13 +27,21 @@ data class Agent(
     val keyCreatedAt: Long = createdAt,
     /** The API revision this agent last read about (guide or changes); 0 = never (API-14). */
     val knownApiRevision: Int = 0,
+    /** What the agent says it runs on (POST /v1/me, AGT-16): the model and the program around it. Unverified. */
+    val model: String? = null,
+    val harness: String? = null,
+    val modelReportedAt: Long = 0,
 ) {
+    /** "Claude Opus 5.5 · Claude Code", or null until the agent reports it. */
+    val modelLabel: String? get() = model?.let { m -> harness?.let { "$m · $it" } ?: m }
+
     fun toJson(): JSONObject = JSONObject()
         .put("id", id).put("name", name).put("key_hash", keyHash).put("key_salt", keySalt)
         .put("key_prefix", keyPrefix).put("created_at", createdAt).put("last_used_at", lastUsedAt)
         .put("last_source_ip", lastSourceIp ?: JSONObject.NULL).put("request_count", requestCount)
         .put("connection", connection.id).put("notes", notes).put("developer", developer)
         .put("key_created_at", keyCreatedAt).put("known_api_revision", knownApiRevision).put("caps", JSONObject.NULL)
+        .put("model", model ?: JSONObject.NULL).put("harness", harness ?: JSONObject.NULL).put("model_reported_at", modelReportedAt)
 
     companion object {
         fun fromJson(o: JSONObject) = Agent(
@@ -45,6 +53,9 @@ data class Agent(
             notes = o.optString("notes", ""), developer = o.optBoolean("developer", false),
             keyCreatedAt = o.optLong("key_created_at", o.getLong("created_at")),
             knownApiRevision = o.optInt("known_api_revision", 0),
+            model = o.optString("model", "").takeIf { it.isNotEmpty() && !o.isNull("model") },
+            harness = o.optString("harness", "").takeIf { it.isNotEmpty() && !o.isNull("harness") },
+            modelReportedAt = o.optLong("model_reported_at", 0),
         )
     }
 }

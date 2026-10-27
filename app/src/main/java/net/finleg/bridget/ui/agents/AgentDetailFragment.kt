@@ -27,6 +27,7 @@ import net.finleg.bridget.core.Agent
 import net.finleg.bridget.databinding.AgentsRenameDialogBinding
 import net.finleg.bridget.databinding.FragmentAgentDetailBinding
 import net.finleg.bridget.log.LogQuery
+import net.finleg.bridget.ui.common.modelText
 import net.finleg.bridget.ui.common.Fmt
 import net.finleg.bridget.ui.common.LogRowAdapter
 import net.finleg.bridget.ui.common.themeColor
@@ -115,7 +116,7 @@ class AgentDetailFragment : Fragment() {
         b.toolbar.title = a.name
         b.avatar.setAgent(a.name)
         b.name.text = a.name
-        b.connection.text = a.connection.label
+        b.connection.text = getString(R.string.agents_model_via, a.modelText(requireContext()), a.connection.label)
         val added = SimpleDateFormat("d MMM", Locale.getDefault()).format(Date(a.createdAt))
         if (a.lastUsedAt > 0) {
             b.added.text = getString(R.string.agents_added_line, added, Fmt.ago(a.lastUsedAt))
@@ -125,7 +126,7 @@ class AgentDetailFragment : Fragment() {
             b.added.text = getString(R.string.agents_added_line_never, added)
             b.lastIp.isVisible = false
         }
-        b.header.contentDescription = listOf(a.name, a.connection.label, b.added.text,
+        b.header.contentDescription = listOf(a.name, b.connection.text, b.added.text,
             if (b.lastIp.isVisible) b.lastIp.text else null).filterNotNull().joinToString(", ")
         b.keyPrefix.text = a.keyPrefix
         b.keyPrefix.contentDescription = getString(R.string.agents_key_desc, a.keyPrefix.trimEnd('…'))

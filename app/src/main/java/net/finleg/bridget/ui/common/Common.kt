@@ -229,3 +229,7 @@ class LogRowAdapter(private val agents: AgentRegistry, private val onClick: (Log
         }
     }
 }
+
+/** What an agent card shows under the name: the model the agent reported (POST /v1/me), not the network path. */
+fun net.finleg.bridget.core.Agent.modelText(ctx: Context): String =
+    modelLabel ?: ctx.getString(net.finleg.bridget.R.string.agents_model_unknown)
