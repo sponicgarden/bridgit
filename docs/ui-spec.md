@@ -611,7 +611,9 @@ Partly, Blocked, sorted Blocked first) and **All set** (On). Footer link
 **Off** / **Partly** / **Blocked**), and one outlined button ("Turn on",
 "Change", "Grant") for anything not On. Rows re-check on resume (UI-25).
 
-**Blocked row (UI-27)** expands into a card: explanation "Android blocks
+**Blocked row (UI-27)** expands into a card (the mockup uses Notification
+access because UI-27 names it; that feature is still undecided, spec Q2, so
+treat it as an example of the pattern, not a promise it ships): explanation "Android blocks
 this for apps installed from a file until you allow it:" and numbered
 steps:
 1. Tap **Turn on**, tap the switch once, close the warning.
