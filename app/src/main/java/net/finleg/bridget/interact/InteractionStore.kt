@@ -54,6 +54,7 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
                 put("controls_json", JSONArray(d.controls.map { it.toJson() }).toString()); put("html", d.html)
                 put("priority", d.priority); put("speak", if (d.speak) 1 else 0); put("status", IStatus.PENDING.id)
                 put("created_at", now); put("expires_at", now + d.expiresInS * 1000)
+                if (d.kind == IKind.TEXT) { put("stream_text", TextPanelRules.keepTail(d.text ?: "")); put("stream_done", 0) }
             })
             if (imageJpeg != null) {
                 imageName = "$id.jpg"
@@ -117,6 +118,45 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
         update(id, ContentValues().apply { put("status", IStatus.ANSWERED.id); put("answer_json", ans.toString()); put("answered_at", now); put("closed_at", now) })
         event(i.agentId, "interaction.answered", JSONObject().put("interaction_id", id).put("answer", ans))
         return get(id)!!.also { tell(it, "answered") }
+    }
+
+    /**
+     * An HTML card's page called Bridget.respond(json) (CAP-34). Completes it like a button answer: status
+     * answered, `interaction.answered` with `answer.data`, waits return. Refused once the card isn't open.
+     */
+    @Synchronized
+    fun answerCard(id: Long, data: Any): Interaction {
+        val i = get(id) ?: throw InteractionError("not_found", "No interaction $id.")
+        if (i.kind != IKind.HTML) throw InteractionError("invalid_parameter", "Only html cards take a card answer.")
+        if (!i.status.open) throw InteractionError("conflict", "This card is already ${i.status.id}.")
+        val ans = JSONObject().put("button", JSONObject.NULL).put("values", JSONObject()).put("data", data)
+        val now = clock()
+        update(id, ContentValues().apply { put("status", IStatus.ANSWERED.id); put("answer_json", ans.toString()); put("answered_at", now); put("closed_at", now) })
+        event(i.agentId, "interaction.answered", JSONObject().put("interaction_id", id).put("answer", ans))
+        return get(id)!!.also { tell(it, "answered") }
+    }
+
+    /**
+     * D26: adds [append] to the agent's own text panel and keeps the last 200 KB; [done] finishes it.
+     * not_found for another agent's or a missing one, conflict once it is finished, closed or cancelled.
+     * No listener call per append (only [changed] bumps), so notifications stay quiet.
+     */
+    @Synchronized
+    fun appendText(agentId: String, id: Long, append: String, done: Boolean): Interaction {
+        val i = getFor(agentId, id) ?: throw InteractionError("not_found", "No interaction $id of yours.")
+        if (i.kind != IKind.TEXT) throw InteractionError("invalid_parameter", "Interaction $id is a ${i.kind.id}, not a text panel.")
+        if (!i.status.open) throw InteractionError("conflict", "This text panel is ${i.status.id}; create a new one.")
+        if (i.streamDone) throw InteractionError("conflict", "This text panel is finished (done was sent); create a new one.")
+        val text = if (append.isEmpty()) i.streamText else TextPanelRules.keepTail(i.streamText + append)
+        update(id, ContentValues().apply { put("stream_text", text); if (done) put("stream_done", 1) })
+        return get(id)!!.also { if (done) tell(it, "stream_done") }
+    }
+
+    /** The newest open text panel (D26), for the phone's panel when Rahul hasn't picked one. */
+    fun latestOpenText(): Interaction? {
+        expireDue()
+        return db.query("interactions", null, "kind = 'text' AND status IN ('pending','seen')", null, null, null, "id DESC", "1")
+            .use { c -> if (c.moveToFirst()) row(c) else null }
     }
 
     /** Rahul closed it (D26); the agent is told `dismissed`. */

@@ -92,7 +92,7 @@ object InteractionNotifier {
             when (what) {
                 "created" -> { post(ctx, i); maybeSpeak(ctx, i) }
                 "answered", "dismissed", "expired", "cancelled" -> cancel(ctx, i.id)
-                "seen" -> if (i.kind == IKind.NOTICE) cancel(ctx, i.id)
+                "seen" -> if (i.kind == IKind.NOTICE || i.kind == IKind.TEXT) cancel(ctx, i.id)
             }
         }.onFailure { app.log.system("diagnostic", "interaction", "Couldn't update the notification for interaction ${i.id}: ${it.javaClass.simpleName}", level = "error") }
     }
@@ -101,12 +101,17 @@ object InteractionNotifier {
         ctx.getSystemService(NotificationManager::class.java).cancel(notifId(interactionId))
 
     private fun post(ctx: Context, i: Interaction) {
-        if (i.kind != IKind.QUESTION && i.kind != IKind.NOTICE) return
         val app = ctx.applicationContext as BridgeApp
         val nid = notifId(i.id)
-        val question = i.kind == IKind.QUESTION
+        // Questions and HTML cards wait for Rahul's answer; notices and text panels only tell him.
+        val question = i.kind == IKind.QUESTION || i.kind == IKind.HTML
         val title = SpannableStringBuilder().apply {
-            val head = if (question) ctx.getString(R.string.interact_notif_asks, i.agent) else ctx.getString(R.string.interact_notif_notice, i.agent)
+            val head = ctx.getString(when (i.kind) {
+                IKind.QUESTION -> R.string.interact_notif_asks
+                IKind.NOTICE -> R.string.interact_notif_notice
+                IKind.HTML -> R.string.interact_notif_card // CAP-34: "<Agent> sent a card: <title>", opens the detail
+                IKind.TEXT -> R.string.interact_notif_streaming // D26: "<Agent> is streaming: <title>", opens the panel
+            }, i.agent)
             append(head, StyleSpan(Typeface.BOLD), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             append(" ").append(i.title)
         }
@@ -156,7 +161,12 @@ object InteractionNotifier {
         else b.setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setPublicVersion(
             NotificationCompat.Builder(ctx, if (question) CHANNEL_QUESTIONS else CHANNEL_NOTICES)
                 .setSmallIcon(R.drawable.ic_notif).setColor(ctx.getColor(R.color.brand_primary))
-                .setContentTitle(ctx.getString(if (question) R.string.interact_public_question else R.string.interact_public_notice, i.agent))
+                .setContentTitle(ctx.getString(when (i.kind) {
+                    IKind.QUESTION -> R.string.interact_public_question
+                    IKind.NOTICE -> R.string.interact_public_notice
+                    IKind.HTML -> R.string.interact_public_card
+                    IKind.TEXT -> R.string.interact_public_streaming
+                }, i.agent))
                 .setContentIntent(open).setAutoCancel(true)
                 .build())
 
