@@ -231,7 +231,10 @@ if [[ ${GITHUB} -eq 1 ]]; then
   ASSET="${WORK}/bridget-${VNAME}.apk"
   cp "${APK}" "${ASSET}"
   echo "==> Creating GitHub release bridget-v${VNAME}"
-  gh release create "bridget-v${VNAME}" "${ASSET}" --repo "${GH_REPO}" --title "Bridget ${VNAME}" \
+  # Tag the commit the APK was built from (it must be pushed), not the default branch.
+  COMMIT="$(git -C "${ROOT:-.}" rev-parse HEAD)"
+  git -C "${ROOT:-.}" branch -r --contains "${COMMIT}" | grep -q . || die "commit ${COMMIT} isn't pushed; push the branch first"
+  gh release create "bridget-v${VNAME}" "${ASSET}" --repo "${GH_REPO}" --target "${COMMIT}" --title "Bridget ${VNAME}" \
     --notes "${NOTES}
 
 SHA-256: ${SHA}
