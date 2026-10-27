@@ -47,8 +47,12 @@ class EntrySheet : BottomSheetDialogFragment() {
             val b = _b ?: return@launch
             if (e == null) {
                 b.title.setText(R.string.activity_sheet_missing)
-                b.copy.isVisible = false; b.agent.isVisible = false
+                b.copy.isVisible = false; b.agent.isVisible = false; b.report.isVisible = false
                 return@launch
+            }
+            b.report.setOnClickListener {
+                (parentFragment as? ActivityFragment)?.reportAbout(e.id)
+                dismiss()
             }
             val name = e.agentId?.let { app.agents.get(it)?.name } ?: e.agent
             val json = e.toJson(::isoAt, name)

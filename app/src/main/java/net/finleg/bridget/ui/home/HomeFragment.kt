@@ -47,6 +47,7 @@ import net.finleg.bridget.databinding.HomeSwitchCardBinding
 import net.finleg.bridget.log.LogQuery
 import net.finleg.bridget.ui.common.Fmt
 import net.finleg.bridget.ui.common.themeColor
+import net.finleg.bridget.ui.feedback.handleFeedbackMenu
 import java.util.Calendar
 
 /**
@@ -82,11 +83,12 @@ class HomeFragment : Fragment() {
         ViewCompat.setOnApplyWindowInsetsListener(b.toolbar) { v, insets ->
             v.updatePadding(top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top); insets
         }
-        // Report a bug / Request a feature join this menu in P1b (FBK-01).
         b.toolbar.menu.add(0, MENU_SETTINGS, 0, R.string.home_menu_settings)
             .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
+        b.toolbar.inflateMenu(R.menu.feedback_overflow) // Report a bug / Request a feature (FBK-01)
         b.toolbar.setOnMenuItemClickListener {
-            if (it.itemId == MENU_SETTINGS) { findNavController().navigate(R.id.settings); true } else false
+            if (it.itemId == MENU_SETTINGS) { findNavController().navigate(R.id.settings); true }
+            else handleFeedbackMenu(it, "Home")
         }
 
         b.pause.setOnClickListener {

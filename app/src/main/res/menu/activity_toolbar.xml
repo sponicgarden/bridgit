@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Activity overflow (ui-spec 5.7). Report a bug / Request a feature join this menu in P1b (FBK-01). -->
+<!-- Activity overflow (ui-spec 5.7). Report a bug / Request a feature are appended from menu/feedback_overflow.xml (FBK-01). -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item android:id="@+id/activity_export" android:title="@string/activity_menu_export" app:showAsAction="never" />

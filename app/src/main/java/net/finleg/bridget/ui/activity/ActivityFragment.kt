@@ -36,6 +36,9 @@ import net.finleg.bridget.log.LogEntry
 import net.finleg.bridget.log.LogQuery
 import net.finleg.bridget.ui.common.Fmt
 import net.finleg.bridget.ui.common.LogRowAdapter
+import net.finleg.bridget.feedback.ReportKind
+import net.finleg.bridget.ui.feedback.handleFeedbackMenu
+import net.finleg.bridget.ui.feedback.openReport
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -126,11 +129,11 @@ class ActivityFragment : Fragment() {
                 R.id.activity_clear -> confirmClear()
                 R.id.activity_diagnostics -> setDiagnostics(true)
                 R.id.activity_back -> setDiagnostics(false)
-                else -> return@setOnMenuItemClickListener false
+                else -> return@setOnMenuItemClickListener handleFeedbackMenu(item, "Activity") { feedbackContext() }
             }
             true
         }
-        // P1b: "Report a bug" and "Request a feature" (FBK-01) are added to this overflow.
+        b.toolbar.inflateMenu(R.menu.feedback_overflow) // Report a bug / Request a feature (FBK-01)
 
         val rows = LogRowAdapter(app.agents) { e ->
             if (childFragmentManager.findFragmentByTag("entry") == null) EntrySheet.newInstance(e.id).show(childFragmentManager, "entry")
@@ -373,6 +376,24 @@ class ActivityFragment : Fragment() {
     }
 
     /** Called by the entry sheet's "<Agent>'s activity". [agentId] "" = Bridget's own entries. */
+    /** FBK-06 screen_context: the filters in use, in words ("Filters: Grok, Requests, errors only"). */
+    private fun feedbackContext(): String {
+        val parts = if (diagnostics) listOfNotNull(
+            getString(R.string.activity_subtitle_diagnostics),
+            minLevel?.let { l -> LEVELS.firstOrNull { it.first == l }?.let { getString(it.second) } },
+        ) else listOfNotNull(
+            agentLabel(agentFilter),
+            *types.mapNotNull { k -> TYPES.firstOrNull { it.key == k }?.let { getString(it.label) } }.toTypedArray(),
+            if (errorsOnly) "errors only" else null,
+        )
+        val search = q.trim().takeIf { it.isNotEmpty() }?.let { "search \"${it.take(100)}\"" }
+        val all = parts + listOfNotNull(search)
+        return if (all.isEmpty()) "Filters: none" else "Filters: " + all.joinToString(", ")
+    }
+
+    /** "Report a bug about this" from the entry sheet: attaches that entry (FBK-01). */
+    fun reportAbout(entryId: Long) = openReport(this, ReportKind.BUG, "Activity", feedbackContext(), entryId)
+
     fun filterToAgent(agentId: String) {
         if (_b == null) return
         diagnostics = false; minLevel = null
