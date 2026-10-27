@@ -45,6 +45,12 @@ object ApiChanges {
             Item("What's playing; stop your audio", "/v1/speaker"),
             Item("City tour: your running tour (tour.started / tour.tick / tour.question / tour.ended events)", "/v1/tour"),
         )),
+        Revision(6, "1.5.2", "2026-10-27", listOf(
+            Item("HTML cards: kind=html draws your own card (offline, Bridget.respond(json) answers)", "/v1/interactions"),
+            Item("Live text panel: kind=text, then stream text into it", "/v1/text/stream"),
+            Item("Callbacks: Rahul can set a callback URL for you; events are POSTed signed with HMAC-SHA256; send a test", "/v1/callback/test"),
+            Item("MCP: use Bridget as an MCP server (Streamable HTTP) with your key", "/v1/mcp"),
+        )),
     )
 
     val CURRENT: Int = revisions.maxOf { it.revision }

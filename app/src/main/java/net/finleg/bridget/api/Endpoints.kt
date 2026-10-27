@@ -166,13 +166,15 @@ object Endpoints {
         example = "POST /v1/feedback {\"kind\":\"bug\",\"description\":\"image/last returned 500 twice\"}", returns = "id, number, status",
         errors = listOf("forbidden", "invalid_parameter", "rate_limited"))
 
-    val INTERACTION_CREATE = EndpointSpec("POST", "/interactions", "interactions", "Send Rahul a notice or a question (buttons, text reply, choice, links)",
-        idempotent = true, privateFields = setOf("text", "image"),
+    val INTERACTION_CREATE = EndpointSpec("POST", "/interactions", "interactions", "Send Rahul a notice, a question (buttons, text reply, choice, links), an HTML card or a live text panel",
+        idempotent = true, privateFields = setOf("text", "image", "html"),
         body = listOf(
-            Param("kind", "string", "notice (one-way) or question", required = true, enum = listOf("notice", "question")),
+            Param("kind", "string", "notice (one-way), question, html (a card you draw; answer comes from Bridget.respond) or text (a live text panel you stream into with /v1/text/stream)",
+                required = true, enum = listOf("notice", "question", "html", "text")),
             Param("title", "string", "Up to 80 characters", required = true),
             Param("text", "string", "Up to 2,000 characters"),
             Param("image", "object", "{\"gallery_id\"} or {\"data_base64\"}, up to 2 MB"),
+            Param("html", "string", "kind=html: the card's HTML, up to 256 KB. Runs offline: no network, only data:image/* images; call Bridget.respond(json) once (up to 16 KB) to answer"),
             Param("controls", "array", "Question: 1-6 of {type: button|text|choice|link, id, label, style?, placeholder?, options?, url?, package?}. Notice: links only"),
             Param("priority", "string", "normal or urgent", enum = listOf("normal", "urgent")),
             Param("speak", "boolean", "Read it aloud on the phone"),
@@ -181,6 +183,21 @@ object Endpoints {
         example = "POST /v1/interactions {\"kind\":\"question\",\"title\":\"Pay this invoice?\",\"controls\":[{\"type\":\"button\",\"id\":\"yes\",\"label\":\"Pay\",\"style\":\"primary\"},{\"type\":\"button\",\"id\":\"no\",\"label\":\"Not now\"}]}",
         returns = "interaction_id, status, expires_at",
         errors = listOf("capability_disabled", "notifications_required", "invalid_parameter", "too_many_open", "photo_not_found"))
+    val TEXT_STREAM = EndpointSpec("POST", "/text/stream", "interactions", "Add text to your live text panel (an interaction of kind text); it scrolls on the phone as it arrives",
+        privateFields = setOf("append"),
+        body = listOf(Param("interaction_id", "string", "The panel's interaction_id", required = true),
+            Param("append", "string", "Text to add, up to 16 KB per call (the panel keeps the last 200 KB)"),
+            Param("done", "boolean", "true: the stream is finished; the panel stays until Rahul closes it")),
+        example = "POST /v1/text/stream {\"interaction_id\":\"42\",\"append\":\"Claude: running the tests now...\\n\"}",
+        returns = "interaction_id, length, status", errors = listOf("not_found", "invalid_parameter", "conflict", "rate_limited"))
+    val CALLBACK_TEST = EndpointSpec("POST", "/callback/test", "interactions", "Send a signed test event to the callback URL Rahul set for you (EVT-05/06)",
+        example = "POST /v1/callback/test", returns = "delivered, http_status, host", errors = listOf("not_found", "callback_failed"))
+    val MCP = EndpointSpec("POST", "/mcp", "status", "Model Context Protocol (Streamable HTTP, JSON replies): every endpoint you can use is an MCP tool",
+        maxBody = 2 * 1024 * 1024,
+        body = listOf(Param("jsonrpc", "string", "\"2.0\"", required = true), Param("method", "string", "initialize, tools/list, tools/call, ping", required = true),
+            Param("params", "object", "For tools/call: {name, arguments}"), Param("id", "integer", "Request id")),
+        example = "POST /v1/mcp {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}",
+        returns = "JSON-RPC result", errors = listOf("invalid_parameter"))
     val INTERACTION_LIST = EndpointSpec("GET", "/interactions", "interactions", "Your interactions, newest first",
         query = listOf(Param("status", "string", "pending, seen, answered, dismissed, expired or cancelled"), Param("limit", "integer", "1-100, default 50")),
         example = "GET /v1/interactions?status=answered", returns = "interactions[]")
@@ -229,6 +246,6 @@ object Endpoints {
 
     val all = listOf(HEALTH, CAPABILITIES, GUIDE, OPENAPI, CHANGES, HELPER, PAIR, SNAPSHOT, MIC, GALLERY_RECENT, GALLERY_PHOTO,
         IMAGE_LAST, LOG, LOG_ENTRY, LOG_STATS, LOG_EXPORT, LOG_NOTE, AUDIT, FEEDBACK_LIST, FEEDBACK_GET, FEEDBACK_STATUS, FEEDBACK_POST,
-        INTERACTION_CREATE, INTERACTION_LIST, INTERACTION_GET, INTERACTION_CANCEL, EVENTS,
+        INTERACTION_CREATE, INTERACTION_LIST, INTERACTION_GET, INTERACTION_CANCEL, EVENTS, TEXT_STREAM, CALLBACK_TEST, MCP,
         LOCATION, SPEAKER_PLAY, SPEAKER_SAY, SPEAKER_STATUS, SPEAKER_STOP, TOUR_GET, TOUR_END)
 }
