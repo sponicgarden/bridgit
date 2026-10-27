@@ -578,13 +578,14 @@ def main():
     def _():
         import hashlib
         url = "https://pub-3a79691572bc4abc93fce31910fe320b.r2.dev/bridget/latest.json"
+        ua = {"User-Agent": "bridget-acceptance/1"}  # Cloudflare refuses Python's default User-Agent with 403
         try:
-            with urllib.request.urlopen(url, timeout=20) as r:
+            with urllib.request.urlopen(urllib.request.Request(url, headers=ua), timeout=20) as r:
                 m = json.loads(r.read())
         except urllib.error.HTTPError as e:
             raise Unverified(f"no manifest published yet (HTTP {e.code})")
         assert m["package"] == "net.finleg.bridget" and m["url"].startswith("https://pub-3a79691572bc4abc93fce31910fe320b.r2.dev/bridget/"), m
-        with urllib.request.urlopen(m["url"], timeout=120) as r:
+        with urllib.request.urlopen(urllib.request.Request(m["url"], headers=ua), timeout=120) as r:
             apk = r.read()
         assert hashlib.sha256(apk).hexdigest() == m["sha256"].lower() and len(apk) == m["size_bytes"], "APK doesn't match the manifest"
         return f"{m['version_name']} ({m['version_code']}), {len(apk)//1024} KB, SHA-256 ok"
