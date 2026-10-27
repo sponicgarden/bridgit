@@ -193,7 +193,7 @@ object Endpoints {
     val CALLBACK_TEST = EndpointSpec("POST", "/callback/test", "interactions", "Send a signed test event to the callback URL Rahul set for you (EVT-05/06)",
         example = "POST /v1/callback/test", returns = "delivered, http_status, host", errors = listOf("not_found", "callback_failed"))
     val MCP = EndpointSpec("POST", "/mcp", "status", "Model Context Protocol (Streamable HTTP, JSON replies): every endpoint you can use is an MCP tool",
-        maxBody = 2 * 1024 * 1024,
+        maxBody = 2 * 1024 * 1024, privateFields = setOf("params"),
         body = listOf(Param("jsonrpc", "string", "\"2.0\"", required = true), Param("method", "string", "initialize, tools/list, tools/call, ping", required = true),
             Param("params", "object", "For tools/call: {name, arguments}"), Param("id", "integer", "Request id")),
         example = "POST /v1/mcp {\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}",

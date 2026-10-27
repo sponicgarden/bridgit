@@ -250,7 +250,7 @@ class SpeakerModule(app: BridgeApp) : Capability(app) {
             requireUsable()
             val (replace, tourId, urgent) = common()
             val a = agent!!
-            val ctype = call.request.headers["Content-Type"] ?: ""
+            val ctype = header("Content-Type") ?: ""
             val file: java.io.File
             if (ctype.startsWith("audio/")) {
                 val ext = ctype.substringAfter('/').substringBefore(';').take(8).ifEmpty { "bin" }
