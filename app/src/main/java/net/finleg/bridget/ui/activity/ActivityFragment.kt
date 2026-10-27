@@ -14,6 +14,7 @@ import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.core.widget.doAfterTextChanged
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -123,6 +124,8 @@ class ActivityFragment : Fragment() {
         ViewCompat.setOnApplyWindowInsetsListener(b.toolbar) { v, insets ->
             v.updatePadding(top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top); insets
         }
+        // D26: Activity is no longer a tab (opened from More, Home, Agent detail), so it has a back arrow.
+        b.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         b.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.activity_export -> ExportSheet().show(childFragmentManager, "export")

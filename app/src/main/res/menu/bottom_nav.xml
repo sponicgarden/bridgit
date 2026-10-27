@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Four tabs in 1.3.0: Inbox is added in P2 (ui-spec Q-D3; spec UI-07 lists five). -->
+<!-- 1.5 (D26): Home, Interactions, Agents, More. Activity moved to More (destination id kept). -->
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@id/home" android:icon="@drawable/ic_nav_home" android:title="@string/nav_home" />
+    <item android:id="@id/interactions" android:icon="@drawable/ic_nav_interactions" android:title="@string/nav_interactions" />
     <item android:id="@id/agents" android:icon="@drawable/ic_nav_agents" android:title="@string/nav_agents" />
-    <item android:id="@id/activity" android:icon="@drawable/ic_nav_activity" android:title="@string/nav_activity" />
     <item android:id="@id/more" android:icon="@drawable/ic_nav_more" android:title="@string/nav_more" />
 </menu>

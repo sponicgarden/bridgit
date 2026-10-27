@@ -14,6 +14,8 @@
         android:layout_height="wrap_content"
         android:minHeight="64dp"
         app:menu="@menu/activity_toolbar"
+        app:navigationContentDescription="@string/agents_back"
+        app:navigationIcon="@drawable/ic_back"
         app:title="@string/activity_title"
         app:titleTextAppearance="?attr/textAppearanceTitleLarge" />
 

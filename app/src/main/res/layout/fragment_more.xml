@@ -24,6 +24,8 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
+            <!-- D26: Activity moved here from the bottom bar. -->
+            <include android:id="@+id/open_activity" layout="@layout/more_row" />
             <include android:id="@+id/features" layout="@layout/more_row" />
             <include android:id="@+id/access" layout="@layout/more_row" />
             <include android:id="@+id/settings" layout="@layout/more_row" />
