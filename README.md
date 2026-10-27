@@ -172,8 +172,10 @@ receiver didn't answer 2xx).
 ## Crash reports
 
 Crashes and freezes (ANRs) go to Sentry, project `bridget-android` in the
-`sponic-gardens-inc` org (decision D32). Only the error, its stack and the app
-version are sent: no screenshots, photos, keys or request data. Turn it off on
+`sponic-gardens-inc` org (decision D32). Sent: the error and stack, app version,
+Android version and basic device facts (model, battery, memory). Not sent:
+screenshots, photos, keys, request data, install ids or sessions; the project
+drops the IP address and the city inferred from it. Turn it off on
 the phone under Settings > Privacy > Send crash reports.
 
 ## Build

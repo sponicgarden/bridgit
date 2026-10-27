@@ -27,7 +27,7 @@
     <string name="settings_lockscreen_text">Show question text on the lock screen</string>
     <string name="settings_lockscreen_text_desc">Off: the lock screen only says which agent has a question.</string>
     <string name="settings_crash_reports">Send crash reports</string>
-    <string name="settings_crash_reports_desc">When Bridget crashes or freezes, it sends the error and app version to Sentry. Never photos, screenshots, keys or what agents asked.</string>
+    <string name="settings_crash_reports_desc">When Bridget crashes or freezes, it sends the error, app version and phone model to Sentry. Never photos, screenshots, keys, your location or what agents asked.</string>
     <string name="settings_changed_crash_reports">You turned crash reports %1$s</string>
     <string name="settings_speak_urgent">Read urgent questions aloud even in Do Not Disturb</string>
     <string name="settings_speak_urgent_desc">Only when the agent marks it urgent and asks for it to be read.</string>

@@ -8,8 +8,10 @@ import net.finleg.bridget.BuildConfig
 
 /**
  * Crash reports to Sentry (D32, owner request 27 Oct 2026): crashes, ANRs and unhandled errors only.
- * On by default, with a Settings switch. No screenshots, view hierarchy, user or device ids, request
- * data or performance tracing; every message and exception text goes through [Keys.scrub] first.
+ * Sent: the error and stack, app version, Android version and basic device facts (model, battery,
+ * memory). Not sent: screenshots, view hierarchy, user or install ids, request data, sessions or
+ * tracing; every message and exception text goes through [Keys.scrub] first. The project also drops
+ * the IP and the city Sentry would infer from it. On by default, with a Settings switch.
  * Auto-init is off in the manifest so the switch is honoured before anything is sent.
  */
 object CrashReports {
@@ -33,7 +35,7 @@ object CrashReports {
             o.isEnableSystemEventBreadcrumbs = false
             o.isEnableAppComponentBreadcrumbs = false
             o.isAnrEnabled = true
-            o.isEnableAutoSessionTracking = true
+            o.isEnableAutoSessionTracking = false // no ping on every launch: Bridget talks to Sentry only when something breaks
             o.tracesSampleRate = null
             o.setBeforeSend { e, _ -> scrub(e) }
             o.setBeforeBreadcrumb { b, _ -> b.message = b.message?.let(Keys::scrub); b }
@@ -41,7 +43,7 @@ object CrashReports {
         Sentry.setTag("git_commit", BuildConfig.GIT_COMMIT)
     }
 
-    /** Turned off in Settings: stop sending now. Turning it back on takes effect at the next app start. */
+    /** Turned off in Settings: stop sending now. Turning it back on calls [start] again. */
     fun stop() { if (Sentry.isEnabled()) Sentry.close() }
 
     private fun scrub(e: SentryEvent): SentryEvent {
