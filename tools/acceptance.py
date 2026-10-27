@@ -169,7 +169,7 @@ def main():
     def _():
         r = c.call("GET", "/health", T); expect(r, 200); j = r.json()
         assert j["agent"] == T and j["port"] == c.port, j
-        assert j["app_version"].startswith("1.3"), j["app_version"]
+        assert re.match(r"^1\.[0-9]+\.[0-9]+$", j["app_version"]), j["app_version"]
         assert r.headers.get("x-request-id") == j["request_id"], "X-Request-Id differs from body"
         return f"{r.secs*1000:.0f} ms, base_url {j['base_url']}"
 
@@ -400,6 +400,68 @@ def main():
         expect(c.call("POST", "/pair", body={"code": code}), 403, "pairing_closed")
         expect(c.call("GET", "/health", T), 200)
 
+    # ---- P1b: feedback (section 11) ----------------------------------------------------------------
+    fb = {}
+
+    @c.check("F01", "any agent files a report (201); non-developers can't read reports (403 developer_only)")
+    def _():
+        r = c.call("POST", "/feedback", T, {"kind": "bug", "description": "acceptance: image/last was slow"}); expect(r, 201)
+        fb["id"] = r.json()["id"]
+        assert r.json()["number"].startswith("#") and r.json()["status"] == "new"
+        f = c.call("POST", "/feedback", T, {"kind": "feature", "description": "acceptance: feature"}); expect(f, 201)
+        assert f.json()["no_autofix"] is True, "features must always be held for review"
+        for path in ("/feedback", f"/feedback/{fb['id']}"):
+            x = c.call("GET", path, T); expect(x, 403, "forbidden")
+            assert x.json().get("reason") == "developer_only", x.json()
+        expect(c.call("POST", f"/feedback/{fb['id']}/status", T, {"status": "fixed"}), 403, "forbidden")
+        expect(c.call("POST", "/feedback", T, {"kind": "bug", "description": "x", "images": [{"data_base64": "AAAA"}]}), 403, "forbidden")
+        expect(c.call("POST", "/feedback", T, {"kind": "nope", "description": "x"}), 422, "invalid_parameter")
+        expect(c.call("POST", "/feedback", T, {"kind": "bug", "description": "  "}), 422, "invalid_parameter")
+        return f"report {r.json()['number']}"
+
+    @c.check("F02", "a developer agent lists and reads a report; the first read marks it seen; Bridget attaches context and log")
+    def _():
+        c.hook(developer=f"{P}=true"); time.sleep(0.5)
+        lst = c.call("GET", "/feedback?status=new", P); expect(lst, 200)
+        assert any(x["id"] == fb["id"] for x in lst.json()["reports"]), "new report not listed"
+        d = c.call("GET", f"/feedback/{fb['id']}", P); expect(d, 200); j = d.json()
+        assert j["status"] == "seen" and j["capture_source"] == "agent" and j["filed_by"] == T, (j["status"], j["capture_source"])
+        assert j["context"]["app_version"].startswith("1.4") and len(j["log"]) > 0, "context or log missing"
+        assert [h["status"] for h in j["history"]] == ["new", "seen"], j["history"]
+        assert set(j["allowed_next"]) == {"in_progress", "duplicate", "wont_fix"}, j["allowed_next"]
+        return f"{len(j['log'])} log entries attached"
+
+    @c.check("F03", "status moves follow FBK-11a: in_progress -> fixed; illegal moves are 422")
+    def _():
+        i = fb["id"]
+        expect(c.call("POST", f"/feedback/{i}/status", P, {"status": "confirmed"}), 422, "invalid_parameter")
+        expect(c.call("POST", f"/feedback/{i}/status", P, {"status": "in_progress", "note": "Looking at it"}), 200)
+        expect(c.call("POST", f"/feedback/{i}/status", P, {"status": "duplicate"}), 422, "invalid_parameter")
+        r = c.call("POST", f"/feedback/{i}/status", P, {"status": "fixed", "note": "Fix in PR #3"}); expect(r, 200)
+        assert r.json()["status"] == "fixed" and r.json()["last_updated_by"] == P
+        expect(c.call("GET", "/feedback/999999", P), 404, "not_found")
+
+    @c.check("F04", "developer agents may attach images; they come back downscaled")
+    def _():
+        import base64, zlib, struct
+        def png(w, h):  # tiny solid PNG, no dependencies
+            raw = b"".join(b"\x00" + b"\x40\x80\xc0" * w for _ in range(h))
+            def chunk(t, d): return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xffffffff)
+            return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b"")
+        img = base64.b64encode(png(2400, 1200)).decode()
+        r = c.call("POST", "/feedback", P, {"kind": "bug", "description": "acceptance: with image", "images": [{"data_base64": img}]}); expect(r, 201)
+        d = c.call("GET", f"/feedback/{r.json()['id']}?size=thumb", P); expect(d, 200)
+        im = d.json()["images"]
+        assert len(im) == 1 and max(im[0]["width_px"], im[0]["height_px"]) <= 512, im[:1]
+        return f"stored and returned {im[0]['width_px']}x{im[0]['height_px']}"
+
+    @c.check("F05", "an agent may file at most 5 reports an hour (429)")
+    def _():
+        codes = [c.call("POST", "/feedback", T, {"kind": "bug", "description": f"acceptance flood {n}"}).status for n in range(5)]
+        assert codes[-1] == 429 and 201 in codes, codes  # F01 already filed 2
+        c.hook(developer=f"{P}=false")
+        return f"statuses {codes}"
+
     captures_note = None
     if a.skip_captures:
         captures_note = "skipped with --skip-captures"
@@ -458,10 +520,17 @@ def main():
                            ("openapi", "/openapi.json"), ("capabilities", "/capabilities")):
             r = c.call("GET", path, T); expect(r, 200)
             api[name] = r.body
+        c.hook(developer=f"{T}=true"); time.sleep(0.5)
+        try:
+            for rep in c.call("GET", "/feedback?limit=100", T).json().get("reports", []):
+                api[f"feedback {rep['id']}"] = c.call("GET", f"/feedback/{rep['id']}?size=thumb", T).body
+        finally:
+            c.hook(developer=f"{T}=false")
         assert len(api["log export"]) > 4096, "log export too small to be a real check"
         blobs = {
             **api,
             "log.db": c.run_as("cat", "databases/log.db") + c.run_as("cat", "databases/log.db-wal"),
+            "feedback.db": c.run_as("cat", "databases/feedback.db") + c.run_as("cat", "databases/feedback.db-journal"),
             "shared_prefs": b"".join(c.run_as("cat", f"shared_prefs/{n}") for n in ("agents.xml", "settings.xml", "pending_key.xml")),
             "logcat": subprocess.run(["adb", "-s", c.serial, "logcat", "-d"], capture_output=True, timeout=60).stdout,
         }
@@ -475,7 +544,8 @@ def main():
             if re.search(rb"Bearer brg_", b):
                 bad.append(f"{name}: a Bearer header")
         assert not bad, "; ".join(bad)
-        return "checked " + ", ".join(f"{k} ({len(v)//1024} KB)" for k, v in blobs.items())
+        n_fb = sum(1 for k in blobs if k.startswith("feedback "))
+        return "checked " + ", ".join(f"{k} ({len(v)//1024} KB)" for k, v in blobs.items() if not k.startswith("feedback ")) + f", {n_fb} feedback reports"
 
     @c.check("A29", "boot receiver path: reinstall (MY_PACKAGE_REPLACED) restarts the listener in the background")
     def _():
@@ -503,6 +573,21 @@ def main():
         c.adb("shell", "am", "start", "-n", f"{c.pkg}/net.finleg.bridget.ui.MainActivity"); time.sleep(4)
         l = c.call("GET", "/capabilities", T).json()["listener"]
         assert l["camera_ready"] and l["mic_ready"], l
+
+    @c.check("U01", "published update manifest (latest.json on R2) is well-formed and its APK matches its SHA-256")
+    def _():
+        import hashlib
+        url = "https://pub-3a79691572bc4abc93fce31910fe320b.r2.dev/bridget/latest.json"
+        try:
+            with urllib.request.urlopen(url, timeout=20) as r:
+                m = json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            raise Unverified(f"no manifest published yet (HTTP {e.code})")
+        assert m["package"] == "net.finleg.bridget" and m["url"].startswith("https://pub-3a79691572bc4abc93fce31910fe320b.r2.dev/bridget/"), m
+        with urllib.request.urlopen(m["url"], timeout=120) as r:
+            apk = r.read()
+        assert hashlib.sha256(apk).hexdigest() == m["sha256"].lower() and len(apk) == m["size_bytes"], "APK doesn't match the manifest"
+        return f"{m['version_name']} ({m['version_code']}), {len(apk)//1024} KB, SHA-256 ok"
 
     # ---- cleanup and results --------------------------------------------------------------------------
     c.hook(remove=T)
