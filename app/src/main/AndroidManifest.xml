@@ -18,12 +18,21 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <!-- In-app updates (12.14, UPD-04): hands a verified APK to Android's installer, which always asks to confirm. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Lets Bridget open the Tailscale app from Home and first run. -->
     <queries>
         <package android:name="com.tailscale.ipn" />
+        <!-- CAP-31/41: interaction link controls may open an app by package (its launch intent). -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <application
@@ -51,13 +60,25 @@
         <service
             android:name=".BridgeService"
             android:exported="false"
-            android:foregroundServiceType="camera|microphone|specialUse">
+            android:foregroundServiceType="camera|microphone|location|mediaPlayback|specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Private API listener on the owner's Tailscale network; answers camera, microphone and gallery requests from the owner's agents." />
         </service>
 
         <receiver android:name=".feedback.FeedbackActionReceiver" android:exported="false" />
+
+        <!-- CAP-33: answers questions from notification buttons and inline reply. -->
+        <receiver android:name=".interact.InteractionActionReceiver" android:exported="false" />
+
+        <!-- CAP-41: opens an interaction link from a notification action (no trampolines). -->
+        <activity
+            android:name=".interact.LinkActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Bridget.Invisible" />
 
         <!-- UPD-04: shares only cacheDir/updates/ with the package installer. -->
         <provider

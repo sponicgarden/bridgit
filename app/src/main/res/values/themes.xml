@@ -70,6 +70,11 @@
         <item name="backgroundTint">@color/toggle_checked_bg</item>
     </style>
 
+    <!-- Selected filter chips in blue (primary container); gold is for live states only. -->
+    <style name="Widget.Bridget.FilterChip" parent="Widget.Material3.Chip.Filter">
+        <item name="chipBackgroundColor">@color/activity_filter_chip_bg</item>
+    </style>
+
     <style name="Widget.Bridget.Card" parent="Widget.Material3.CardView.Filled">
         <item name="cardBackgroundColor">?attr/colorSurfaceContainer</item>
         <item name="cardCornerRadius">12dp</item>

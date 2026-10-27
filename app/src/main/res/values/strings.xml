@@ -35,6 +35,15 @@
     <string name="cap_log">Log</string>
     <string name="cap_log_desc">Agents can read the activity log</string>
 
+    <string name="cap_location">Location</string>
+    <string name="cap_location_desc">Where the phone is, with heading</string>
+    <string name="cap_speaker">Speaker</string>
+    <string name="cap_speaker_desc">Agents play audio and speak out loud</string>
+    <string name="cap_tour">City tour</string>
+    <string name="cap_tour_desc">A guided walk with an agent</string>
+    <string name="notif_location">%1$s checked your location</string>
+    <string name="cap_interactions">Interactions</string>
+    <string name="cap_interactions_desc">Questions and notices from agents</string>
     <string name="cap_feedback">Feedback</string>
     <string name="cap_feedback_desc">Bug reports and feature requests</string>
 

@@ -104,6 +104,7 @@ should treat these as settled unless a serious problem is found.
 | D15 | 27 Oct 2026 | Screens use **native Kotlin Android Views with Material 3 components**, with a "techie but friendly" look (section 12). | Decided |
 | D16 | 27 Oct 2026 | Spec **"maximum capabilities"**: describe everything Android allows that's useful to a personal agent, phased (section 16). | Decided |
 | D17 | 27 Oct 2026 | **Screenshots use an Accessibility service**, with no per-screenshot approval (replaces D10's approve-each-time design). Default mode: a private in-memory copy; optional mode: Android's normal screenshot, saved to the gallery. The screen-share grant flow (once / 1 h / 16 h) stays only as the fallback when Accessibility is off. | Decided |
+| D30 | 27 Oct 2026 | **Bridget applications; first: City tour** (owner). Rahul picks the kind of tour; every minute Bridget sends the agent location, compass and new photos; the agent narrates with audio that keeps changing as he moves; he can ask spoken questions. Pulls forward a minimal location (8.8), compass (8.21) and speaker (CAP-51/53) for it. Section 8.25, prototype in 1.5.x. | Decided |
 | D29 | 27 Oct 2026 | **Playing mirrors listening, and video goes with audio** (owner): play an audio file, stream audio to the speaker (two-way voice with the mic stream), speak text, play a video on screen, and a **live camera video stream** with optional audio; the video clip (8.3) moves to P2. Section 8.24, all in 1.6. | Decided |
 | D28 | 27 Oct 2026 | **Relay mode: yes** (owner; resolves Q10). Built in P2 as 1.7. Two ways in per agent: **sealed** (end-to-end encrypted; the relay can't read anything) and **connector** (for hosted assistants that can only speak HTTPS/MCP; the relay sees content in transit, never stores it past the job). The phone keeps an **outbound** connection to the relay while listening, so no Google push is needed (FCM optional later, Q9). Hosted on Sponic's Cloudflare account. 4.4, ARC-20..ARC-29. | Decided |
 | D27 | 27 Oct 2026 | **Listening is an owner option, not a ban** (owner: "I never had a no always-on listening rule"). PRD-09's "live streaming" and "always-on listening" are removed from Not in scope. New capability 8.23 Listening: live audio streaming, timed listening sessions, and **always-on listening with wake words recognised on the phone**, each off by default and always visible. Built in P2 as 1.6. | Decided |
@@ -839,6 +840,7 @@ every request is logged (section 10).
 | 8.22 | Communications (SMS, contacts, calendar, calls) | — | Not scheduled |
 | 8.23 | Listening: live stream, sessions, always-on with wake words (D27) | Listening | P2 (1.6) |
 | 8.24 | Playing (audio file, audio stream, speak, video on screen) and live video stream (D29) | Speaker; Video | P2 (1.6) |
+| 8.25 | Applications: City tour (D30) | Location, Speaker (+ Gallery, Microphone) | P2 (1.5.x prototype) |
 
 ### 8.1 Status and self-description
 
@@ -884,7 +886,7 @@ every request is logged (section 10).
 - **CAP-07 [Built]** `POST /v1/mic/record {"duration_seconds": 1-120}`
   (whole numbers; out of range is `invalid_parameter`, never clamped).
   Returns M4A (AAC, 44.1 kHz mono, 96 kbps).
-- **CAP-08 [P5]** Optional `"transcribe": true` returns `transcript` using
+- **CAP-08 [P2, 1.6 with 8.23]** Optional `"transcribe": true` returns `transcript` using
   Android's on-device speech recognizer where available
   (`SpeechRecognizer.createOnDeviceSpeechRecognizer`, [Verify] on API 37);
   audio is still returned unless `"return_audio": false`.
@@ -1370,11 +1372,121 @@ camera video shows Android's green camera dot.
   the mic too (AAC/Opus), so video and audio arrive together. One frame per
   N seconds (`fps` < 1, e.g. 0.2) gives a cheap "watch the room" mode.
   Counts as one capture; the camera dot and a notification show throughout.
+- **SPK-01 [P2, review] Speaker limits** (apply to CAP-51..53, CAP-31
+  `speak` and City tour): an owner-set **volume ceiling** (default 70 %);
+  one clip at most 10 minutes; a queue of at most 5 per agent; 60 plays an
+  hour per agent; **Stop** (notification, Home, tour screen) stops playback
+  and clears every queue; silent / vibrate / DND are checked explicitly
+  (media playback isn't silenced by Android on its own); volume is restored
+  only if Rahul hasn't changed it meanwhile.
+- **SPK-02 [P2, review] Audio and video URLs**: public HTTPS only by
+  default (tailnet origins only if Rahul adds them); embedded credentials
+  refused; the resolved address checked on every fetch, retry and redirect
+  (redirects re-validated, at most 3); 25 MB and 15 s connect / 60 s total.
+- **SPK-03 [P2, review] Service type**: playback adds the `mediaPlayback`
+  foreground-service type (and `FOREGROUND_SERVICE_MEDIA_PLAYBACK`) and
+  requests audio focus; on focus loss it pauses, and it never plays during a
+  phone call.
 - **CAP-06 (video clip) moves from P5 to P2 (1.6)** with the stream, since
   they share the recorder.
 - Android: camera and microphone FGS types (ARC-02a); playback uses the media
   session so the system output switcher and headphones work; nothing plays
   while a call is active.
+
+### 8.23a Review gates for 1.6 and 1.7 (Codex design review, 27 Oct 2026)
+
+Open design work, recorded so the 1.6/1.7 plans close it before code:
+- Connector mode gives the relay **control**, not just visibility: connector
+  agents get narrow per-agent permissions (section 15) or phone approval for
+  sensitive calls, and their credentials work only through the relay.
+- Sealed mode names an authenticated construction: HPKE with pinned keys both
+  ways, request ids rejected on replay across restarts, sequenced stream frames.
+- Phone enrolment is owner-authenticated, single-use and confirmed on the phone.
+- The relay states exactly what it stores, where and how long, including
+  abandoned jobs.
+- MCP: a fixed protocol version; OAuth with PKCE and audience checks for hosted
+  clients; Origin validation; tool exclusions (Developer-only, feedback);
+  agent-bound sessions.
+- Queued jobs carry an execution deadline; live capture and playback run now
+  or fail; rotating, removing or disabling cancels queued jobs and streams.
+- Wake words are untrusted input (never approval); Bridget's own playback must
+  not trigger them; transcripts are not logged (metadata only) and have their
+  own retention.
+- The keyword engine, model and licence, on-device recogniser availability and
+  offline TTS voices are chosen and fail closed (no cloud fallback).
+- The relay socket's Doze behaviour is measured with and without the battery
+  exemption.
+- Streams get a wire protocol, budgets and back-pressure; MJPEG can't carry
+  audio, so audio+video uses WebSocket frames with timestamps.
+- Full-screen video keeps Bridget's frame (agent name, Close), opens only from
+  a tap on an unlocked phone; screen streaming (MediaProjection) is separate
+  from camera streaming.
+
+P2 is done only when these pass on the Pixel, not just the happy paths.
+
+### 8.25 Bridget applications: City tour (D30, P2 as 1.5.x prototype)
+
+An **application** is a ready-made session that combines capabilities for
+one purpose, started by Rahul and run together with one agent. The first is
+**City tour** (owner, 27 Oct 2026).
+
+**The flow**
+
+1. Rahul opens **More → Applications → City tour** (or an agent sends a
+   question offering one). He picks the **kind of tour**: History,
+   Architecture, Environment, Food, Art, or "Anything interesting" (one or
+   more), the **agent** that guides him, and **how often** (every 30 s, 1 min
+   default, 2 min, 5 min). **Start** starts a tour session.
+2. **Every tick** Bridget sends the agent an event `tour.tick`
+   (long-poll `/v1/events`, a callback when built, or through the relay):
+   - location: latitude, longitude, altitude, accuracy, speed, bearing,
+     fix age (8.8, CAP-18 fields);
+   - **compass**: the direction the phone points (azimuth 0-360°, from the
+     rotation-vector sensor) and pitch, so "the building on your left" works;
+   - **photos taken since the last tick**: ids, time, and agent-size images
+     inline (at most 3 per tick; more as ids to fetch);
+   - the tour's kind, how far he moved since the last tick, and what is
+     playing now.
+3. **The agent narrates** with audio: `POST /v1/speaker/play` (a file or
+   URL), `POST /v1/speaker/say` (text read on the phone), or a live stream
+   (CAP-52), each tagged with the tour id. **The audio keeps up with him**
+   (owner): a newer narration for the tour replaces anything still queued;
+   the one playing finishes its sentence (`"replace": "after_current"`,
+   default) or stops at once (`"replace": "now"`). Optional `text` with the
+   audio shows as the current caption on the tour screen.
+4. **He can ask questions** (owner): a big **Ask** button on the tour screen
+   and in the tour notification records his voice until he lets go (max 30 s)
+   or until he stops talking, transcribes it on the phone (CAP-08), and sends
+   `tour.question` with the transcript, the audio clip, the current location,
+   compass and latest photo. The agent answers with audio the same way
+   (answers jump the queue). Typing a question works too.
+5. **The tour screen** shows the map position (coordinates, no map tiles in
+   the prototype), heading, the caption of what's playing, a history of
+   what was said (scrolls, like the live text panel), photos sent, and
+   **Pause**, **Skip**, **Ask**, **End tour**. The ongoing notification has
+   Ask, Pause and End.
+6. **Ending:** End tour, after 4 hours (setting), or when the agent sends
+   `DELETE /v1/tour`. The agent gets `tour.ended` with a summary (distance,
+   duration, photos).
+
+**Rules and limits**
+
+- **TOUR-01** A tour needs the **Location** and **Speaker** switches on,
+  plus Gallery for photos and Microphone for spoken questions; the start
+  screen lists what's missing with one-tap fixes. It runs in the foreground
+  service with the `location` type (added because Rahul starts it from the
+  app, ARC-02a) and keeps the screen-off GPS working.
+- **TOUR-02** Location is sent only to the tour's agent, only during the
+  tour, only every tick. Nothing is kept after the tour except the log lines
+  (coordinates rounded per LOG-02).
+- **TOUR-03** API: `GET /v1/tour` (the agent's current tour: kind, interval,
+  started_at, last tick), `DELETE /v1/tour` (end it), and the tick, question
+  and end events above. Speaker calls accept `tour_id` and `replace`.
+- **TOUR-04** Battery: GPS at the tick rate with balanced accuracy between
+  ticks; the tour screen shows the battery used so far. [Verify] on a
+  one-hour walk.
+- **TOUR-05** Later applications reuse the same session engine (for
+  example "Museum guide" with the camera, "Run coach" with sensors).
 
 ### 8.22 Communications (not scheduled)
 

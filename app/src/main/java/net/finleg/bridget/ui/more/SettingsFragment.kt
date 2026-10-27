@@ -30,6 +30,8 @@ import net.finleg.bridget.capability.appVersion
 import net.finleg.bridget.databinding.FragmentSettingsBinding
 import net.finleg.bridget.databinding.SettingsDialogFieldBinding
 import net.finleg.bridget.databinding.SettingsRowBinding
+import net.finleg.bridget.databinding.SettingsSwitchRowBinding
+import net.finleg.bridget.interact.InteractionNotifier
 import net.finleg.bridget.log.LogQuery
 import net.finleg.bridget.ui.common.themeColor
 import net.finleg.bridget.ui.home.UiActions
@@ -38,11 +40,11 @@ import java.security.MessageDigest
 import java.text.NumberFormat
 
 /**
- * Settings (UI-19, ui-spec 5.10), built from our own rows. P1a sections only:
- * Listener, Privacy (log visibility), Log, Notifications, Appearance, About.
+ * Settings (UI-19, ui-spec 5.10), built from our own rows. Sections:
+ * Listener, Privacy (log visibility, lock-screen question text, urgent read-aloud in DND),
+ * Log, Notifications, Appearance, About.
  * Not shown yet (later phases): Allow internet callbacks, Screenshots, Feedback,
- * lock-screen question text, precise locations, address lookup, Licences, and the
- * Questions / Notices / Files / Feedback notification channels.
+ * precise locations, address lookup, Licences, and the Files / Feedback notification channels.
  */
 class SettingsFragment : Fragment() {
     private var _b: FragmentSettingsBinding? = null
@@ -74,6 +76,10 @@ class SettingsFragment : Fragment() {
 
         // Privacy
         row(b.logVisibility, R.string.settings_log_visibility) { askVisibility() }
+        prefSwitch(b.lockscreenText, R.string.settings_lockscreen_text, R.string.settings_lockscreen_text_desc,
+            InteractionNotifier.PREF_LOCKSCREEN_TEXT, R.string.settings_changed_lockscreen)
+        prefSwitch(b.speakUrgent, R.string.settings_speak_urgent, R.string.settings_speak_urgent_desc,
+            InteractionNotifier.PREF_SPEAK_URGENT_IN_DND, R.string.settings_changed_speak_urgent)
 
         // Log
         row(b.keep, R.string.settings_keep) { askKeep() }
@@ -91,6 +97,10 @@ class SettingsFragment : Fragment() {
         b.notifListener.value.setText(R.string.channel_listener_desc)
         row(b.notifCapture, R.string.channel_capture) { UiActions.openChannelSettings(requireContext(), BridgeApp.CHANNEL_CAPTURE) }
         b.notifCapture.value.setText(R.string.channel_capture_desc)
+        row(b.notifQuestions, R.string.channel_questions) { UiActions.openChannelSettings(requireContext(), InteractionNotifier.CHANNEL_QUESTIONS) }
+        b.notifQuestions.value.setText(R.string.channel_questions_desc)
+        row(b.notifNotices, R.string.channel_notices) { UiActions.openChannelSettings(requireContext(), InteractionNotifier.CHANNEL_NOTICES) }
+        b.notifNotices.value.setText(R.string.channel_notices_desc)
 
         // Appearance
         row(b.theme, R.string.settings_theme) { askAppearance() }
@@ -139,6 +149,8 @@ class SettingsFragment : Fragment() {
         val st = app.settings
         val s = app.listener.value
         if (b.alwaysOn.toggle.isChecked != st.listenerEnabled) b.alwaysOn.toggle.isChecked = st.listenerEnabled
+        b.lockscreenText.toggle.isChecked = prefs().getBoolean(InteractionNotifier.PREF_LOCKSCREEN_TEXT, false)
+        b.speakUrgent.toggle.isChecked = prefs().getBoolean(InteractionNotifier.PREF_SPEAK_URGENT_IN_DND, false)
         b.port.value.text = st.port.toString()
         b.bind.value.text = if (s.running && s.boundTo.isNotEmpty())
             s.boundTo.joinToString(", ") { if (it.contains(':')) "[$it]:${s.port}" else "$it:${s.port}" }
@@ -151,10 +163,26 @@ class SettingsFragment : Fragment() {
             else -> R.string.settings_theme_system
         })
         listOf(b.port, b.bind, b.logVisibility, b.keep, b.theme, b.version, b.checkUpdates, b.commit, b.cert, b.spec, b.export, b.clear,
-            b.notifListener, b.notifCapture).forEach { it.root.contentDescription = "${it.title.text}, ${it.value.text}" }
+            b.notifListener, b.notifCapture, b.notifQuestions, b.notifNotices).forEach { it.root.contentDescription = "${it.title.text}, ${it.value.text}" }
     }
 
     private fun audit(message: String) = app.log.system("audit", "setting", message)
+
+    private fun prefs() = requireContext().getSharedPreferences("settings", android.content.Context.MODE_PRIVATE)
+
+    /** A switch row for a plain boolean in the "settings" prefs (default off); every change is audited (UI-18). */
+    private fun prefSwitch(r: SettingsSwitchRowBinding, title: Int, desc: Int, key: String, changed: Int) {
+        r.title.setText(title)
+        r.value.setText(desc)
+        r.root.contentDescription = getString(title) + ", " + getString(desc)
+        UiActions.asSwitch(r.root) { prefs().getBoolean(key, false) }
+        r.root.setOnClickListener {
+            val on = !prefs().getBoolean(key, false)
+            prefs().edit().putBoolean(key, on).apply()
+            r.toggle.isChecked = on
+            audit(getString(changed, getString(if (on) R.string.home_on else R.string.home_off)))
+        }
+    }
 
     private fun setListener(on: Boolean) {
         app.settings.listenerEnabled = on

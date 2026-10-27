@@ -38,7 +38,8 @@ class Ctx:
         cmd = ["shell", "am", "broadcast", "-f", "0x20", "-a", "net.finleg.bridget.debug.SETUP",
                "-n", f"{self.pkg}/net.finleg.bridget.DebugSetupReceiver"]
         for k, v in extras.items():
-            cmd += (["--ez", k, "true" if v else "false"] if isinstance(v, bool) else ["--es", k, str(v)])
+            # adb joins arguments into one shell command: quote values so spaces survive.
+            cmd += (["--ez", k, "true" if v else "false"] if isinstance(v, bool) else ["--es", k, "'" + str(v).replace("'", "'\\''") + "'"])
         out = self.adb(*cmd)
         m = re.search(r'data="(\d{6})"', out)
         return m.group(1) if m else None
@@ -413,6 +414,111 @@ def main():
         assert r2.json()["whats_new"] is None and "x-bridget-whats-new" not in r2.headers, "still nagging after reading the changes"
         return f"revision {rev}"
 
+    # ---- 1.5: interactions (8.13, D26) ----------------------------------------------------------------
+    def question(agent, title, **extra):
+        body = {"kind": "question", "title": title, "controls": [
+            {"type": "button", "id": "yes", "label": "Yes", "style": "primary"}, {"type": "button", "id": "no", "label": "No"}]}
+        body.update(extra)
+        return c.call("POST", "/interactions", agent, body)
+
+    @c.check("I01", "a question reaches the phone; the waiting agent gets the answer about 1 s after the tap (stand-in tap)")
+    def _():
+        c.hook(interactions=True); time.sleep(0.5)
+        r = question(T, "Acceptance: pay the test invoice?"); expect(r, 201)
+        iid = r.json()["interaction_id"]
+        with concurrent.futures.ThreadPoolExecutor(1) as ex:
+            fut = ex.submit(c.call, "GET", f"/interactions/{iid}?wait=30", T)
+            time.sleep(2)
+            t_tap = time.time()
+            c.hook(answer=f"{iid}:yes")
+            w = fut.result(40)
+        expect(w, 200)
+        j = w.json(); lag = time.time() - t_tap
+        assert j["status"] == "answered" and j["answer"]["button"] == "yes", j
+        return f"answer arrived {lag:.2f} s after the tap (includes the adb broadcast)"
+
+    @c.check("I02", "ownership: another agent can't read or cancel it (404); bad links and notice buttons are refused")
+    def _():
+        r = question(T, "Acceptance: ownership"); expect(r, 201); iid = r.json()["interaction_id"]
+        expect(c.call("GET", f"/interactions/{iid}", P), 404, "not_found")
+        expect(c.call("DELETE", f"/interactions/{iid}", P), 404, "not_found")
+        assert all(x["interaction_id"] != iid for x in c.call("GET", "/interactions", P).json()["interactions"])
+        expect(c.call("DELETE", f"/interactions/{iid}", T), 200)
+        expect(c.call("POST", "/interactions", T, {"kind": "question", "title": "x", "controls": [
+            {"type": "button", "id": "a", "label": "A"}, {"type": "link", "id": "l", "label": "L", "url": "javascript:alert(1)"}]}), 422, "invalid_parameter")
+        expect(c.call("POST", "/interactions", T, {"kind": "notice", "title": "x", "controls": [{"type": "button", "id": "a", "label": "A"}]}), 422, "invalid_parameter")
+
+    @c.check("I03", "Rahul closes it: the agent sees dismissed and gets an interaction.dismissed event")
+    def _():
+        cur = c.call("GET", "/events?types=interaction.dismissed", T).json()["next_cursor"]
+        r = question(T, "Acceptance: close me"); expect(r, 201); iid = r.json()["interaction_id"]
+        c.hook(dismiss=str(iid))
+        g = c.call("GET", f"/interactions/{iid}?wait=10", T).json()
+        assert g["status"] == "dismissed", g
+        ev = c.call("GET", f"/events?since={cur}&wait=10&types=interaction.dismissed", T, timeout=20).json()
+        assert any(e["data"]["interaction_id"] == iid for e in ev["events"]), ev
+
+    @c.check("I04", "at most 5 open questions per agent (429 too_many_open)")
+    def _():
+        ids = []
+        codes = []
+        for n in range(6):
+            r = question(P, f"Acceptance: open {n}"); codes.append(r.status)
+            if r.status == 201: ids.append(r.json()["interaction_id"])
+        for i in ids: c.call("DELETE", f"/interactions/{i}", P)
+        assert codes[-1] == 429 and codes.count(201) == 5, codes
+        return f"statuses {codes}"
+
+    # ---- 1.5: location, speaker, City tour (D30) ------------------------------------------------------
+    @c.check("L01", "location: a fix with latitude, longitude, altitude, accuracy, and the compass heading")
+    def _():
+        c.hook(location=True); time.sleep(0.5)
+        r = c.call("GET", "/location?fresh=false", T, timeout=40)
+        if r.status == 504:
+            raise Unverified("no location fix available on the phone")
+        expect(r, 200); j = r.json()
+        assert -90 <= j["latitude"] <= 90 and -180 <= j["longitude"] <= 180 and j["precision"] in ("precise", "approximate"), j
+        comp = j.get("compass")
+        return f"accuracy {j.get('accuracy_m')} m, altitude {j.get('altitude_m')}, heading " + (f"{comp['azimuth_deg']}° {comp['direction']}" if comp else "none")
+
+    @c.check("S01", "speaker: say queues speech on the phone; unsafe audio URLs are refused; stop clears it")
+    def _():
+        c.hook(speaker=True, speaker_ceiling="30"); time.sleep(0.5)
+        for bad in ("http://example.com/a.mp3", "https://192.168.1.1/a.mp3", "https://user:pw@example.com/a.mp3", "https://localhost/a.mp3"):
+            expect(c.call("POST", "/speaker/play", T, {"url": bad}, timeout=40), 422, "invalid_parameter")
+        r = c.call("POST", "/speaker/say", T, {"text": "Bridget test."}, timeout=40)
+        expect(r, 200)
+        st = c.call("GET", "/speaker", T); expect(st, 200)
+        expect(c.call("DELETE", "/speaker", T), 200)
+        return f"say -> {r.json()['status']}, quiet mode {st.json()['quiet']}"
+
+    @c.check("TOUR", "City tour: start sends tour.started, a tick carries location + compass, a question arrives, the agent ends it")
+    def _():
+        c.hook(location=True, speaker=True); time.sleep(0.5)
+        start = c.call("GET", "/events", T).json()
+        cur = start["events"][-1]["id"] if start["events"] else "0"
+        c.hook(tour_start=f"{T}:history,architecture:30")
+        t = c.call("GET", "/tour", T); expect(t, 200)
+        tour = t.json()["tour"]; assert tour and tour["interval_s"] == 30, t.json()
+        got, deadline = {}, time.time() + 45
+        while time.time() < deadline and not {"tour.started", "tour.tick"} <= set(got):
+            ev = c.call("GET", f"/events?since={cur}&wait=20", T, timeout=30).json()
+            for e in ev["events"]:
+                got.setdefault(e["type"], e)
+            cur = ev["next_cursor"]
+        assert "tour.started" in got and "tour.tick" in got, sorted(got)
+        tick = got["tour.tick"]["data"]
+        c.hook(tour_ask="What is that tower?")
+        ev = c.call("GET", f"/events?since={cur}&wait=15&types=tour.question", T, timeout=25).json()
+        assert ev["events"] and ev["events"][0]["data"]["question"] == "What is that tower?", ev
+        expect(c.call("POST", "/speaker/say", T, {"text": "That is the town hall.", "tour_id": tour["tour_id"], "urgent": True}, timeout=40), 200)
+        c.call("DELETE", "/speaker", T)
+        expect(c.call("DELETE", "/tour", T), 200)
+        end = c.call("GET", f"/events?since={ev['next_cursor']}&wait=10&types=tour.ended", T, timeout=20).json()
+        assert end["events"], "no tour.ended"
+        loc = tick.get("location") or {}
+        return f"tick: lat {loc.get('latitude')}, heading {(tick.get('compass') or {}).get('direction')}, {len(tick['new_photos'])} new photos"
+
     # ---- P1b: feedback (section 11) ----------------------------------------------------------------
     fb = {}
 
@@ -439,7 +545,7 @@ def main():
         assert any(x["id"] == fb["id"] for x in lst.json()["reports"]), "new report not listed"
         d = c.call("GET", f"/feedback/{fb['id']}", P); expect(d, 200); j = d.json()
         assert j["status"] == "seen" and j["capture_source"] == "agent" and j["filed_by"] == T, (j["status"], j["capture_source"])
-        assert j["context"]["app_version"].startswith("1.4") and len(j["log"]) > 0, "context or log missing"
+        assert re.match(r"^1\.\d+\.\d+", j["context"]["app_version"]) and len(j["log"]) > 0, "context or log missing"
         assert [h["status"] for h in j["history"]] == ["new", "seen"], j["history"]
         assert set(j["allowed_next"]) == {"in_progress", "duplicate", "wont_fix"}, j["allowed_next"]
         return f"{len(j['log'])} log entries attached"

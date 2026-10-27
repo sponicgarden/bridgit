@@ -69,6 +69,8 @@ class Registry(app: BridgeApp) {
     val modules: List<Capability> = listOf(
         StatusModule(app), CameraModule(app, this), MicModule(app, this), GalleryModule(app), LogModule(app),
         net.finleg.bridget.feedback.FeedbackModule(app),
+        net.finleg.bridget.interact.InteractionModule(app),
+        LocationModule(app), SpeakerModule(app), net.finleg.bridget.tour.TourModule(app),
     )
 
     fun caps(): List<net.finleg.bridget.api.CapInfo> = modules.map { it.status() }

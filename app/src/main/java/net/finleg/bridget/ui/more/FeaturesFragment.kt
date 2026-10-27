@@ -93,6 +93,8 @@ class FeaturesFragment : Fragment() {
     private fun groupTitle(group: String): String = when (group) {
         "capture" -> getString(R.string.features_group_capture)
         "photos" -> getString(R.string.features_group_photos)
+        "talk" -> getString(R.string.features_group_talk)
+        "where" -> getString(R.string.features_group_where)
         else -> group.replaceFirstChar { it.uppercase() }
     }
 

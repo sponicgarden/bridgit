@@ -20,7 +20,7 @@ import net.finleg.bridget.feedback.ReportKind
 import net.finleg.bridget.ui.feedback.openReport
 import net.finleg.bridget.update.UpdateDialog
 
-/** More (UI-07, ui-spec 5.13): Features, Access, Settings, the reporter (FBK-01), Check for updates (UPD-02), About. */
+/** More (UI-07, ui-spec 5.13): Activity (D26), Features, Access, Settings, the reporter (FBK-01), Check for updates (UPD-02), About. */
 class MoreFragment : Fragment() {
     private var _b: FragmentMoreBinding? = null
     private val b get() = _b!!
@@ -34,6 +34,7 @@ class MoreFragment : Fragment() {
         ViewCompat.setOnApplyWindowInsetsListener(b.toolbar) { v, insets ->
             v.updatePadding(top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top); insets
         }
+        row(b.openActivity, R.drawable.ic_nav_activity, R.string.more_activity) { findNavController().navigate(R.id.activity) }
         row(b.features, R.drawable.ic_toggle, R.string.more_features) { findNavController().navigate(R.id.features) }
         row(b.access, R.drawable.ic_shield, R.string.more_access) { findNavController().navigate(R.id.access) }
         row(b.settings, R.drawable.ic_settings, R.string.more_settings) { findNavController().navigate(R.id.settings) }

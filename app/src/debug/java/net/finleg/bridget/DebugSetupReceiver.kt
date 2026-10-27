@@ -3,6 +3,7 @@ package net.finleg.bridget
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import kotlinx.coroutines.launch
 import net.finleg.bridget.core.Connection
 
 /**
@@ -17,11 +18,24 @@ import net.finleg.bridget.core.Connection
 class DebugSetupReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val app = context.applicationContext as BridgeApp
+        intent.getStringExtra("speaker_ceiling")?.toIntOrNull()?.let { app.settings.speakerCeiling = it }
         for (m in app.registry.switchable()) {
             val k = m.switchKey!!
             if (intent.hasExtra(k)) app.settings.setOn(k, intent.getBooleanExtra(k, false))
         }
         intent.getStringExtra("log_visibility")?.let { app.settings.logVisibility = it }
+        // answer=<id>:<button> and dismiss=<id> stand in for Rahul's tap in tests.
+        intent.getStringExtra("answer")?.let { spec ->
+            val (id, button) = spec.split(":", limit = 2).let { it[0].toLong() to it.getOrNull(1) }
+            runCatching { app.interactions.answer(id, button, emptyMap()) }
+        }
+        intent.getStringExtra("dismiss")?.let { runCatching { app.interactions.dismiss(it.toLong()) } }
+        // tour_start=<agent name>:<kind,kind>:<interval s>, tour_ask=<text>, tour_end=1 stand in for the City tour screen.
+        intent.getStringExtra("tour_start")?.let { spec ->
+            val p = spec.split(":")
+            app.agents.byName(p[0])?.let { a -> runCatching { app.tours.start(a.id, p.getOrElse(1) { "history" }.split(","), p.getOrElse(2) { "60" }.toInt()) } }
+        }
+        if (intent.hasExtra("tour_end")) app.tours.end("ended from the test hook")
         intent.getStringExtra("remove")?.let { n -> app.agents.byName(n)?.let { app.agents.remove(it.id) } }
         intent.getStringExtra("developer")?.let { spec ->
             val (n, v) = spec.split("=").let { it[0] to (it.getOrNull(1) != "false") }
@@ -45,5 +59,12 @@ class DebugSetupReceiver : BroadcastReceiver() {
             BridgeService.start(context)
         }
         resultData = code
+        // Last, after the result is set: never block the main thread (ask() reads the compass on it).
+        intent.getStringExtra("tour_ask")?.let { q ->
+            val pending = goAsync()
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                try { app.tours.ask(q, spoken = false) } finally { pending.finish() }
+            }
+        }
     }
 }

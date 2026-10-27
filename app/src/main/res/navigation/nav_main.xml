@@ -5,7 +5,13 @@
     app:startDestination="@id/home">
 
     <fragment android:id="@+id/home" android:name="net.finleg.bridget.ui.home.HomeFragment" android:label="@string/nav_home" />
+    <!-- 1.5 (D26): Interactions tab and detail. -->
+    <fragment android:id="@+id/interactions" android:name="net.finleg.bridget.ui.interactions.InteractionsFragment" android:label="@string/nav_interactions" />
+    <fragment android:id="@+id/interactionDetail" android:name="net.finleg.bridget.ui.interactions.InteractionDetailFragment">
+        <argument android:name="interactionId" app:argType="long" />
+    </fragment>
     <fragment android:id="@+id/agents" android:name="net.finleg.bridget.ui.agents.AgentsFragment" android:label="@string/nav_agents" />
+    <!-- Not a tab since 1.5 (D26): opened from More, Home's Today card and Agent detail. -->
     <fragment android:id="@+id/activity" android:name="net.finleg.bridget.ui.activity.ActivityFragment" android:label="@string/nav_activity" />
     <fragment android:id="@+id/more" android:name="net.finleg.bridget.ui.more.MoreFragment" android:label="@string/nav_more" />
 

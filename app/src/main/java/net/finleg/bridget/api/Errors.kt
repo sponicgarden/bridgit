@@ -38,7 +38,7 @@ object ErrorCatalog {
         Entry(422, "invalid_parameter", "Bad value", "Fix; never retry unchanged"),
         Entry(422, "not_supported", "Android doesn't allow this (for example Wi-Fi toggle)", "Don't retry", built = false),
         Entry(429, "rate_limited", "Over a limit (`retry_after_s`)", "Wait"),
-        Entry(429, "too_many_open", "Too many open questions/notices", "Wait for answers or cancel some", built = false),
+        Entry(429, "too_many_open", "Too many open questions/notices", "Wait for answers or cancel some"),
         Entry(403, "notifications_required", "Bridget's notifications are off, so captures are refused (PRD-05)", "Tell Rahul to turn notifications on"),
         Entry(403, "forbidden", "Not allowed for this agent (`reason`, for example `developer_only`)", "Don't retry"),
         Entry(409, "in_progress", "Same `Idempotency-Key` still running", "Wait, then retry with the same key"),
