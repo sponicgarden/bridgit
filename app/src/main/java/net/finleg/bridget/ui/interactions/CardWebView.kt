@@ -74,6 +74,7 @@ class CardWebView(context: Context, private val onRespond: (Any) -> Unit, privat
 
     fun release() {
         accepting = false
+        main.removeCallbacksAndMessages(null) // an answer queued during teardown is dropped
         stopLoading()
         removeJavascriptInterface("Bridget")
         webChromeClient = null
@@ -87,7 +88,7 @@ class CardWebView(context: Context, private val onRespond: (Any) -> Unit, privat
         fun respond(json: String?) {
             if (!accepting) return
             val v = gate.offer(json) ?: return
-            main.post { onRespond(v) }
+            main.post { if (accepting) onRespond(v) }
         }
     }
 

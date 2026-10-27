@@ -33,6 +33,15 @@ class CardRulesTest {
         assertEquals(1, Regex("http-equiv", RegexOption.IGNORE_CASE).findAll(out).count())
     }
 
+    @Test fun guardRunsBeforeThePage() {
+        val out = CardRules.prepare("<script>new RTCPeerConnection()</script>")
+        val guard = out.indexOf("<script>" + CardRules.GUARD + "</script>")
+        assertTrue(guard > out.indexOf("Content-Security-Policy"))
+        assertTrue(guard < out.indexOf("new RTCPeerConnection"))
+        assertTrue("RTCPeerConnection" in CardRules.GUARD && "contentWindow" in CardRules.GUARD)
+        assertFalse("</script" in CardRules.GUARD.lowercase())
+    }
+
     @Test fun pageMetaCantSetPolicyOrRefresh() {
         for (evil in listOf(
             "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src *\">",
@@ -100,6 +109,10 @@ class CardRulesTest {
         assertNotNull(CardRules.parseRespond(ok))
         assertNull(CardRules.parseRespond("\"" + "x".repeat(CardRules.RESPOND_MAX_BYTES - 1) + "\""))
         assertNull(CardRules.parseRespond("\"" + "é".repeat(CardRules.RESPOND_MAX_BYTES / 2) + "\""))
+        // Lenient JSONTokener extras are refused, and can't hide nesting from the depth check (Codex review).
+        for (lenient in listOf("[/*\"*/" + "[".repeat(100) + "0" + "]".repeat(101), "{'a':1}", "[1;2]", "{a:1}", "[1] // c", "#x\n1"))
+            assertNull("accepted $lenient", CardRules.parseRespond(lenient))
+        assertEquals(1, (CardRules.parseRespond("{\"note\":\"it's /* fine */ in a string ['\"}") as JSONObject).length())
         // A 16 KB bracket bomb is refused without parsing (no stack overflow).
         assertNull(CardRules.parseRespond("[".repeat(CardRules.RESPOND_MAX_BYTES)))
     }

@@ -210,8 +210,9 @@ class InteractionDetailFragment : Fragment() {
 
     /** The card's page called Bridget.respond(json): stored as `answer.data`, like a button answer. */
     private fun answerCard(i: Interaction, data: Any) {
+        if (_b == null || !isAdded) return // the screen is going away; the card is released with it
         val store = app.interactions
-        val owner = _b?.let { viewLifecycleOwner } ?: return
+        val owner = viewLifecycleOwner
         owner.lifecycleScope.launch {
             val r = withContext(Dispatchers.IO) { runCatching { store.answerCard(i.id, data) } }
             val bb = _b ?: return@launch

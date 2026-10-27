@@ -23,6 +23,23 @@ object CardRules {
     const val CSP = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; " +
         "base-uri 'none'; form-action 'none'; frame-src 'none'; object-src 'none'"
 
+    /**
+     * Runs before any of the page's own script: removes WebRTC (CSP doesn't cover peer connections, so a
+     * page could otherwise reach a STUN server) and the other network constructors, locked so the page can't
+     * put them back, and hides the windows of frames made at run time. Best effort on top of the CSP and the
+     * blocked network; Bridget.respond is the only way out.
+     */
+    const val GUARD = "(function(){var w=window;['RTCPeerConnection','webkitRTCPeerConnection','RTCDataChannel'," +
+        "'RTCSessionDescription','RTCIceCandidate','RTCRtpSender','RTCRtpReceiver','WebSocket','WebTransport','EventSource'," +
+        "'XMLHttpRequest','fetch','Worker','SharedWorker','BroadcastChannel'].forEach(function(k){try{Object.defineProperty(w,k," +
+        "{value:undefined,writable:false,configurable:false})}catch(e){}});" +
+        "['HTMLIFrameElement','HTMLFrameElement','HTMLObjectElement','HTMLEmbedElement'].forEach(function(t){var P=w[t]&&w[t].prototype;" +
+        "if(!P)return;['contentWindow','contentDocument'].forEach(function(k){try{Object.defineProperty(P,k," +
+        "{get:function(){return null},configurable:false})}catch(e){}})});" +
+        "try{if(navigator.serviceWorker)Object.defineProperty(navigator,'serviceWorker',{value:undefined,configurable:false})}catch(e){}" +
+        "try{if(navigator.sendBeacon)Object.defineProperty(Navigator.prototype,'sendBeacon',{value:function(){return false},configurable:false})}catch(e){}" +
+        "})();"
+
     /** The four directives CAP-34 names; [CSP] must contain each. */
     val CSP_REQUIRED = listOf("default-src 'none'", "img-src data:", "style-src 'unsafe-inline'", "script-src 'unsafe-inline'")
 
@@ -71,6 +88,7 @@ object CardRules {
         return "<!DOCTYPE html><html><head>" +
             "<meta http-equiv=\"Content-Security-Policy\" content=\"$CSP\">" +
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" +
+            "<script>$GUARD</script>" +
             "</head>" + neutral
     }
 
@@ -94,15 +112,32 @@ object CardRules {
         } catch (_: Exception) { null }
     }
 
-    /** Deepest [ / { nesting outside strings. */
+    /**
+     * Deepest [ / { nesting outside strings, or Int.MAX_VALUE when something outside a double-quoted string
+     * isn't JSON (comments, single quotes, other words). The lenient JSONTokener accepts those, so they are
+     * refused here first; that also keeps this count honest.
+     */
     fun depth(s: String): Int {
         var d = 0; var max = 0; var inStr = false; var esc = false
+        val word = StringBuilder()
+        fun wordOk(): Boolean { val w = word.toString(); word.clear(); return w.isEmpty() || w in JSON_WORDS }
         for (c in s) {
             if (inStr) { if (esc) esc = false else if (c == '\\') esc = true else if (c == '"') inStr = false; continue }
-            when (c) { '"' -> inStr = true; '[', '{' -> { d++; if (d > max) max = d }; ']', '}' -> d-- }
+            if (c in 'a'..'z' || c in 'A'..'Z') { word.append(c); continue }
+            if (!wordOk()) return Int.MAX_VALUE
+            when (c) {
+                '"' -> inStr = true
+                '[', '{' -> { d++; if (d > max) max = d }
+                ']', '}' -> d--
+                ',', ':', '-', '+', '.', ' ', '\t', '\n', '\r', in '0'..'9' -> {}
+                else -> return Int.MAX_VALUE
+            }
         }
-        return max
+        return if (wordOk()) max else Int.MAX_VALUE
     }
+
+    /** The only bare words JSON has: the literals and the exponent marker. */
+    private val JSON_WORDS = setOf("true", "false", "null", "e", "E")
 }
 
 /**
