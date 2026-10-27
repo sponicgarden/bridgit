@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Colour tokens: spec UI-02, plus the "derived" roles from docs/ui-spec.md 2.1. -->
+<resources>
+    <color name="b_primary">#5FD4C4</color>
+    <color name="b_on_primary">#00372F</color>
+    <color name="b_primary_container">#005047</color>
+    <color name="b_on_primary_container">#A6F2E6</color>
+    <color name="b_secondary">#FFC15E</color>
+    <color name="b_on_secondary">#412D00</color>
+    <color name="b_secondary_container">#5C4200</color>
+    <color name="b_on_secondary_container">#FFDEA6</color>
+    <color name="b_surface">#0E1513</color>
+    <color name="b_surface_container">#1A2120</color>
+    <color name="b_surface_container_high">#252B2A</color>
+    <color name="b_surface_container_low">#161D1B</color>
+    <color name="b_surface_container_highest">#2F3634</color>
+    <color name="b_surface_container_lowest">#090F0E</color>
+    <color name="b_on_surface">#DDE4E1</color>
+    <color name="b_on_surface_variant">#BEC9C6</color>
+    <color name="b_outline">#899391</color>
+    <color name="b_outline_variant">#3F4947</color>
+    <color name="b_error">#FFB4AB</color>
+    <color name="b_on_error">#690005</color>
+    <color name="b_error_container">#93000A</color>
+    <color name="b_on_error_container">#FFDAD6</color>
+    <color name="b_success">#7FD99A</color>
+    <color name="b_success_container">#005226</color>
+    <color name="b_on_success_container">#9CF6B4</color>
+    <color name="avatar_bg_0">#4C1D95</color>
+    <color name="avatar_fg_0">#EDE9FE</color>
+    <color name="avatar_bg_1">#7C2D12</color>
+    <color name="avatar_fg_1">#FFEDD5</color>
+    <color name="avatar_bg_2">#1E3A8A</color>
+    <color name="avatar_fg_2">#DBEAFE</color>
+    <color name="avatar_bg_3">#831843</color>
+    <color name="avatar_fg_3">#FCE7F3</color>
+    <color name="avatar_bg_4">#365314</color>
+    <color name="avatar_fg_4">#ECFCCB</color>
+    <color name="avatar_bg_5">#164E63</color>
+    <color name="avatar_fg_5">#CFFAFE</color>
+    <color name="avatar_bg_6">#78350F</color>
+    <color name="avatar_fg_6">#FEF3C7</color>
+    <color name="avatar_bg_7">#334155</color>
+    <color name="avatar_fg_7">#F1F5F9</color>
+</resources>

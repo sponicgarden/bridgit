@@ -1,4 +1,4 @@
-package net.finleg.bridget
+package net.finleg.bridget.capability
 
 import android.Manifest
 import android.annotation.SuppressLint
@@ -34,10 +34,8 @@ import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import kotlin.coroutines.resume
-
-/** A structured API error, mapped 1:1 to the spec's error vocabulary. */
-class ApiError(val http: Int, val code: String, message: String, val extra: Map<String, Any?> = emptyMap()) :
-    Exception(message)
+import net.finleg.bridget.api.ApiError
+import net.finleg.bridget.api.Sizing
 
 class Encoded(val bytes: ByteArray, val width: Int, val height: Int, val mime: String)
 
@@ -49,39 +47,34 @@ fun isoAt(epochMs: Long): String =
 
 object ImageUtil {
     /**
-     * Applies EXIF rotation and downscales to [maxWidth] if needed. Returns the
-     * original bytes untouched when nothing needs to change.
+     * Applies EXIF rotation and resizes per [spec] (API-10). Returns the original
+     * bytes untouched when nothing needs to change and [forceJpeg] is false.
      */
-    fun prepare(original: ByteArray, mime: String, maxWidth: Int?, maxEdge: Int? = null,
-                forceJpeg: Boolean = false, quality: Int = 90): Encoded {
+    fun prepare(original: ByteArray, mime: String, spec: Sizing.Spec, forceJpeg: Boolean = false): Encoded {
         val exif = runCatching { ExifInterface(original.inputStream()) }.getOrNull()
         val rotation = exif?.rotationDegrees ?: 0
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(original, 0, original.size, bounds)
         val rawW = bounds.outWidth
         val rawH = bounds.outHeight
+        if (rawW <= 0) throw ApiError(500, "internal_error", "Could not decode image")
         val (w, h) = if (rotation % 180 != 0) rawH to rawW else rawW to rawH
-        if (rawW <= 0) throw ApiError(500, "capture_failed", "Could not decode image")
-        // Target width: the smaller of the max-width and max-long-edge limits.
-        var target = w
-        if (maxWidth != null && w > maxWidth) target = maxWidth
-        if (maxEdge != null && maxOf(w, h) > maxEdge) target = minOf(target, w * maxEdge / maxOf(w, h))
+        val (tw, th) = Sizing.target(w, h, spec)
         val needsJpeg = forceJpeg && mime != "image/jpeg"
-        if (target == w && rotation == 0 && !needsJpeg) return Encoded(original, w, h, mime)
+        if (spec.original || (tw == w && rotation == 0 && !needsJpeg)) return Encoded(original, w, h, mime)
 
-        var sample = 1
-        while (w / (sample * 2) >= target) sample *= 2
+        val sample = Sizing.sampleSize(maxOf(w, h), maxOf(tw, th))
         val bmp = BitmapFactory.decodeByteArray(original, 0, original.size,
             BitmapFactory.Options().apply { inSampleSize = sample })
-            ?: throw ApiError(500, "capture_failed", "Could not decode image")
+            ?: throw ApiError(500, "internal_error", "Could not decode image")
         val m = Matrix()
         if (rotation != 0) m.postRotate(rotation.toFloat())
         val rotatedW = if (rotation % 180 != 0) bmp.height else bmp.width
-        val scale = target.toFloat() / rotatedW
+        val scale = tw.toFloat() / rotatedW
         if (scale < 1f) m.postScale(scale, scale)
         val out = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
         val bos = ByteArrayOutputStream()
-        out.compress(Bitmap.CompressFormat.JPEG, quality, bos)
+        out.compress(Bitmap.CompressFormat.JPEG, spec.quality, bos)
         val res = Encoded(bos.toByteArray(), out.width, out.height, "image/jpeg")
         if (out !== bmp) out.recycle()
         bmp.recycle()
@@ -91,7 +84,7 @@ object ImageUtil {
 
 class CameraCapture(private val context: Context, private val owner: LifecycleOwner) {
 
-    suspend fun snapshot(rear: Boolean, flash: Boolean, maxWidth: Int?): Encoded {
+    suspend fun snapshot(rear: Boolean, flash: Boolean, spec: Sizing.Spec): Encoded {
         val km = context.getSystemService(KeyguardManager::class.java)
         if (km.isDeviceLocked) throw ApiError(409, "device_locked", "Phone is locked. Unlock it, then retry.")
 
@@ -121,7 +114,7 @@ class CameraCapture(private val context: Context, private val owner: LifecycleOw
             } finally {
                 withContext(Dispatchers.Main) { provider.unbind(capture) }
             }
-            return ImageUtil.prepare(file.readBytes(), "image/jpeg", maxWidth)
+            return ImageUtil.prepare(file.readBytes(), "image/jpeg", spec)
         } finally {
             file.delete()
         }

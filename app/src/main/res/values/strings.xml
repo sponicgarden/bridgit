@@ -1,3 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shared strings. Each screen keeps its own strings in strings_<screen>.xml. -->
 <resources>
     <string name="app_name">Bridget</string>
+
+    <!-- Notification channels (UI-21) -->
+    <string name="channel_listener">Listener</string>
+    <string name="channel_listener_desc">Shown while Bridget listens for your agents</string>
+    <string name="channel_capture">Captures</string>
+    <string name="channel_capture_desc">Shown every time an agent uses the camera or microphone</string>
+
+    <!-- Listener notification (UI-22) -->
+    <string name="notif_listening">Bridget is listening</string>
+    <string name="notif_waiting_tailscale">Bridget is waiting for Tailscale</string>
+    <string name="notif_not_reachable">Agents can\'t reach the phone until Tailscale is on</string>
+    <string name="notif_last_request">%1$s · %2$s</string>
+    <string name="notif_capture_sub">Logged in Bridget\'s activity</string>
+    <string name="notif_taking_photo">%1$s is taking a photo</string>
+    <string name="notif_recording">%1$s is recording audio (%2$d s)</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_open">Open</string>
+
+    <!-- Capabilities (UI-18) -->
+    <string name="cap_status">Status</string>
+    <string name="cap_status_desc">Health, capabilities, guide</string>
+    <string name="cap_camera">Camera</string>
+    <string name="cap_camera_desc">Photos when an agent asks</string>
+    <string name="cap_mic">Microphone</string>
+    <string name="cap_mic_desc">Audio clips when an agent asks</string>
+    <string name="cap_gallery">Gallery</string>
+    <string name="cap_gallery_desc">Find and send photos from your gallery</string>
+    <string name="cap_log">Log</string>
+    <string name="cap_log_desc">Agents can read the activity log</string>
+
+    <!-- Shared -->
+    <string name="nav_home">Home</string>
+    <string name="nav_agents">Agents</string>
+    <string name="nav_activity">Activity</string>
+    <string name="nav_more">More</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">OK</string>
 </resources>

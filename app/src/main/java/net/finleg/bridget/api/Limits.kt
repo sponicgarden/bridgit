@@ -1,0 +1,185 @@
+package net.finleg.bridget.api
+
+import org.json.JSONObject
+
+/**
+ * Sliding one-minute windows (SEC-06, SEC-07, LOG-11). Keys are free-form
+ * ("ip:100.1.2.3", "agent:a1b2c3"). Pure Kotlin with an injectable clock.
+ */
+class RateLimiter(private val clock: () -> Long = System::currentTimeMillis, private val windowMs: Long = 60_000) {
+    private val hits = HashMap<String, ArrayDeque<Long>>()
+
+    /** Records a hit and returns true if it's within [limit] for the window; otherwise records nothing. */
+    @Synchronized
+    fun tryAcquire(key: String, limit: Int): Boolean {
+        val q = prune(key)
+        if (q.size >= limit) return false
+        q.addLast(clock()); return true
+    }
+
+    @Synchronized
+    fun record(key: String) { prune(key).addLast(clock()) }
+
+    @Synchronized
+    fun count(key: String): Int = prune(key).size
+
+    /** Seconds until the oldest hit in the window expires (for `retry_after_s`). */
+    @Synchronized
+    fun retryAfterS(key: String): Int {
+        val q = prune(key)
+        if (q.isEmpty()) return 0
+        return (((q.first() + windowMs) - clock()) / 1000 + 1).toInt().coerceAtLeast(1)
+    }
+
+    private fun prune(key: String): ArrayDeque<Long> {
+        val q = hits.getOrPut(key) { ArrayDeque() }
+        val cutoff = clock() - windowMs
+        while (q.isNotEmpty() && q.first() <= cutoff) q.removeFirst()
+        return q
+    }
+
+    companion object {
+        const val AUTH_FAILS_PER_IP = 5          // SEC-06
+        const val CAPTURES_PER_AGENT = 10        // SEC-07
+        const val CAPTURES_PER_IP = 30           // SEC-07
+        const val NOTES_PER_AGENT = 60           // LOG-11
+    }
+}
+
+/** Counts open `wait` requests (SEC-08a): 4 per agent, 32 in total. */
+class WaitGate(private val perAgent: Int = 4, private val total: Int = 32) {
+    private val open = HashMap<String, Int>()
+    private var sum = 0
+
+    @Synchronized
+    fun enter(agentId: String): Boolean {
+        val n = open[agentId] ?: 0
+        if (n >= perAgent || sum >= total) return false
+        open[agentId] = n + 1; sum++; return true
+    }
+
+    @Synchronized
+    fun exit(agentId: String) {
+        val n = open[agentId] ?: return
+        if (n <= 1) open.remove(agentId) else open[agentId] = n - 1
+        sum--
+    }
+}
+
+/**
+ * Idempotency-Key handling (API-13), kept in memory and scoped per agent.
+ * A repeat of a finished request returns the stored response. Small JSON results
+ * are kept 24 h. Media results are kept only [mediaKeepMs] (15 min) because
+ * captures are not kept (SEC-13); after that a repeat gets `idempotency_expired`,
+ * so it still never captures twice within 24 h. Lost if the process restarts.
+ */
+class IdempotencyCache(private val clock: () -> Long = System::currentTimeMillis,
+                       private val keepMs: Long = 24 * 3600_000L, private val mediaKeepMs: Long = 15 * 60_000L,
+                       private val maxEntries: Int = 2_000) {
+    class Stored(val status: Int, val contentType: String, val body: ByteArray?, val headers: Map<String, String>,
+                 val doneAt: Long)
+
+    sealed class Claim {
+        object New : Claim()
+        object Running : Claim()
+        class Done(val stored: Stored) : Claim()
+        object Expired : Claim()
+    }
+
+    private val running = HashSet<String>()
+    private val done = LinkedHashMap<String, Stored>()
+
+    /** Atomically reserves (agent, key) before the work starts. */
+    @Synchronized
+    fun claim(agentId: String, key: String): Claim {
+        prune()
+        val k = "$agentId\u0000$key"
+        done[k]?.let { return if (it.body == null) Claim.Expired else Claim.Done(it) }
+        if (k in running) return Claim.Running
+        running += k
+        return Claim.New
+    }
+
+    /** Stores the outcome. [isMedia] responses lose their body after 15 minutes. */
+    @Synchronized
+    fun finish(agentId: String, key: String, status: Int, contentType: String, body: ByteArray,
+               headers: Map<String, String>, isMedia: Boolean) {
+        val k = "$agentId\u0000$key"
+        running -= k
+        // Server errors are not remembered: a retry should really retry.
+        if (status >= 500) return
+        done[k] = Stored(status, contentType, body, headers, clock()).also { if (isMedia) mediaKeys += k }
+        while (done.size > maxEntries) done.remove(done.keys.first())
+    }
+
+    @Synchronized
+    fun abandon(agentId: String, key: String) { running -= "$agentId\u0000$key" }
+
+    private val mediaKeys = HashSet<String>()
+
+    private fun prune() {
+        val now = clock()
+        val it = done.entries.iterator()
+        while (it.hasNext()) {
+            val e = it.next()
+            val v = e.value
+            if (now - v.doneAt > keepMs) { it.remove(); mediaKeys -= e.key }
+            else if (e.key in mediaKeys && v.body != null && now - v.doneAt > mediaKeepMs)
+                e.setValue(Stored(v.status, v.contentType, null, emptyMap(), v.doneAt))
+        }
+    }
+
+    companion object {
+        val KEY_RE = Regex("^[A-Za-z0-9_-]{8,128}$")
+    }
+}
+
+/** Image sizing presets (API-10). Pure maths, unit-tested. */
+object Sizing {
+    data class Spec(val maxEdge: Int?, val maxWidth: Int?, val quality: Int, val original: Boolean = false)
+
+    val PRESETS = mapOf(
+        "agent" to Spec(1568, null, 85),
+        "thumb" to Spec(512, null, 75),
+        "large" to Spec(2560, null, 90),
+        "original" to Spec(null, null, 100, original = true),
+    )
+
+    /**
+     * Resolves `size`, `max_edge_px`, `max_width_px` and `quality` from query or body values.
+     * Explicit values win over the preset. Throws [ApiError] invalid_parameter on bad input.
+     */
+    fun resolve(get: (String) -> Any?, default: String): Spec {
+        val size = (get("size") as? String) ?: default
+        val base = PRESETS[size] ?: throw ErrorCatalog.error("invalid_parameter", "size must be agent, thumb, large or original")
+        fun int(name: String, min: Int, max: Int): Int? {
+            val v = get(name) ?: return null
+            if (v == JSONObject.NULL) return null
+            val n = when (v) { is Int -> v; is Long -> v.toInt(); is String -> v.toIntOrNull(); else -> null }
+            if (n == null || n < min || n > max) throw ErrorCatalog.error("invalid_parameter", "$name must be $min to $max")
+            return n
+        }
+        val edge = int("max_edge_px", 64, 20_000)
+        val width = int("max_width_px", 64, 20_000)
+        val q = int("quality", 40, 100)
+        if (edge == null && width == null && q == null) return base
+        return Spec(edge ?: if (width != null) null else base.maxEdge, width, q ?: if (base.original) 90 else base.quality)
+    }
+
+    /** Target (width, height) for an image of [w]x[h] under [spec]; never upscales. */
+    fun target(w: Int, h: Int, spec: Spec): Pair<Int, Int> {
+        if (spec.original || w <= 0 || h <= 0) return w to h
+        var scale = 1.0
+        spec.maxEdge?.let { e -> val long = maxOf(w, h); if (long > e) scale = minOf(scale, e.toDouble() / long) }
+        spec.maxWidth?.let { mw -> if (w > mw) scale = minOf(scale, mw.toDouble() / w) }
+        if (scale >= 1.0) return w to h
+        return maxOf(1, Math.round(w * scale).toInt()) to maxOf(1, Math.round(h * scale).toInt())
+    }
+
+    /** Largest power-of-two decode sample that still leaves the decoded image at least the target size. */
+    fun sampleSize(srcLong: Int, targetLong: Int): Int {
+        var s = 1
+        while (targetLong > 0 && srcLong / (s * 2) >= targetLong) s *= 2
+        return s
+    }
+}

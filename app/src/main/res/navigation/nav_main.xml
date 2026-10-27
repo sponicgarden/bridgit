@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_main"
+    app:startDestination="@id/home">
+
+    <fragment android:id="@+id/home" android:name="net.finleg.bridget.ui.home.HomeFragment" android:label="@string/nav_home" />
+    <fragment android:id="@+id/agents" android:name="net.finleg.bridget.ui.agents.AgentsFragment" android:label="@string/nav_agents" />
+    <fragment android:id="@+id/activity" android:name="net.finleg.bridget.ui.activity.ActivityFragment" android:label="@string/nav_activity" />
+    <fragment android:id="@+id/more" android:name="net.finleg.bridget.ui.more.MoreFragment" android:label="@string/nav_more" />
+
+    <fragment android:id="@+id/agentDetail" android:name="net.finleg.bridget.ui.agents.AgentDetailFragment">
+        <argument android:name="agentId" app:argType="string" />
+    </fragment>
+    <!-- Full-screen flows (no bottom bar). agentId set = show the setup prompt for that agent (rotate / resume). -->
+    <fragment android:id="@+id/addAgent" android:name="net.finleg.bridget.ui.addagent.AddAgentFragment">
+        <argument android:name="agentId" app:argType="string" app:nullable="true" android:defaultValue="@null" />
+    </fragment>
+    <fragment android:id="@+id/pairCode" android:name="net.finleg.bridget.ui.addagent.PairCodeFragment" />
+    <fragment android:id="@+id/features" android:name="net.finleg.bridget.ui.more.FeaturesFragment" />
+    <fragment android:id="@+id/access" android:name="net.finleg.bridget.ui.more.AccessFragment" />
+    <fragment android:id="@+id/settings" android:name="net.finleg.bridget.ui.more.SettingsFragment" />
+    <fragment android:id="@+id/firstRun" android:name="net.finleg.bridget.ui.firstrun.FirstRunFragment" />
+</navigation>
