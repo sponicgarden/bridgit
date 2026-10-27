@@ -22,6 +22,10 @@ data class EndpointSpec(
     val example: String,
     val returns: String,
     val errors: List<String> = emptyList(),
+    /** AGT-15: only agents with the Developer switch; checked before anything else, including replays. */
+    val developerOnly: Boolean = false,
+    /** Body fields never copied into the log, only their length (report text, notes, images). */
+    val privateFields: Set<String> = emptySet(),
 ) {
     val fullPath get() = "/v1$path"
 }
@@ -126,6 +130,7 @@ object Endpoints {
         example = "GET /v1/audit?limit=50", returns = "entries[] (same shape as /v1/log)")
 
     val FEEDBACK_LIST = EndpointSpec("GET", "/feedback", "feedback", "Bug reports and feature requests filed on the phone (developer agents only)",
+        developerOnly = true,
         query = listOf(
             Param("status", "string", "new, seen, in_progress, fixed, wont_fix, duplicate, confirmed, reopened"),
             Param("kind", "string", "bug or feature", enum = listOf("bug", "feature")),
@@ -136,17 +141,18 @@ object Endpoints {
         example = "GET /v1/feedback?status=new", returns = "reports[id, number, kind, status, first_line, created_at, updated_at, no_autofix, image_count, filed_by]",
         errors = listOf("forbidden", "invalid_parameter", "too_many_waits"))
     val FEEDBACK_GET = EndpointSpec("GET", "/feedback/{id}", "feedback", "One report with its text, images, attached log and history (developer agents only; marks a new report seen)",
+        developerOnly = true,
         media = true, query = sizing.filter { it.name != "raw" },
         example = "GET /v1/feedback/7", returns = "report: description, no_autofix, context, images[data_base64], log[], history[]",
         errors = listOf("forbidden", "not_found"))
     val FEEDBACK_STATUS = EndpointSpec("POST", "/feedback/{id}/status", "feedback", "Move a report: in_progress, fixed, wont_fix or duplicate (developer agents only; FBK-11a)",
-        idempotent = true,
+        idempotent = true, developerOnly = true, privateFields = setOf("note"),
         body = listOf(Param("status", "string", "in_progress, fixed, wont_fix or duplicate", required = true),
             Param("note", "string", "Short note shown to Rahul, e.g. \"Fix in PR #412\" (500 chars)")),
         example = "POST /v1/feedback/7/status {\"status\":\"in_progress\",\"note\":\"Looking at it\"}", returns = "the report summary",
         errors = listOf("forbidden", "not_found", "invalid_parameter"))
     val FEEDBACK_POST = EndpointSpec("POST", "/feedback", "feedback", "File a bug report or feature request yourself (any agent; images from developer agents only)",
-        idempotent = true,
+        idempotent = true, privateFields = setOf("description", "images"),
         body = listOf(Param("kind", "string", "bug or feature", required = true, enum = listOf("bug", "feature")),
             Param("description", "string", "What happened, up to 10,000 characters", required = true),
             Param("no_autofix", "boolean", "true = leave it for a person"),

@@ -40,6 +40,7 @@ class FeedbackModule(app: BridgeApp) : Capability(app) {
     private fun mapError(e: FeedbackError): Nothing = when (e.code) {
         "not_found" -> throw ErrorCatalog.error("not_found", e.message ?: "No such report.")
         "rate_limited" -> throw ErrorCatalog.error("rate_limited", e.message ?: "Too many reports.", mapOf("retry_after_s" to 3600))
+        "internal" -> throw ErrorCatalog.error("internal_error", e.message ?: "The report couldn't be saved.")
         else -> throw ErrorCatalog.error("invalid_parameter", e.message ?: "Bad report.")
     }
 
@@ -54,15 +55,23 @@ class FeedbackModule(app: BridgeApp) : Capability(app) {
             val since = query("since")?.let { LogQuery.iso(it) ?: throw ErrorCatalog.error("invalid_parameter", "since must be an ISO time.") }
             val limit = query("limit")?.let { it.toIntOrNull()?.takeIf { n -> n in 1..100 } ?: throw ErrorCatalog.error("invalid_parameter", "limit must be 1 to 100.") } ?: 50
             val wait = query("wait")?.let { it.toIntOrNull()?.takeIf { n -> n in 0..55 } ?: throw ErrorCatalog.error("invalid_parameter", "wait must be 0 to 55.") } ?: 0
+            if (wait > 0 && since == null) throw ErrorCatalog.error("invalid_parameter", "wait needs since (an ISO time).")
+            // Read the change counter before querying, so a report filed in between is never missed.
+            var seen = app.feedback.changed.value
             var list = app.feedback.list(status, kind, since, limit)
             if (list.isEmpty() && wait > 0) {
-                if (since == null) throw ErrorCatalog.error("invalid_parameter", "wait needs since (an ISO time).")
                 if (!api.waits.enter(agent!!.id)) throw ErrorCatalog.error("too_many_waits", "At most 4 open waits per agent.")
                 try {
-                    val seen = app.feedback.changed.value
-                    withTimeoutOrNull(wait * 1000L) { app.feedback.changed.first { it > seen } }
-                    list = app.feedback.list(status, kind, since, limit)
+                    withTimeoutOrNull(wait * 1000L) {
+                        while (list.isEmpty()) {
+                            app.feedback.changed.first { it > seen }
+                            seen = app.feedback.changed.value
+                            list = app.feedback.list(status, kind, since, limit)
+                        }
+                    }
                 } finally { api.waits.exit(agent!!.id) }
+                // The Developer switch may have been turned off (or the agent removed) during the wait.
+                requireDeveloper()
             }
             params.put("returned", list.size)
             Reply.Json(JSONObject().put("reports", JSONArray(list.map { it.summaryJson(::isoAt) })))

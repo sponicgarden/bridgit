@@ -80,6 +80,7 @@ class BridgeApp : Application() {
             description = getString(R.string.channel_capture_desc); setSound(null, null)
         })
         FeedbackNotifier.createChannel(this)
+        net.finleg.bridget.update.UpdateInstaller.cleanStale(this) // UPD-05: downloads older than an hour go
     }
 
     /** PRD-05: captures need Bridget's notifications on, including the capture channel. */

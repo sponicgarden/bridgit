@@ -50,16 +50,29 @@ class FeedbackStore(private val context: Context, private val clock: () -> Long 
         }
         val now = clock()
         val held = noAutofix || kind == ReportKind.FEATURE // features are always held for review (FBK-04)
-        val id = db.insertOrThrow("reports", null, ContentValues().apply {
+        val written = mutableListOf<File>()
+        db.beginTransaction()
+        val id: Long
+        try {
+        id = db.insertOrThrow("reports", null, ContentValues().apply {
             put("kind", kind.id); put("description", text); put("no_autofix", if (held) 1 else 0)
             put("status", ReportStatus.NEW.id); put("created_at", now); put("updated_at", now)
             put("capture_source", captureSource); put("agent_id", agentId); put("agent", agent)
             put("context_json", ctx.toString()); put("log_json", log.toString()); put("images_json", "[]")
             put("last_by", agent ?: "Rahul")
         })
-        val names = images.mapIndexed { i, bytes -> "$id-${i + 1}.jpg".also { File(dir, it).writeBytes(bytes) } }
+        val names = images.mapIndexed { i, bytes ->
+            "$id-${i + 1}.jpg".also { File(dir, it).apply { writeBytes(bytes); written += this } }
+        }
         db.update("reports", ContentValues().apply { put("images_json", JSONArray(names).toString()) }, "id = ?", arrayOf(id.toString()))
         addHistory(id, ReportStatus.NEW, agent ?: "Rahul", null, now)
+            db.setTransactionSuccessful()
+        } catch (e: Exception) {
+            written.forEach { it.delete() } // a failed save leaves no report and no stray screenshots
+            throw FeedbackError("internal", "The report couldn't be saved: ${e.javaClass.simpleName}")
+        } finally {
+            db.endTransaction()
+        }
         _changed.value = _changed.value + 1
         return get(id)!!
     }

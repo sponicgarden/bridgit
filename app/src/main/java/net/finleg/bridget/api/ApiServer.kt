@@ -136,6 +136,8 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                     }
                 }
                 app.agents.recordUse(agent!!.id, source)
+                if (spec.developerOnly && !agent!!.developer) throw ErrorCatalog.error("forbidden",
+                    "Only developer agents can read bug reports. Ask Rahul to turn on Developer for ${agent!!.name}.", mapOf("reason" to "developer_only"))
             }
             // Pairing has no key, but wrong codes count as failed sign-ins (SEC-06).
             if (spec.path == "/pair" && limiter.count("auth:$source") >= RateLimiter.AUTH_FAILS_PER_IP) throw authBlockedError(source)
@@ -144,7 +146,10 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                 bytesIn = bytes.size.toLong()
                 parseBody(bytes)
             } else JSONObject()
-            body.keys().forEach { k -> logParams.put(k, body.get(k)) }
+            body.keys().forEach { k ->
+                val v = body.get(k)
+                logParams.put(k, if (k in spec.privateFields) "[${(v as? org.json.JSONArray)?.length()?.let { "$it items" } ?: "${v.toString().length} chars"}]" else v)
+            }
             val r = Req(call, spec, agent, rid, source, body)
             req = r
 
