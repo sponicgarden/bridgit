@@ -66,7 +66,7 @@
             <com.google.android.material.chip.Chip
                 android:id="@+id/chip_agent"
                 app:chipBackgroundColor="@color/activity_filter_chip_bg"
-                style="@style/Widget.Material3.Chip.Filter"
+                style="@style/Widget.Bridget.FilterChip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checkable="true"
@@ -78,7 +78,7 @@
             <com.google.android.material.chip.Chip
                 android:id="@+id/chip_type"
                 app:chipBackgroundColor="@color/activity_filter_chip_bg"
-                style="@style/Widget.Material3.Chip.Filter"
+                style="@style/Widget.Bridget.FilterChip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checkable="true"
@@ -90,7 +90,7 @@
             <com.google.android.material.chip.Chip
                 android:id="@+id/chip_errors"
                 app:chipBackgroundColor="@color/activity_filter_chip_bg"
-                style="@style/Widget.Material3.Chip.Filter"
+                style="@style/Widget.Bridget.FilterChip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/activity_chip_errors" />
@@ -98,7 +98,7 @@
             <com.google.android.material.chip.Chip
                 android:id="@+id/chip_level"
                 app:chipBackgroundColor="@color/activity_filter_chip_bg"
-                style="@style/Widget.Material3.Chip.Filter"
+                style="@style/Widget.Bridget.FilterChip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:checkable="true"
@@ -110,7 +110,7 @@
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/chip_live"
-                style="@style/Widget.Material3.Chip.Filter"
+                style="@style/Widget.Bridget.FilterChip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/activity_chip_live"
