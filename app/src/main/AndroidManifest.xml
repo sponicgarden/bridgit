@@ -24,6 +24,11 @@
     <!-- Lets Bridget open the Tailscale app from Home and first run. -->
     <queries>
         <package android:name="com.tailscale.ipn" />
+        <!-- CAP-31/41: interaction link controls may open an app by package (its launch intent). -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <application
@@ -58,6 +63,18 @@
         </service>
 
         <receiver android:name=".feedback.FeedbackActionReceiver" android:exported="false" />
+
+        <!-- CAP-33: answers questions from notification buttons and inline reply. -->
+        <receiver android:name=".interact.InteractionActionReceiver" android:exported="false" />
+
+        <!-- CAP-41: opens an interaction link from a notification action (no trampolines). -->
+        <activity
+            android:name=".interact.LinkActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Bridget.Invisible" />
 
         <!-- UPD-04: shares only cacheDir/updates/ with the package installer. -->
         <provider

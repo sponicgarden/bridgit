@@ -34,8 +34,7 @@
                 android:paddingBottom="16dp">
 
                 <!-- Later phases add: Allow internet callbacks (Listener), the Screenshots section,
-                     Show question text on the lock screen / Log precise locations / Address lookup (Privacy),
-                     Questions/Notices/Files/Feedback channels, the Feedback section and Licences (About). -->
+                     Log precise locations / Address lookup (Privacy), Files/Feedback channels, the Feedback section and Licences (About). -->
 
                 <TextView style="@style/SettingsHeader" android:text="@string/settings_listener" />
                 <include android:id="@+id/alwaysOn" layout="@layout/settings_switch_row" />
@@ -44,6 +43,8 @@
 
                 <TextView style="@style/SettingsHeader" android:text="@string/settings_privacy" />
                 <include android:id="@+id/logVisibility" layout="@layout/settings_row" />
+                <include android:id="@+id/lockscreenText" layout="@layout/settings_switch_row" />
+                <include android:id="@+id/speakUrgent" layout="@layout/settings_switch_row" />
 
                 <TextView style="@style/SettingsHeader" android:text="@string/settings_log" />
                 <include android:id="@+id/keep" layout="@layout/settings_row" />
@@ -53,6 +54,8 @@
                 <TextView style="@style/SettingsHeader" android:text="@string/settings_notifications" />
                 <include android:id="@+id/notifListener" layout="@layout/settings_row" />
                 <include android:id="@+id/notifCapture" layout="@layout/settings_row" />
+                <include android:id="@+id/notifQuestions" layout="@layout/settings_row" />
+                <include android:id="@+id/notifNotices" layout="@layout/settings_row" />
 
                 <TextView style="@style/SettingsHeader" android:text="@string/settings_appearance" />
                 <include android:id="@+id/theme" layout="@layout/settings_row" />
