@@ -101,7 +101,7 @@ class StatusModule(app: BridgeApp) : Capability(app) {
         endpoint(Endpoints.PAIR) {
             if (!app.pairing.isOpen()) throw ErrorCatalog.error("pairing_closed", "No pairing window is open. Ask Rahul to open one (Add agent, then Pair with code).")
             val w = app.pairing.redeem(body.optString("code", ""))
-                ?: throw ErrorCatalog.error("unauthorized", "Wrong pairing code.")
+                ?: run { api.recordAuthFailure(source); throw ErrorCatalog.error("unauthorized", "Wrong pairing code.") }
             message = "${w.agentName} fetched its key with a pairing code"
             data = JSONObject().put("agent_id", w.agentId)
             Reply.Json(JSONObject().put("key", w.key).put("agent", w.agentName).put("base_url", app.address().baseUrl))
@@ -122,11 +122,11 @@ private fun Capability.captureBlocked(app: BridgeApp, permission: String, ready:
 
 private suspend fun <T> ApiServer.withSensor(lock: Mutex, note: String, block: suspend () -> T): T {
     if (!lock.tryLock()) throw ErrorCatalog.error("sensor_busy", "A capture is already running. Retry in a few seconds.")
+    val token = service.captureStarted(note)
     try {
-        service.showCapture(note)
         return block()
     } finally {
-        service.showCapture(null)
+        service.captureEnded(token)
         lock.unlock()
     }
 }
@@ -185,7 +185,7 @@ class MicModule(app: BridgeApp, private val registry: Registry) : Capability(app
     override fun Route.install(api: ApiServer) = with(api) {
         endpoint(Endpoints.MIC) {
             val d = body.opt("duration_seconds")
-            val secs = (d as? Int) ?: (d as? Long)?.toInt()
+            val secs = (d as? Int) ?: (d as? Long)?.takeIf { it in 1..120 }?.toInt()
             if (secs == null || secs < 1 || secs > 120) throw ErrorCatalog.error("invalid_parameter", "duration_seconds must be a whole number from 1 to 120.")
             requireUsable()
             val started = System.currentTimeMillis()
@@ -313,8 +313,10 @@ class LogModule(app: BridgeApp) : Capability(app) {
     private val noteLimiter = net.finleg.bridget.api.RateLimiter()
 
     /** Agent ids this caller may read, or null for everything (developer agents always see all). */
-    private fun allowed(r: Req): List<String>? =
-        if (r.agent?.developer == true || app.settings.logVisibility == "all") null else listOf(r.agent!!.id)
+    private fun allowed(r: Req): List<String>? {
+        val current = r.agent?.let { app.agents.get(it.id) } ?: return emptyList()
+        return if (current.developer || app.settings.logVisibility == "all") null else listOf(current.id)
+    }
 
     private fun parse(r: Req, extra: Map<String, String> = emptyMap()): LogQuery {
         val p = r.call.request.queryParameters.entries().associate { it.key to (it.value.firstOrNull() ?: "") }.toMutableMap()
@@ -337,7 +339,10 @@ class LogModule(app: BridgeApp) : Capability(app) {
             val entries = if (wait > 0) {
                 if (!q.ascending || q.sinceId == null) throw ErrorCatalog.error("invalid_parameter", "Tail mode needs order=asc and since=<log id>.")
                 if (!api.waits.enter(agent!!.id)) throw ErrorCatalog.error("too_many_waits", "At most 4 open waits per agent.")
-                try { app.log.waitFor(q, q.sinceId, wait * 1000L) } finally { api.waits.exit(agent!!.id) }
+                val found = try { app.log.waitFor(q, q.sinceId, wait * 1000L) } finally { api.waits.exit(agent!!.id) }
+                // The setting or the Developer switch may have changed during the wait: filter again with the current rule.
+                val now = allowed(this)
+                if (now == null) found else found.filter { it.agentId in now }
             } else app.log.query(q)
             params.put("returned", entries.size)
             Reply.Json(JSONObject().put("entries", JSONArray(entries.map { json(it) }))

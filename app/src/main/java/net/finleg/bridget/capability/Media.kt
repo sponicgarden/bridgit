@@ -112,7 +112,8 @@ class CameraCapture(private val context: Context, private val owner: LifecycleOw
                     ?: throw ApiError(504, "capture_timeout", "Camera did not produce a photo in time")
                 outcome.exceptionOrNull()?.let { throw ApiError(409, "sensor_busy", "Capture failed: ${it.message}") }
             } finally {
-                withContext(Dispatchers.Main) { provider.unbind(capture) }
+                // Unbind even when the request was cancelled (client gone), or the camera stays held.
+                withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main) { provider.unbind(capture) }
             }
             return ImageUtil.prepare(file.readBytes(), "image/jpeg", spec)
         } finally {

@@ -68,26 +68,31 @@ class WaitGate(private val perAgent: Int = 4, private val total: Int = 32) {
 
 /**
  * Idempotency-Key handling (API-13), kept in memory and scoped per agent.
- * A repeat of a finished request returns the stored response. Small JSON results
- * are kept 24 h. Media results are kept only [mediaKeepMs] (15 min) because
- * captures are not kept (SEC-13); after that a repeat gets `idempotency_expired`,
- * so it still never captures twice within 24 h. Lost if the process restarts.
+ * Only successful (2xx) results are remembered: a failed request did nothing,
+ * so a retry should really retry. A repeat of a success within 24 h returns the
+ * stored response. Media bodies are kept at most [mediaKeepMs] (15 min, SEC-13)
+ * and within a total byte budget; once a body is dropped, a small "done" marker
+ * stays for the full 24 h, so a repeat gets `idempotency_expired` and never
+ * captures twice. Markers are never evicted early; when [maxEntries] is reached,
+ * new keys are refused instead. Everything is lost if the process restarts.
  */
 class IdempotencyCache(private val clock: () -> Long = System::currentTimeMillis,
                        private val keepMs: Long = 24 * 3600_000L, private val mediaKeepMs: Long = 15 * 60_000L,
-                       private val maxEntries: Int = 2_000) {
+                       private val maxEntries: Int = 20_000, private val maxBodyBytes: Long = 48L * 1024 * 1024) {
     class Stored(val status: Int, val contentType: String, val body: ByteArray?, val headers: Map<String, String>,
-                 val doneAt: Long)
+                 val doneAt: Long, val isMedia: Boolean)
 
     sealed class Claim {
         object New : Claim()
         object Running : Claim()
         class Done(val stored: Stored) : Claim()
         object Expired : Claim()
+        object Full : Claim()
     }
 
     private val running = HashSet<String>()
     private val done = LinkedHashMap<String, Stored>()
+    private var bodyBytes = 0L
 
     /** Atomically reserves (agent, key) before the work starts. */
     @Synchronized
@@ -96,36 +101,41 @@ class IdempotencyCache(private val clock: () -> Long = System::currentTimeMillis
         val k = "$agentId\u0000$key"
         done[k]?.let { return if (it.body == null) Claim.Expired else Claim.Done(it) }
         if (k in running) return Claim.Running
+        if (done.size + running.size >= maxEntries) return Claim.Full
         running += k
         return Claim.New
     }
 
-    /** Stores the outcome. [isMedia] responses lose their body after 15 minutes. */
+    /** Stores a 2xx outcome; anything else just releases the claim. */
     @Synchronized
     fun finish(agentId: String, key: String, status: Int, contentType: String, body: ByteArray,
                headers: Map<String, String>, isMedia: Boolean) {
         val k = "$agentId\u0000$key"
         running -= k
-        // Server errors are not remembered: a retry should really retry.
-        if (status >= 500) return
-        done[k] = Stored(status, contentType, body, headers, clock()).also { if (isMedia) mediaKeys += k }
-        while (done.size > maxEntries) done.remove(done.keys.first())
+        if (status !in 200..299) return
+        prune()
+        // Keep the body only while it fits the budget; the done marker is kept either way.
+        val keepBody = bodyBytes + body.size <= maxBodyBytes
+        if (keepBody) bodyBytes += body.size
+        done[k] = Stored(status, contentType, if (keepBody) body else null, if (keepBody) headers else emptyMap(), clock(), isMedia)
     }
 
     @Synchronized
     fun abandon(agentId: String, key: String) { running -= "$agentId\u0000$key" }
 
-    private val mediaKeys = HashSet<String>()
-
-    private fun prune() {
+    /** Drops expired entries and media bodies. Also called from a timer so idle memory is freed. */
+    @Synchronized
+    fun prune() {
         val now = clock()
         val it = done.entries.iterator()
         while (it.hasNext()) {
             val e = it.next()
             val v = e.value
-            if (now - v.doneAt > keepMs) { it.remove(); mediaKeys -= e.key }
-            else if (e.key in mediaKeys && v.body != null && now - v.doneAt > mediaKeepMs)
-                e.setValue(Stored(v.status, v.contentType, null, emptyMap(), v.doneAt))
+            if (now - v.doneAt > keepMs) { it.remove(); bodyBytes -= v.body?.size ?: 0 }
+            else if (v.isMedia && v.body != null && now - v.doneAt > mediaKeepMs) {
+                bodyBytes -= v.body.size
+                e.setValue(Stored(v.status, v.contentType, null, emptyMap(), v.doneAt, true))
+            }
         }
     }
 
@@ -155,7 +165,7 @@ object Sizing {
         fun int(name: String, min: Int, max: Int): Int? {
             val v = get(name) ?: return null
             if (v == JSONObject.NULL) return null
-            val n = when (v) { is Int -> v; is Long -> v.toInt(); is String -> v.toIntOrNull(); else -> null }
+            val n = when (v) { is Int -> v; is Long -> v.takeIf { it in min..max }?.toInt(); is String -> v.toIntOrNull(); else -> null }
             if (n == null || n < min || n > max) throw ErrorCatalog.error("invalid_parameter", "$name must be $min to $max")
             return n
         }

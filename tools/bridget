@@ -97,6 +97,20 @@ def send(cfg, req, host, port):
     return b"".join(chunks)
 
 
+def complete(raw):
+    """True if the whole HTTP response arrived (Content-Length matched, or the final chunk was seen)."""
+    head, sep, body = raw.partition(b"\r\n\r\n")
+    if not sep:
+        return False
+    h = head.decode("latin-1").lower()
+    for line in h.split("\r\n")[1:]:
+        if line.startswith("content-length:"):
+            return len(body) >= int(line.split(":", 1)[1])
+        if line.startswith("transfer-encoding:") and "chunked" in line:
+            return body.endswith(b"0\r\n\r\n")
+    return True
+
+
 def main(argv):
     if len(argv) < 2 or argv[0] in ("-h", "--help"):
         print(__doc__)
@@ -126,15 +140,14 @@ def main(argv):
     for attempt in (1, 2):
         try:
             raw = send(cfg, req, host, port)
+            if not complete(raw):
+                raise IOError("the response was cut off")
+            break
         except Exception as e:
             if attempt == 2:
                 print(f"bridget: {e}", file=sys.stderr)
                 return 1
-            time.sleep(2)
-            continue
-        if raw or attempt == 2:
-            break
-        time.sleep(2)
+            time.sleep(2)  # retried once with the same Idempotency-Key
 
     head, _, payload = raw.partition(b"\r\n\r\n")
     if not head:

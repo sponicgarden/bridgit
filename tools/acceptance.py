@@ -353,7 +353,8 @@ def main():
         r1 = c.call("POST", "/log", T, {"message": msg}, {"Idempotency-Key": k}); expect(r1, 201)
         r2 = c.call("POST", "/log", T, {"message": msg}, {"Idempotency-Key": k}); expect(r2, 201)
         assert r2.headers.get("idempotent-replay") == "true", "no replay header"
-        assert r2.json()["request_id"] == r1.json()["request_id"], "replay body differs"
+        assert r2.json().get("idempotent_replay_of") == r1.json()["request_id"], "replay doesn't point at the first request"
+        assert r2.json()["request_id"] == r2.headers.get("x-request-id") != r1.json()["request_id"], "replay request_id must match its own header"
         time.sleep(2)
         n = sum(1 for e in c.call("GET", "/log?channel=agent&agent=me&limit=50", T).json()["entries"] if e["message"] == msg)
         assert n == 1, f"note written {n} times"

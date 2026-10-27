@@ -92,6 +92,9 @@ class LogLogicTest {
         assertEquals(200, r.getString("long").length)
         assertEquals("[redacted]", r.getJSONObject("nested").getString("secret"))
         assertEquals("[object]", r.getJSONObject("nested").getString("deeper"))
+        // A key used as a field NAME is scrubbed too.
+        val named = Redactor.params(JSONObject().put(k, 1).put("x", 2)).toString()
+        assertFalse("key in a field name survived", named.contains(k))
     }
 
     @Test fun dataCap() {

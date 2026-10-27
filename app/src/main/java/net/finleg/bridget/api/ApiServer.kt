@@ -123,11 +123,8 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                     is AuthResult.Ok -> agent = r.agent
                     else -> {
                         // SEC-06: only requests without a valid key are blocked by the per-IP failure count.
-                        val ipKey = "auth:$source"
-                        if (limiter.count(ipKey) >= RateLimiter.AUTH_FAILS_PER_IP)
-                            throw ErrorCatalog.error("rate_limited", "Too many failed sign-ins from this address. Wait a minute.",
-                                mapOf("retry_after_s" to limiter.retryAfterS(ipKey)))
-                        limiter.record(ipKey)
+                        // tryAcquire checks and records in one step, so concurrent bad keys can't slip past.
+                        if (!limiter.tryAcquire("auth:$source", RateLimiter.AUTH_FAILS_PER_IP)) throw authBlockedError(source)
                         if (r is AuthResult.Revoked) {
                             revokedReason = r.reason
                             throw ErrorCatalog.error("unauthorized",
@@ -140,15 +137,8 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                 }
                 app.agents.recordUse(agent!!.id, source)
             }
-            if (spec.capture) {
-                val a = agent!!
-                if (!limiter.tryAcquire("cap-agent:${a.id}", RateLimiter.CAPTURES_PER_AGENT))
-                    throw ErrorCatalog.error("rate_limited", "At most ${RateLimiter.CAPTURES_PER_AGENT} captures per minute per agent.",
-                        mapOf("retry_after_s" to limiter.retryAfterS("cap-agent:${a.id}")))
-                if (!limiter.tryAcquire("cap-ip:$source", RateLimiter.CAPTURES_PER_IP))
-                    throw ErrorCatalog.error("rate_limited", "At most ${RateLimiter.CAPTURES_PER_IP} captures per minute from one address.",
-                        mapOf("retry_after_s" to limiter.retryAfterS("cap-ip:$source")))
-            }
+            // Pairing has no key, but wrong codes count as failed sign-ins (SEC-06).
+            if (spec.path == "/pair" && limiter.count("auth:$source") >= RateLimiter.AUTH_FAILS_PER_IP) throw authBlockedError(source)
             val body = if (spec.method == "POST") {
                 val bytes = readBody(call)
                 bytesIn = bytes.size.toLong()
@@ -165,24 +155,43 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                     throw ErrorCatalog.error("invalid_parameter", "Idempotency-Key must be 8-128 letters, digits, - or _ (a UUID works).") }
                 logParams.put("idempotency", "key")
                 when (val c = idempotency.claim(agent!!.id, idemKey)) {
+                    is IdempotencyCache.Claim.Full -> { idemKey = null; throw ErrorCatalog.error("rate_limited", "Too many Idempotency-Keys in the last 24 h. Retry later.", mapOf("retry_after_s" to 60)) }
                     is IdempotencyCache.Claim.Running -> { idemKey = null; throw ErrorCatalog.error("in_progress", "A request with this Idempotency-Key is still running. Retry with the same key shortly.") }
                     is IdempotencyCache.Claim.Expired -> { idemKey = null; throw ErrorCatalog.error("idempotency_expired", "This Idempotency-Key was already used; its media result is no longer kept.") }
                     is IdempotencyCache.Claim.Done -> {
-                        val key = idemKey; idemKey = null
+                        idemKey = null
                         http = c.stored.status
-                        result = if (http < 400) "ok" else JSONObject(String(c.stored.body!!)).optString("error", "error")
                         logParams.put("replay", true)
                         c.stored.headers.forEach { (k, v) -> call.response.header(k, v) }
                         call.response.header("Idempotent-Replay", "true")
-                        r.bytesOut = c.stored.body!!.size.toLong()
-                        call.respondBytes(c.stored.body, ContentType.parse(c.stored.contentType), HttpStatusCode.fromValue(http))
-                        r.message = "replayed result for Idempotency-Key ${key.take(8)}…"
+                        // API-03: the replay gets its own request_id (matching its header and log entry);
+                        // the first request's id is kept as idempotent_replay_of.
+                        var body = c.stored.body!!
+                        if (c.stored.contentType.startsWith("application/json")) runCatching {
+                            val o = JSONObject(String(body))
+                            val first = o.optString("request_id")
+                            body = o.put("request_id", rid).put("idempotent_replay_of", first).toString().toByteArray()
+                            r.data = JSONObject().put("replay_of", first)
+                        }
+                        r.bytesOut = body.size.toLong()
+                        call.respondBytes(body, ContentType.parse(c.stored.contentType), HttpStatusCode.fromValue(http))
+                        r.message = "${agent!!.name}: replayed ${spec.method} ${spec.fullPath} (Idempotency-Key)"
                         return
                     }
                     IdempotencyCache.Claim.New -> {}
                 }
             }
 
+            // Capture limits are charged only for work that really runs (not for replays, SEC-07).
+            if (spec.capture) {
+                val a = agent!!
+                if (!limiter.tryAcquire("cap-agent:${a.id}", RateLimiter.CAPTURES_PER_AGENT))
+                    throw ErrorCatalog.error("rate_limited", "At most ${RateLimiter.CAPTURES_PER_AGENT} captures per minute per agent.",
+                        mapOf("retry_after_s" to limiter.retryAfterS("cap-agent:${a.id}")))
+                if (!limiter.tryAcquire("cap-ip:$source", RateLimiter.CAPTURES_PER_IP))
+                    throw ErrorCatalog.error("rate_limited", "At most ${RateLimiter.CAPTURES_PER_IP} captures per minute from one address.",
+                        mapOf("retry_after_s" to limiter.retryAfterS("cap-ip:$source")))
+            }
             val reply = r.block()
             val (status, ctype, bytes, headers) = render(reply, rid)
             http = status
@@ -196,7 +205,10 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
             idemKey?.let { k -> agent?.let { idempotency.finish(it.id, k, e.http, "application/json", body, emptyMap(), false) } }
             call.respondBytes(body, ContentType.Application.Json, HttpStatusCode.fromValue(e.http))
         } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (e is kotlinx.coroutines.CancellationException) {
+                idemKey?.let { k -> agent?.let { idempotency.abandon(it.id, k) } }
+                throw e
+            }
             http = 500; result = "internal_error"
             idemKey?.let { k -> agent?.let { idempotency.abandon(it.id, k) } }
             app.log.system("diagnostic", "crash", "Error in ${spec.fullPath}: ${e.javaClass.simpleName} at ${e.stackTrace.firstOrNull()}", level = "error")
@@ -218,6 +230,15 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                 data = (r?.data ?: JSONObject()).also { d -> revokedReason?.let { d.put("reason", it) } }.let { Redactor.params(it) }))
         }
     }
+
+    private fun authBlockedError(source: String) = ErrorCatalog.error("rate_limited",
+        "Too many failed sign-ins from this address. Wait a minute.", mapOf("retry_after_s" to limiter.retryAfterS("auth:$source")))
+
+    /** A wrong pairing code counts as a failed sign-in (SEC-06). */
+    fun recordAuthFailure(source: String) = limiter.record("auth:$source")
+
+    /** Frees expired idempotency results; called from the service's periodic check. */
+    fun maintenance() = idempotency.prune()
 
     private data class Rendered(val status: Int, val contentType: String, val bytes: ByteArray, val headers: Map<String, String>)
 

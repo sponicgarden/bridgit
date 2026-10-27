@@ -66,8 +66,12 @@ object Redactor {
     /** Copies [src] with secrets replaced, media dropped and strings truncated. Nested objects are flattened to 2 levels. */
     fun params(src: JSONObject, depth: Int = 0): JSONObject {
         val out = JSONObject()
-        for (k in src.keys()) {
-            val v = src.opt(k)
+        var n = 0
+        for (rawKey in src.keys()) {
+            if (++n > 40) { out.put("…", "${src.length() - 40} more"); break }
+            val v = src.opt(rawKey)
+            // Field names are agent input too: scrub and cap them like values.
+            val k = string(rawKey, 40)
             out.put(k, when {
                 SECRET_NAME.containsMatchIn(k) && k != "idempotency" -> "[redacted]"
                 MEDIA_NAME.containsMatchIn(k) && v is String -> "[${v.length} chars]"

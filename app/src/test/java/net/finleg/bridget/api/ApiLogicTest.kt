@@ -70,6 +70,18 @@ class ApiLogicTest {
         assertEquals("media body dropped after 15 min", IdempotencyCache.Claim.Expired, c.claim("a", "m"))
         c.claim("a", "e"); c.finish("a", "e", 500, "application/json", ByteArray(1), emptyMap(), isMedia = false)
         assertEquals("5xx is not remembered", IdempotencyCache.Claim.New, c.claim("a", "e"))
+        c.finish("a", "e", 422, "application/json", ByteArray(1), emptyMap(), isMedia = false)
+        assertEquals("4xx is not remembered (nothing was done)", IdempotencyCache.Claim.New, c.claim("a", "e"))
+        c.abandon("a", "e")
+        // Byte budget: a body that doesn't fit leaves only the done marker, so no second capture.
+        val small = IdempotencyCache(clock = { now }, maxBodyBytes = 5)
+        small.claim("a", "big"); small.finish("a", "big", 200, "image/jpeg", ByteArray(10), emptyMap(), isMedia = true)
+        assertEquals(IdempotencyCache.Claim.Expired, small.claim("a", "big"))
+        // Full: new keys are refused, existing markers are never evicted.
+        val tiny = IdempotencyCache(clock = { now }, maxEntries = 1)
+        tiny.claim("a", "k1"); tiny.finish("a", "k1", 200, "application/json", ByteArray(1), emptyMap(), isMedia = false)
+        assertEquals(IdempotencyCache.Claim.Full, tiny.claim("a", "k2"))
+        assertTrue(tiny.claim("a", "k1") is IdempotencyCache.Claim.Done)
         assertTrue(IdempotencyCache.KEY_RE.matches("123e4567-e89b-12d3-a456-426614174000"))
         assertFalse(IdempotencyCache.KEY_RE.matches("bad key!"))
     }

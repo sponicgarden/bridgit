@@ -114,6 +114,7 @@ class BridgeService : LifecycleService() {
         recheck.trySend("start")
         while (lifecycleScope.isActive) {
             val why = withTimeoutOrNull(RECHECK_MS) { recheck.receive() } ?: "periodic"
+            server?.maintenance()
             if (why != "start" && why != "periodic") delay(1500) // let the VPN settle after a change
             val addrs = tailscaleAddresses()
             val port = app.settings.port
@@ -156,7 +157,26 @@ class BridgeService : LifecycleService() {
     /** Asks for a re-check now (the port changed, or the UI wants a fresh state). */
     fun poke(reason: String) { recheck.trySend(reason) }
 
-    fun showCapture(note: String?) {
+    private val activeCaptures = LinkedHashMap<Long, String>()
+    private var nextCapture = 0L
+
+    /** A capture began; the notification names it until [captureEnded]. Camera and mic can overlap. */
+    @Synchronized
+    fun captureStarted(note: String): Long {
+        val t = ++nextCapture
+        activeCaptures[t] = note
+        showCaptures()
+        return t
+    }
+
+    @Synchronized
+    fun captureEnded(token: Long) {
+        activeCaptures.remove(token)
+        showCaptures()
+    }
+
+    private fun showCaptures() {
+        val note = activeCaptures.values.lastOrNull()
         captureNote = note
         app.updateListener { it.copy(capturing = note) }
         refreshNotification()

@@ -73,8 +73,9 @@ class LogStore(context: Context, private val retention: () -> Retention) {
      */
     suspend fun waitFor(q: LogQuery, afterId: Long, waitMs: Long): List<LogEntry> {
         val ask = q.copy(sinceId = afterId, ascending = true, cursor = null)
+        // Read the watermark before querying, so an entry written in between is never missed.
+        var seen = _latest.value
         query(ask).let { if (it.isNotEmpty()) return it }
-        var seen = afterId.coerceAtLeast(_latest.value)
         withTimeoutOrNull(waitMs) {
             while (true) {
                 _latest.first { it > seen }
