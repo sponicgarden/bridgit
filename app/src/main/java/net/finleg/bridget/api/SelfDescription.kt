@@ -166,7 +166,7 @@ object OpenApi {
         for (e in Endpoints.all) {
             val op = JSONObject().put("summary", e.summary).put("operationId", opId(e)).put("tags", JSONArray().put(e.capability))
             val params = JSONArray()
-            Regex("\\{(\\w+)}").findAll(e.path).forEach {
+            Regex("\\{(\\w+)\\}").findAll(e.path).forEach {
                 params.put(JSONObject().put("name", it.groupValues[1]).put("in", "path").put("required", true)
                     .put("schema", JSONObject().put("type", "string")))
             }
