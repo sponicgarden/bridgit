@@ -61,6 +61,7 @@ data class Interaction(
         .put("seen_at", seenAt?.let(iso) ?: JSONObject.NULL)
         .put("answer", answer ?: JSONObject.NULL).put("answered_at", answeredAt?.let(iso) ?: JSONObject.NULL)
         .put("closed_at", closedAt?.let(iso) ?: JSONObject.NULL)
+        .apply { if (kind == IKind.TEXT) put("length", streamText.length).put("done", streamDone) }
 }
 
 class InteractionError(val code: String, message: String) : Exception(message)
