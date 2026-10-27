@@ -18,6 +18,8 @@ written as "Almusca Device Bridge"), with these changes:
 | Gallery access | **Full** photo access (selected-photos mode still works and is reported) |
 | Spec questions 3-7 | Spec defaults: snapshots not saved to the gallery, 120 s mic cap, rear camera at 2048 px, 1,000-entry log kept on the phone |
 
+**For agents:** [`docs/scenarios.md`](docs/scenarios.md) lists everything you can do with Bridget, with exact calls and what works today vs. what's planned.
+
 ## Install
 
 1. Download the APK from the private GitHub release (`sponicgarden/bridget`,
