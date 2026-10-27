@@ -886,7 +886,7 @@ every request is logged (section 10).
 - **CAP-07 [Built]** `POST /v1/mic/record {"duration_seconds": 1-120}`
   (whole numbers; out of range is `invalid_parameter`, never clamped).
   Returns M4A (AAC, 44.1 kHz mono, 96 kbps).
-- **CAP-08 [P5]** Optional `"transcribe": true` returns `transcript` using
+- **CAP-08 [P2, 1.6 with 8.23]** Optional `"transcribe": true` returns `transcript` using
   Android's on-device speech recognizer where available
   (`SpeechRecognizer.createOnDeviceSpeechRecognizer`, [Verify] on API 37);
   audio is still returned unless `"return_audio": false`.
@@ -1372,11 +1372,57 @@ camera video shows Android's green camera dot.
   the mic too (AAC/Opus), so video and audio arrive together. One frame per
   N seconds (`fps` < 1, e.g. 0.2) gives a cheap "watch the room" mode.
   Counts as one capture; the camera dot and a notification show throughout.
+- **SPK-01 [P2, review] Speaker limits** (apply to CAP-51..53, CAP-31
+  `speak` and City tour): an owner-set **volume ceiling** (default 70 %);
+  one clip at most 10 minutes; a queue of at most 5 per agent; 60 plays an
+  hour per agent; **Stop** (notification, Home, tour screen) stops playback
+  and clears every queue; silent / vibrate / DND are checked explicitly
+  (media playback isn't silenced by Android on its own); volume is restored
+  only if Rahul hasn't changed it meanwhile.
+- **SPK-02 [P2, review] Audio and video URLs**: public HTTPS only by
+  default (tailnet origins only if Rahul adds them); embedded credentials
+  refused; the resolved address checked on every fetch, retry and redirect
+  (redirects re-validated, at most 3); 25 MB and 15 s connect / 60 s total.
+- **SPK-03 [P2, review] Service type**: playback adds the `mediaPlayback`
+  foreground-service type (and `FOREGROUND_SERVICE_MEDIA_PLAYBACK`) and
+  requests audio focus; on focus loss it pauses, and it never plays during a
+  phone call.
 - **CAP-06 (video clip) moves from P5 to P2 (1.6)** with the stream, since
   they share the recorder.
 - Android: camera and microphone FGS types (ARC-02a); playback uses the media
   session so the system output switcher and headphones work; nothing plays
   while a call is active.
+
+### 8.23a Review gates for 1.6 and 1.7 (Codex design review, 27 Oct 2026)
+
+Open design work, recorded so the 1.6/1.7 plans close it before code:
+- Connector mode gives the relay **control**, not just visibility: connector
+  agents get narrow per-agent permissions (section 15) or phone approval for
+  sensitive calls, and their credentials work only through the relay.
+- Sealed mode names an authenticated construction: HPKE with pinned keys both
+  ways, request ids rejected on replay across restarts, sequenced stream frames.
+- Phone enrolment is owner-authenticated, single-use and confirmed on the phone.
+- The relay states exactly what it stores, where and how long, including
+  abandoned jobs.
+- MCP: a fixed protocol version; OAuth with PKCE and audience checks for hosted
+  clients; Origin validation; tool exclusions (Developer-only, feedback);
+  agent-bound sessions.
+- Queued jobs carry an execution deadline; live capture and playback run now
+  or fail; rotating, removing or disabling cancels queued jobs and streams.
+- Wake words are untrusted input (never approval); Bridget's own playback must
+  not trigger them; transcripts are not logged (metadata only) and have their
+  own retention.
+- The keyword engine, model and licence, on-device recogniser availability and
+  offline TTS voices are chosen and fail closed (no cloud fallback).
+- The relay socket's Doze behaviour is measured with and without the battery
+  exemption.
+- Streams get a wire protocol, budgets and back-pressure; MJPEG can't carry
+  audio, so audio+video uses WebSocket frames with timestamps.
+- Full-screen video keeps Bridget's frame (agent name, Close), opens only from
+  a tap on an unlocked phone; screen streaming (MediaProjection) is separate
+  from camera streaming.
+
+P2 is done only when these pass on the Pixel, not just the happy paths.
 
 ### 8.25 Bridget applications: City tour (D30, P2 as 1.5.x prototype)
 
