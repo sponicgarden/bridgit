@@ -1,5 +1,7 @@
 # Bridget (Android)
 
+Copyright 2026 Sponic Garden, Inc. Licensed under the [Apache License 2.0](LICENSE).
+
 A small sideloaded app for Rahul's Pixel 10 Pro XL. It lets any AI agent you
 pair with it (Muse, Grok, or others) take a photo, record a short audio clip,
 or fetch a gallery photo. It answers only over Tailscale, each agent has its
@@ -18,7 +20,7 @@ written as "Almusca Device Bridge"), with these changes:
 
 ## Install
 
-1. Download the APK from the private GitHub release (`rahuliofam/finleg`,
+1. Download the APK from the private GitHub release (`sponicgarden/bridget`,
    tag `bridget-v1.2.0`), or build it (below).
 2. Open it on the Pixel and allow installs from that source. Let Play Protect scan.
 3. Open **Bridget**. The listener and all three capabilities start **off**.
@@ -130,12 +132,11 @@ listener up before camera/mic are granted), `ACCESS_NETWORK_STATE`, and
 Needs JDK 17 and the Android SDK (platform 35, build-tools 35).
 
 ```bash
-cd android
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
 ./gradlew assembleRelease   # app/build/outputs/apk/release/app-release.apk
 ```
 
-Signing reads `android/keystore.properties` (gitignored):
+Signing reads `keystore.properties` (gitignored):
 
 ```
 storeFile=/Users/otter/.config/almusca-device-bridge/release.jks
@@ -184,3 +185,20 @@ real 5-second mic clip** (AAC, 5.9 s), and `image/last` for all three types
   optionally spoken aloud), files sent to the phone, and things Rahul shares
   to an agent, all in a new Inbox screen. Works for
   agents without webhooks (long polling).
+
+## License
+
+Copyright 2026 Sponic Garden, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not
+use this project except in compliance with the License. You may obtain a copy
+of the License in [LICENSE](LICENSE) or at
+http://www.apache.org/licenses/LICENSE-2.0. Unless required by applicable law
+or agreed to in writing, software distributed under the License is
+distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied. See the License for the specific language
+governing permissions and limitations under the License.
+
+Third-party components keep their own licences: Ktor (Apache 2.0), CameraX
+and AndroidX (Apache 2.0), Material Components (Apache 2.0), ZXing (Apache
+2.0), Kotlin coroutines (Apache 2.0).

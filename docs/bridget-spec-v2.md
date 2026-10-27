@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| **Document** | `android/docs/bridget-spec-v2.md` in `rahuliofam/finleg` |
+| **Document** | `docs/bridget-spec-v2.md` in `sponicgarden/bridget` (Apache License 2.0, © Sponic Garden, Inc.) |
 | **Version** | 2.1, 27 Oct 2026: revised after the Grok 4.7 review (`reviews/2026-10-27-grok-4.7-review.md`) |
 | **Owner** | Rahul Sonnad (sole user, sole device) |
 | **Product** | Bridget, a general-purpose Android bridge for personal AI agents |
@@ -88,7 +88,8 @@ should treat these as settled unless a serious problem is found.
 |---|---|---|---|
 | D1 | 26 Oct 2026 | The listener is **always on** (one foreground service with a permanent notification), not "only while the app is open". | Decided |
 | D2 | 26 Oct 2026 | Gallery access is **full** access. Selected-photos mode is still detected and reported. | Decided |
-| D3 | 26 Oct 2026 | Source lives in `android/` in the private `rahuliofam/finleg` repo. Releases are private GitHub releases. | Decided |
+| D3 | 26 Oct 2026 | Source lives in `android/` in the private `rahuliofam/finleg` repo. Superseded by D19. | Superseded |
+| D19 | 27 Oct 2026 | Bridget is **its own repo**, `sponicgarden/bridget` (private), owned by Sponic Garden, Inc., under the **Apache License 2.0**. History moved from finleg's `android/` folder. | Decided |
 | D4 | 26 Oct 2026 | The app is named **Bridget** (was "Almusca Device Bridge"). Package `net.finleg.bridget`. | Decided |
 | D5 | 26 Oct 2026 | Bridget is **general-purpose**: any number of named agents, each with its own key, with nothing tied to one agent vendor. | Decided |
 | D6 | 26 Oct 2026 | Four agents are paired: **Muse, Grok, Claude, Codex**. Keys are in Bitwarden as "Bridget — <Name> agent key". | Decided |
@@ -285,7 +286,7 @@ Agent host (on tailnet) ──WireGuard (Tailscale)──▶ Pixel: Bridget
   (configurable).
 - **ARC-11 [Decided]** Agent hosts running Tailscale in **userspace mode**
   (for example Grok's box) can't open direct connections to tailnet devices.
-  They use the `android/tools/bridget` helper, which tunnels through
+  They use the `tools/bridget` helper, which tunnels through
   `tailscale nc`, or enable tailscaled's SOCKS5/HTTP proxy. The setup prompt
   covers both (section 6.5).
 - **ARC-12 [Proposed]** HTTP only (WireGuard encrypts the tunnel). HTTPS with
@@ -593,7 +594,7 @@ under a minute, with nothing typed except the name.
 | Type | Who | What the prompt adds |
 |---|---|---|
 | `direct` | Agent host on the tailnet with normal routing (Macs, most Linux hosts, phones) | `curl` example |
-| `userspace` | Host running `tailscaled --tun=userspace-networking` (containers, some VMs, Grok's box) | The helper `android/tools/bridget`, **embedded in the prompt** (the host may have no access to the private repo; Grok's GitHub account doesn't), the env file written with a file tool, then `bridget GET /v1/health`. Alternative: restart tailscaled with `--socks5-server=localhost:1055` and use `curl --socks5-hostname`. |
+| `userspace` | Host running `tailscaled --tun=userspace-networking` (containers, some VMs, Grok's box) | The helper `tools/bridget`, **embedded in the prompt** (the host may have no access to the private repo; Grok's GitHub account doesn't), the env file written with a file tool, then `bridget GET /v1/health`. Alternative: restart tailscaled with `--socks5-server=localhost:1055` and use `curl --socks5-hostname`. |
 | `relay` | Not on the tailnet | Relay base URL, end-to-end encryption via the helper or library (ARC-15) |
 
 - **AGT-11 [Proposed]** `GET /v1/tools/bridget` returns the helper script
@@ -1434,7 +1435,7 @@ somewhere is optional (11.6).
 ### 11.6 Optional upload
 
 - **FBK-14 [Open]** **Settings → Feedback → Also send reports to:** Off
-  (default) | finleg intranet tasks | GitHub issue in `rahuliofam/finleg`.
+  (default) | finleg intranet tasks | GitHub issue in `sponicgarden/bridget`.
   Proposed default target if turned on: a new finleg Supabase edge function
   `bridget-feedback` that writes a `tasks` row labelled `bridget bug report`
   or `bridget feature request`, with screenshots in storage, authenticated by
@@ -1703,7 +1704,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
   the table is Appendix E.
 - **UI-26 [P1]** **Show me how**: numbered steps with Pixel screenshots
   (taken on the device during the build, stored in the app and
-  `android/docs/img/access-*.png`) for when a link lands somewhere
+  `docs/img/access-*.png`) for when a link lands somewhere
   unexpected.
 - **UI-27 [P1] Blocked ("Restricted setting")**: since Android 13, an APK
   installed from a downloaded file can't receive notification access (and
@@ -1756,7 +1757,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
   endpoint's happy path and main errors, driven by the debug-only ADB setup
   hook (`DebugSetupReceiver`, protected by the DUMP permission and absent
   from release builds).
-- **TST-03 [P1]** Device acceptance script (`android/tools/acceptance.sh`)
+- **TST-03 [P1]** Device acceptance script (`tools/acceptance.sh`)
   that runs from the Mac over Tailscale and ADB: creates a test agent, runs
   every capability that's switched on, checks the log, and removes the
   agent. Captures (photo, mic, screenshot) need the phone unlocked; the
@@ -1765,7 +1766,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
   written asynchronously), so the owner's own agents' traffic doesn't
   interfere.
 - **TST-04 [P1]** CI: a GitHub Actions job builds the debug APK and runs the
-  unit tests on every push touching `android/`, plus instrumented smoke
+  unit tests on every push, plus instrumented smoke
   tests on emulators at API 34, 35 and 36 (service start, cleartext config,
   permission flows), since the Pixel only covers API 37. Release signing
   stays on the owner's Mac (the keystore never goes to CI).
@@ -1811,7 +1812,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 | Built | 1.0-1.2 | Listener, keys, camera photo, mic clip, gallery, last image, audit log, four agents | Done 26 Oct 2026 |
 | **P1a** | 2.0 | New UI shell (12.1-12.5, 12.7-12.9, 12.11-12.13), setup prompt flow (6) with AGT-05a, `brg_` keys, Developer switch, `/v1/guide`, `/v1/openapi.json`, `/v1/tools/bridget`, log store and API with the visibility setting (10), Access screen, boot receiver, network callbacks, cleartext config, size presets, `raw=1` for snapshots, `image/last?wait`, idempotency and pending schema | TST-03 passes; Rahul adds a new agent from the prompt in under 1 minute |
 | **P1b** | 2.0.x | Bug reports and feature requests on the phone (11.1-11.5, 12.10); upload (11.6) only after Q6 | A report filed on the phone is read and moved to `fixed` by a developer agent |
-| Gate | before P3 | Battery measurement (NFR-06) over 3 days with the always-on service; Downloads spike (CAP-13) | Both written up in `android/docs/reviews/` |
+| Gate | before P3 | Battery measurement (NFR-06) over 3 days with the always-on service; Downloads spike (CAP-13) | Both written up in `docs/reviews/` |
 | **P2** | 2.1 | Interactions (8.13) + Inbox (12.6) + events and callbacks (9), open link (8.20), Quick Settings tile, **Accessibility screenshots** (8.10) | A no-webhook agent gets an answer within 1 s of the tap; an agent gets a screenshot in under 1 s with no prompt |
 | **P3** | 2.2 | Phone status and context (8.7), sensors (8.21), location (8.8), flashlight and controls (8.9), find my phone (8.14), gallery filters, videos and downloads (8.5) | Each endpoint's acceptance test on the Pixel |
 | **P4** | 2.3 | Files to phone (8.11), share to agent (8.12) | Share-to-Grok round trip |
@@ -1972,7 +1973,7 @@ decided; Q18 holds the decision. Play policy statements are marked
 This is the **2.0** template. `{…}` fields are filled by Bridget. Sections in
 `[[ ]]` appear only for that connection type. The prompts generated by hand
 for Muse and Grok on 26-27 Oct 2026 (against 1.2.0) point to
-`android/README.md` instead of `/v1/guide`, which doesn't exist until P1.
+`README.md` instead of `/v1/guide`, which doesn't exist until P1.
 
 Key handling in the template: on agent hosts, the key MUST be written to the
 env file with the agent's file-writing tool, not passed as a shell argument,

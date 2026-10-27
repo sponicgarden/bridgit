@@ -83,7 +83,7 @@ on those pages at all.
 Short numbered steps with the exact words on Rahul's Pixel, each with a
 screenshot. Screenshots are taken on the Pixel while this feature is built
 (the phone was locked when this spec was written) and stored in
-`android/docs/img/access-*.png` plus inside the app. Wording to confirm then:
+`docs/img/access-*.png` plus inside the app. Wording to confirm then:
 
 **App usage**
 1. Settings → **Apps** → **Special app access** → **Usage access**
