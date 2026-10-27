@@ -23,6 +23,8 @@
 #      {"package","version_name","version_code","url","sha256","size_bytes","published_at","notes"}.
 #   5. Uploads bridget/bridget-<version>.apk, then bridget/latest.json, to the public R2 bucket
 #      sponic-images via the Cloudflare API, and checks each reply says "success": true.
+#   5a. Generates the public API page (ApiDocsTest writes app/build/apidocs/api.html for this version)
+#      and uploads it as bridget/api.html; the What can Bridget do? cards' Share buttons link to it.
 #   6. Downloads both back from the public host and checks the SHA-256.
 #   7. Creates the GitHub release bridget-v<version> with the APK attached (unless --no-github).
 #
@@ -157,9 +159,17 @@ else
   echo "==> Public latest.json has version_code ${CUR_CODE}; this is ${VCODE}"
 fi
 
+# ---- 5a. The public API page ----
+echo "==> Generating the API page for ${VNAME}"
+DOCS="${ROOT}/app/build/apidocs/api.html"
+rm -f "${DOCS}"
+(cd "${ROOT}" && ./gradlew testDebugUnitTest --tests '*ApiDocsTest*' --rerun -PbridgetDocsVersion="${VNAME}" -q) || die "ApiDocsTest failed"
+grep -q "version ${VNAME}," "${DOCS}" || die "api.html wasn't written for ${VNAME}"
+
 if [[ ${DRY_RUN} -eq 1 ]]; then
   echo "==> Dry run: would PUT ${KEY_APK} (${SIZE} bytes, application/vnd.android.package-archive)"
   echo "==> Dry run: would PUT ${KEY_JSON} (application/json)"
+  echo "==> Dry run: would PUT bridget/api.html (text/html)"
   echo "==> Dry run: would verify ${URL} and ${PUBLIC_BASE}/latest.json against SHA-256 ${SHA}"
   [[ ${GITHUB} -eq 1 ]] && echo "==> Dry run: would create GitHub release bridget-v${VNAME} on ${GH_REPO}"
   echo "==> Dry run finished; nothing was uploaded."
@@ -207,6 +217,7 @@ PY
 echo "==> Uploading to R2 (${R2_BUCKET})"
 upload "${KEY_APK}" "${APK}" "application/vnd.android.package-archive"
 upload "${KEY_JSON}" "${MANIFEST}" "application/json"
+upload "bridget/api.html" "${DOCS}" "text/html; charset=utf-8"
 rm -f "${HDR}"; HDR=""
 
 # ---- 6. Verify the public copies ----

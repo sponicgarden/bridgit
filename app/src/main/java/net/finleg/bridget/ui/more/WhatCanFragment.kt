@@ -1,5 +1,6 @@
 package net.finleg.bridget.ui.more
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -12,6 +13,7 @@ import androidx.fragment.app.Fragment
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.RecyclerView
 import net.finleg.bridget.R
+import net.finleg.bridget.api.ApiDocs
 import net.finleg.bridget.databinding.FragmentWhatCanBinding
 import net.finleg.bridget.databinding.WhatcanCardBinding
 import net.finleg.bridget.databinding.WhatcanHeaderBinding
@@ -107,6 +109,14 @@ class WhatCanFragment : Fragment() {
             }
             b.stage.background.mutate().setTint(ctx.themeColor(bg))
             b.stage.setTextColor(ctx.themeColor(fg))
+            // Owner request (1.5.1): share a link to this card's section on the public API page.
+            b.share.contentDescription = ctx.getString(R.string.whatcan_share, f.title)
+            b.share.setOnClickListener {
+                val send = Intent(Intent.ACTION_SEND).setType("text/plain")
+                    .putExtra(Intent.EXTRA_SUBJECT, "Bridget: ${f.title}")
+                    .putExtra(Intent.EXTRA_TEXT, ctx.getString(R.string.whatcan_share_text, f.title, ApiDocs.link(f.title)))
+                ctx.startActivity(Intent.createChooser(send, ctx.getString(R.string.whatcan_share_title, f.title)))
+            }
             b.root.contentDescription = "${f.title}. ${f.stage.label}. ${f.what}" +
                 (if (opts.isNotEmpty()) " Options: " + opts.joinToString("; ") + "." else "") + " For example: ${f.useCase}"
         }

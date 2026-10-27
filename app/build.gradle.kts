@@ -22,8 +22,8 @@ android {
         targetSdk = 35
         // -PbridgetVersionCode / -PbridgetVersionName build an older-looking copy, used only to test
         // the in-app update path (UPD-03/04) against the published release. Never published.
-        versionCode = (project.findProperty("bridgetVersionCode") as String?)?.toInt() ?: 10
-        versionName = (project.findProperty("bridgetVersionName") as String?) ?: "1.5.0"
+        versionCode = (project.findProperty("bridgetVersionCode") as String?)?.toInt() ?: 11
+        versionName = (project.findProperty("bridgetVersionName") as String?) ?: "1.5.1"
         buildConfigField("int", "DEFAULT_PORT", "8734")
         buildConfigField("String", "GIT_COMMIT", "\"${gitCommit()}\"")
         buildConfigField("boolean", "DIRTY_BUILD", "${gitDirty()}")
@@ -63,7 +63,11 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/helperAssets"))
-    testOptions { unitTests.isReturnDefaultValues = true }
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+        // ApiDocsTest writes build/apidocs/api.html for this version (tools/publish-apk.sh passes the APK's).
+        unitTests.all { it.systemProperty("bridget.version", (project.findProperty("bridgetDocsVersion") as String?) ?: defaultConfig.versionName!!) }
+    }
     packaging {
         resources {
             excludes += setOf(

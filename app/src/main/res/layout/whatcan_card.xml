@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One feature: title, stage chip, what it does, a use case. -->
+<!-- One feature: title, stage chip, what it does, a use case, and a Share button linking to its API section. -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     style="@style/Widget.Bridget.Card"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -29,6 +30,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
+            android:layout_marginEnd="32dp"
             android:textAppearance="?attr/textAppearanceTitleMedium"
             android:textColor="?attr/colorOnSurface" />
 
@@ -83,4 +85,16 @@
             android:textAppearance="@style/TextAppearance.Bridget.Mono"
             android:textColor="?attr/colorOnSurfaceVariant" />
     </LinearLayout>
+
+    <!-- Outside the hidden-descendants group so TalkBack reaches it. -->
+    <ImageButton
+        android:id="@+id/share"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="top|end"
+        android:layout_marginTop="-12dp"
+        android:layout_marginEnd="-12dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_share"
+        app:tint="?attr/colorPrimary" />
 </com.google.android.material.card.MaterialCardView>
