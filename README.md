@@ -78,6 +78,7 @@ needs `Authorization: Bearer brg_...`. Every response has a `request_id`
 | `GET /gallery/recent?limit=20` | Newest images, metadata only |
 | `GET /gallery/photo/{id}` | One image; `size=`, `raw=1` |
 | `GET /image/last?type=any\|screenshot\|photo` | Newest image, sized for AI vision (1568 px, q85); `since=&wait=55` waits for the next one |
+| `POST /screen/capture` | What's on screen now, same sizing, nothing saved. Needs More > Access > Screenshots (Android Accessibility, "Bridget screenshots") and the Screenshots switch in Features |
 | `GET /log` | The log, with filters; `order=asc&since=<id>&wait=55` follows it live |
 | `GET /log/{id}`, `/log/stats`, `/log/export?format=jsonl\|csv` | One entry, stats, export |
 | `POST /log` | `{"message":"..."}`: a note in the agent channel |
