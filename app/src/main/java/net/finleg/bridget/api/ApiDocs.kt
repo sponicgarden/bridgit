@@ -46,8 +46,8 @@ a{color:var(--accent)}nav a{margin-right:12px}ul{margin:4px 0 4px 20px;padding:0
         append("<h1>Bridget API</h1><p class=\"sub\">Bridget: Agentic Android Device Bridge, version ${h(appVersion)}, API revision ${ApiChanges.CURRENT}. ")
         append("What an AI agent can ask an Android phone to do, and the exact calls. Base URL <code>http://&lt;phone&gt;:8734/v1</code> on the owner's Tailscale network; ")
         append("every call needs <code>Authorization: Bearer &lt;key&gt;</code> except where noted. A running phone also serves this live at <code>GET /v1/guide</code> and <code>GET /v1/openapi.json</code>.</p>")
-        append("<nav><a href=\"#abilities\">What agents can ask</a><a href=\"#technical\">How it works</a><a href=\"#reference\">All endpoints</a><a href=\"#errors\">Errors</a><a href=\"#revisions\">Revisions</a></nav>")
-        for ((id, title, technical) in listOf(Triple("abilities", "Agents can request Bridget to:", false), Triple("technical", "How Bridget works", true))) {
+        append("<nav><a href=\"#abilities\">Supported Agent Requests</a><a href=\"#technical\">How it works</a><a href=\"#reference\">All endpoints</a><a href=\"#errors\">Errors</a><a href=\"#revisions\">Revisions</a></nav>")
+        for ((id, title, technical) in listOf(Triple("abilities", "Supported Agent Requests:", false), Triple("technical", "How Bridget works", true))) {
             append("<h2 id=\"$id\">${h(title)}</h2>")
             for (c in cards.filter { it.technical == technical }) card(c)
         }

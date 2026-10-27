@@ -10,7 +10,7 @@
     <string name="whatcan_group_ideas">Later, or needs your decision</string>
     <string name="whatcan_example">For example</string>
     <string name="whatcan_options">Options</string>
-    <string name="whatcan_section_abilities">Agents can request Bridget to:</string>
+    <string name="whatcan_section_abilities">Supported Agent Requests:</string>
     <string name="whatcan_section_abilities_intro">Everything an agent can ask of this phone, with an example of each. Each one works only while its switch is on.</string>
     <string name="whatcan_section_mechanics">How Bridget works (the technical part)</string>
     <string name="whatcan_section_mechanics_intro">How agents connect, and how you stay in control.</string>
