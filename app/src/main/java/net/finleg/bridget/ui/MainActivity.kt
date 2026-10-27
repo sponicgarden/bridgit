@@ -10,9 +10,16 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import net.finleg.bridget.BridgeApp
 import net.finleg.bridget.BridgeService
 import net.finleg.bridget.R
@@ -44,7 +51,24 @@ class MainActivity : AppCompatActivity() {
         ViewCompat.setOnApplyWindowInsetsListener(b.bottomNav) { v, insets ->
             v.updatePadding(bottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom); insets
         }
-        if (savedInstanceState == null) { route(); openReportFrom(intent) }
+        if (savedInstanceState == null) { route(); openReportFrom(intent); openInteractionFrom(intent) }
+        watchInteractionsBadge()
+    }
+
+    /** D26: the Interactions tab badge = questions waiting plus notices not yet seen ("99+" cap, hidden at 0). */
+    private fun watchInteractionsBadge() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                app.interactions.changed.collectLatest {
+                    val n = withContext(Dispatchers.IO) { runCatching { app.interactions.unreadCount() }.getOrDefault(0) }
+                    val badge = b.bottomNav.getOrCreateBadge(R.id.interactions)
+                    badge.maxCharacterCount = 3
+                    badge.setContentDescriptionQuantityStringsResource(R.plurals.interactions_badge)
+                    badge.number = n
+                    badge.isVisible = n > 0
+                }
+            }
+        }
     }
 
     /** The feedback notification (FBK-11) opens its report. */
@@ -52,6 +76,17 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         openReportFrom(intent)
+        openInteractionFrom(intent)
+    }
+
+    /** A question or notice notification (CAP-33) opens its interaction. */
+    private fun openInteractionFrom(intent: Intent?) {
+        val id = intent?.getLongExtra(EXTRA_INTERACTION_ID, -1L) ?: -1L
+        if (id < 0) return
+        intent?.removeExtra(EXTRA_INTERACTION_ID)
+        // Not over an unfinished setup prompt or first run: those must finish first.
+        if (nav.currentDestination?.id in setOf(R.id.addAgent, R.id.pairCode, R.id.firstRun)) return
+        nav.navigate(R.id.interactionDetail, Bundle().apply { putLong("interactionId", id) })
     }
 
     private fun openReportFrom(intent: Intent?) {
@@ -106,6 +141,9 @@ class MainActivity : AppCompatActivity() {
         const val CLIP_LABEL = "Bridget setup prompt"
         /** Long extra: open this report (from the feedback notification). */
         const val EXTRA_REPORT_ID = "report_id"
-        val TOP_LEVEL = setOf(R.id.home, R.id.agents, R.id.activity, R.id.more)
+        /** Long extra: open this interaction (from a question or notice notification). */
+        const val EXTRA_INTERACTION_ID = "interaction_id"
+        /** D26: Activity is no longer a tab; it is opened from More and shows a back arrow. */
+        val TOP_LEVEL = setOf(R.id.home, R.id.interactions, R.id.agents, R.id.more)
     }
 }
