@@ -62,6 +62,7 @@ class BridgeApp : Application() {
         speaker = net.finleg.bridget.capability.SpeakerQueue(this)
         tours = net.finleg.bridget.tour.TourManager(this)
         feedback.onStatusChange { FeedbackNotifier.statusChanged(this, it) }
+        interactions.addListener { i, what -> net.finleg.bridget.interact.InteractionNotifier.onChange(this, i, what) }
         applyAppearance()
         createChannels()
     }
@@ -73,8 +74,8 @@ class BridgeApp : Application() {
     })
 
     /**
-     * UI-21 channels that P1a uses. Questions, notices, files, grants and feedback
-     * channels are added with their features (P1b, P2, P4, P5).
+     * UI-21 channels: listener, capture, questions and notices (1.5), feedback.
+     * Files and grants channels are added with their features (P4, P5).
      */
     private fun createChannels() {
         val nm = getSystemService(NotificationManager::class.java)
@@ -85,6 +86,10 @@ class BridgeApp : Application() {
             NotificationManager.IMPORTANCE_DEFAULT).apply {
             description = getString(R.string.channel_capture_desc); setSound(null, null)
         })
+        nm.createNotificationChannel(NotificationChannel(net.finleg.bridget.interact.InteractionNotifier.CHANNEL_QUESTIONS,
+            getString(R.string.channel_questions), NotificationManager.IMPORTANCE_HIGH).apply { description = getString(R.string.channel_questions_desc) })
+        nm.createNotificationChannel(NotificationChannel(net.finleg.bridget.interact.InteractionNotifier.CHANNEL_NOTICES,
+            getString(R.string.channel_notices), NotificationManager.IMPORTANCE_DEFAULT).apply { description = getString(R.string.channel_notices_desc) })
         FeedbackNotifier.createChannel(this)
         net.finleg.bridget.update.UpdateInstaller.cleanStale(this) // UPD-05: downloads older than an hour go
     }
