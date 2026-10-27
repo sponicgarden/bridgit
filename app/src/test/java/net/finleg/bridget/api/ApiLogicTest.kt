@@ -147,6 +147,18 @@ class ApiLogicTest {
         assertEquals(order.sorted(), order)
     }
 
+    @Test fun setupPromptWithCallback() {
+        val key = Keys.generate()
+        val secret = net.finleg.bridget.core.CallbackRules.newSecret()
+        val p = SetupPrompt.build("Grok", key, Connection.DIRECT, addr, "Pixel 10 Pro XL", caps("gallery", "camera"), null,
+            secret)
+        assertEquals("secret exactly once", 1, Regex(Regex.escape(secret)).findAll(p).count())
+        assertTrue(p.contains("CALLBACK SECRET (verify: /v1/guide): $secret"))
+        assertTrue("AGT-10 budget: ${p.length}", p.length < 2500)
+        assertTrue(p.indexOf("CALLBACK SECRET") in p.indexOf("RULES")..p.indexOf("FIRST TEST"))
+        assertFalse(SetupPrompt.build("Grok", key, Connection.DIRECT, addr, "Pixel", caps(), null).contains("CALLBACK"))
+    }
+
     @Test fun setupPromptNothingOnAndUserspace() {
         val key = Keys.generate()
         val p = SetupPrompt.build("Grok", key, Connection.DIRECT, addr, "Pixel", caps(), null)

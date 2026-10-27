@@ -43,7 +43,8 @@ import java.text.NumberFormat
  * Settings (UI-19, ui-spec 5.10), built from our own rows. Sections:
  * Listener, Privacy (log visibility, lock-screen question text, urgent read-aloud in DND),
  * Log, Notifications, Appearance, About.
- * Not shown yet (later phases): Allow internet callbacks, Screenshots, Feedback,
+ * Allow internet callbacks (EVT-05) sits under Listener.
+ * Not shown yet (later phases): Screenshots, Feedback,
  * precise locations, address lookup, Licences, and the Files / Feedback notification channels.
  */
 class SettingsFragment : Fragment() {
@@ -73,6 +74,8 @@ class SettingsFragment : Fragment() {
         b.alwaysOn.root.setOnClickListener { setListener(!app.settings.listenerEnabled) }
         row(b.port, R.string.settings_port, mono = true) { askPort() }
         row(b.bind, R.string.settings_bind, mono = true, onClick = null)
+        prefSwitch(b.internetCallbacks, R.string.settings_internet_callbacks, R.string.settings_internet_callbacks_desc,
+            net.finleg.bridget.core.Settings.PREF_INTERNET_CALLBACKS, R.string.settings_changed_internet_callbacks)
 
         // Privacy
         row(b.logVisibility, R.string.settings_log_visibility) { askVisibility() }

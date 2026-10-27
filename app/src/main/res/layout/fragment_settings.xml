@@ -33,13 +33,14 @@
                 android:orientation="vertical"
                 android:paddingBottom="16dp">
 
-                <!-- Later phases add: Allow internet callbacks (Listener), the Screenshots section,
+                <!-- Later phases add: the Screenshots section,
                      Log precise locations / Address lookup (Privacy), Files/Feedback channels, the Feedback section and Licences (About). -->
 
                 <TextView style="@style/SettingsHeader" android:text="@string/settings_listener" />
                 <include android:id="@+id/alwaysOn" layout="@layout/settings_switch_row" />
                 <include android:id="@+id/port" layout="@layout/settings_row" />
                 <include android:id="@+id/bind" layout="@layout/settings_row" />
+                <include android:id="@+id/internetCallbacks" layout="@layout/settings_switch_row" />
 
                 <TextView style="@style/SettingsHeader" android:text="@string/settings_privacy" />
                 <include android:id="@+id/logVisibility" layout="@layout/settings_row" />

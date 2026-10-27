@@ -22,8 +22,12 @@ data class Address(val magicDns: String?, val ip: String?, val port: Int) {
  * order; "most useful calls" built from the switches that are on now (AGT-07).
  */
 object SetupPrompt {
+    /**
+     * [callbackSecret] is set when Rahul has set a callback URL for this agent (AGT-09 item 9, EVT-06):
+     * a refreshed prompt carries the existing secret so the agent can verify signatures.
+     */
     fun build(agentName: String, key: String, connection: Connection, addr: Address, deviceModel: String,
-              caps: List<CapInfo>, helperSource: String?): String {
+              caps: List<CapInfo>, helperSource: String?, callbackSecret: String? = null): String {
         val on = caps.filter { it.enabled }.map { it.id }.toSet()
         val sb = StringBuilder()
         sb.appendLine("You now have access to Bridget, an Android app on Rahul's phone ($deviceModel) that lets AI agents use")
@@ -85,6 +89,11 @@ object SetupPrompt {
         sb.appendLine("   \"pending\": true means \"not done yet\": poll its poll_url.")
         sb.appendLine("4. Timeouts: 30 s; 60 s for anything with wait=; mic: duration + 30 s.")
         sb.appendLine()
+        if (callbackSecret != null) {
+            // One line for the AGT-10 budget; the guide's Conventions explain how to verify.
+            sb.appendLine("CALLBACK SECRET (verify: /v1/guide): $callbackSecret")
+            sb.appendLine()
+        }
         sb.appendLine("FIRST TEST")
         sb.append("Call /v1/health, then tell Rahul you're connected and which features are on.")
         return sb.toString()
@@ -152,6 +161,10 @@ object Guide {
         sb.appendLine("- Lists page with `next_cursor`; pass it back as `cursor`.")
         sb.appendLine("- POSTs with side effects accept `Idempotency-Key: <uuid>`. A repeat within 24 h returns the first result (409 `in_progress` while it runs). Photos and clips are kept only 15 min, after that a repeat gets 409 `idempotency_expired` instead of a second capture.")
         sb.appendLine("- 202 with `\"pending\": true` means accepted but not done: poll `poll_url` (`{pending, code, id, poll_url, retry_after_s}`). Nothing returns this yet; screen-share consent and relay jobs will.")
+        sb.appendLine("- Callbacks (if Rahul set a URL for you): every event is POSTed as `{\"event\":{id,type,at,data},\"agent\"}` with " +
+            "`X-Bridget-Timestamp`, `X-Bridget-Event-Id` and `X-Bridget-Signature: sha256=<hex HMAC-SHA256(secret, \"<timestamp>.<raw body>\")>`. " +
+            "Check the signature, reject timestamps over 5 min off and event ids you've seen. Retries at 10 s, 60 s, 5 min; " +
+            "`/v1/events` always has them. `POST /v1/callback/test` sends one now.")
         sb.appendLine("- The log: you can read " + (if (developer || logVisibility == "all") "every agent's entries" else "only your own entries") +
             ". It never contains keys, media or full texts.")
         sb.appendLine()
