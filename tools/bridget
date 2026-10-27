@@ -11,17 +11,23 @@ On normal Tailscale hosts it uses a plain socket.
   bridget POST /v1/mic/record '{"duration_seconds":5}' --save-image clip.m4a
 
 Settings come from ~/.config/bridget/env (or environment variables):
-  BRIDGET_KEY=<your agent key>     required, never printed
+  BRIDGET_KEY=<your agent key>     required (brg_...), never printed
   BRIDGET_HOST=100.94.27.79        optional
-  BRIDGET_PORT=8734                optional
+  BRIDGET_PORT=8734                optional (debug builds listen on 8735)
+  BRIDGET_ENV=<path>               optional: another env file, so several agents
+                                   on one computer can each keep their own key
   TAILSCALE_BIN, TAILSCALE_SOCKET  optional, for userspace tailscaled
+
+POST requests carry an Idempotency-Key (a new UUID per command). If the
+connection fails, the helper retries once with the same key, so a retry never
+takes two photos.
 """
-import base64, json, os, select, shutil, socket, subprocess, sys, time
+import base64, json, os, select, shutil, socket, subprocess, sys, time, uuid
 
 
 def load_env():
     cfg = {}
-    p = os.path.expanduser("~/.config/bridget/env")
+    p = os.path.expanduser(os.environ.get("BRIDGET_ENV") or "~/.config/bridget/env")
     if os.path.exists(p):
         for line in open(p):
             line = line.strip()
@@ -112,14 +118,23 @@ def main(argv):
         return 2
     host, port = cfg.get("BRIDGET_HOST", "100.94.27.79"), cfg.get("BRIDGET_PORT", "8734")
     data = (body or "").encode()
+    idem = f"Idempotency-Key: {uuid.uuid4()}\r\n" if method == "POST" else ""
     req = (f"{method} {path} HTTP/1.1\r\nHost: {host}:{port}\r\nAuthorization: Bearer {key}\r\n"
-           f"Content-Type: application/json\r\nContent-Length: {len(data)}\r\n"
+           f"Content-Type: application/json\r\nContent-Length: {len(data)}\r\n{idem}"
            f"Connection: close\r\n\r\n").encode() + data
-    try:
-        raw = send(cfg, req, host, port)
-    except Exception as e:
-        print(f"bridget: {e}", file=sys.stderr)
-        return 1
+    raw = b""
+    for attempt in (1, 2):
+        try:
+            raw = send(cfg, req, host, port)
+        except Exception as e:
+            if attempt == 2:
+                print(f"bridget: {e}", file=sys.stderr)
+                return 1
+            time.sleep(2)
+            continue
+        if raw or attempt == 2:
+            break
+        time.sleep(2)
 
     head, _, payload = raw.partition(b"\r\n\r\n")
     if not head:
