@@ -60,6 +60,11 @@
         <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
     </style>
 
+    <!-- Active tab pill in primaryContainer (teal); gold is kept for live states (ui-spec 1, 3). -->
+    <style name="Widget.Bridget.NavIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">?attr/colorPrimaryContainer</item>
+    </style>
+
     <style name="Widget.Bridget.Card" parent="Widget.Material3.CardView.Filled">
         <item name="cardBackgroundColor">?attr/colorSurfaceContainer</item>
         <item name="cardCornerRadius">12dp</item>

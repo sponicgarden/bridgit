@@ -55,9 +55,14 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Android lets an app see the clipboard only while its window has focus, so SEC-11 runs here, not in onResume. */
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) clearOurClip()
+    }
+
     override fun onResume() {
         super.onResume()
-        clearOurClip()
         // A visible start lets Android grant the camera and microphone service types (ARC-03).
         if (app.settings.listenerEnabled && app.agents.count > 0) {
             val s = app.listener.value

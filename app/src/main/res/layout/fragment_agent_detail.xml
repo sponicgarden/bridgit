@@ -247,6 +247,7 @@
                 android:visibility="gone" />
 
             <androidx.recyclerview.widget.RecyclerView
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
                 android:id="@+id/activity_list"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
