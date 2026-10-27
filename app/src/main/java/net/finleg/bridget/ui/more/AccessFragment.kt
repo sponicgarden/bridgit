@@ -32,6 +32,7 @@ import net.finleg.bridget.databinding.AccessSheetHowBinding
 import net.finleg.bridget.databinding.FragmentAccessBinding
 import net.finleg.bridget.ui.common.dp
 import net.finleg.bridget.ui.common.themeColor
+import net.finleg.bridget.update.UpdateInstaller
 
 /**
  * Access (UI-25 … UI-27, ui-spec 5.9, Appendix E): every Android permission or special access
@@ -128,6 +129,7 @@ class AccessFragment : Fragment() {
             granted(Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED) -> Status.PARTLY
             else -> Status.OFF
         }
+        val installs = if (UpdateInstaller.canRequestInstalls(ctx)) Status.ON else Status.OFF
         val battery = if (ctx.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(ctx.packageName) == true)
             Status.ON else Status.OFF
         return listOf(
@@ -151,6 +153,11 @@ class AccessFragment : Fragment() {
             Item("battery", R.string.access_battery, R.string.access_battery_unlocks, battery,
                 R.string.access_btn_turn_on, R.array.access_how_battery) {
                 open(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${ctx.packageName}")))
+            },
+            // UPD-04: Android asks for this the first time Bridget installs its own update.
+            Item("installs", R.string.access_installs, R.string.access_installs_unlocks, installs,
+                R.string.access_btn_turn_on, R.array.access_how_installs) {
+                open(UpdateInstaller.unknownSourcesIntent(ctx))
             },
         )
     }

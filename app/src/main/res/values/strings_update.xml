@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App updates (spec 12.14, UPD-02 … UPD-06). Plain second-person copy. -->
+<resources>
+    <string name="update_check">Check for updates</string>
+    <string name="update_title">Bridget updates</string>
+    <string name="update_debug">Debug build: install new builds with adb.</string>
+
+    <string name="update_checking">Checking for a newer Bridget…</string>
+    <string name="update_current">You have the latest Bridget (%1$s).</string>
+    <string name="update_local_ahead">You have Bridget %1$s, which is newer than the published %2$s.</string>
+
+    <string name="update_available_title">Update available</string>
+    <string name="update_available">Bridget %1$s is available. You have %2$s.</string>
+    <string name="update_notes">What\'s new: %1$s</string>
+    <string name="update_size">Download size: %1$s.</string>
+    <string name="update_download">Download</string>
+    <string name="update_not_now">Not now</string>
+
+    <string name="update_downloading">Downloading Bridget %1$s…</string>
+    <string name="update_downloading_pct">Downloading Bridget %1$s… %2$d%%</string>
+    <string name="update_downloading_hint">After the download, Bridget checks it, then Android asks you to confirm the install.</string>
+
+    <string name="update_ready_title">Ready to install</string>
+    <string name="update_ready">Bridget %1$s is downloaded and checked. Android will ask you to confirm the install. Your agents, keys, switches and log stay as they are.</string>
+    <string name="update_install">Install</string>
+
+    <string name="update_allow_title">Allow installs from Bridget</string>
+    <string name="update_allow">To install its own updates, Bridget needs Android\'s \"Install unknown apps\" permission. On the next page, turn on \"Allow from this source\", then come back and tap Install.</string>
+    <string name="update_open_settings">Open settings</string>
+    <string name="update_no_installer">Android\'s installer didn\'t open. Try again, or install the file with adb.</string>
+
+    <string name="update_error_title">Couldn\'t update</string>
+    <string name="update_err_network">Bridget couldn\'t reach the update server. Check your connection and try again.</string>
+    <string name="update_err_http">The update server didn\'t answer properly. Try again later.</string>
+    <string name="update_err_forbidden">The update server refused the request.</string>
+    <string name="update_err_redirect">The update server tried to send Bridget somewhere else, so Bridget stopped. Nothing was installed.</string>
+    <string name="update_err_manifest">The published update information isn\'t valid, so Bridget ignored it.</string>
+    <string name="update_err_too_large">The update is larger than 100 MB, so Bridget refused it.</string>
+    <string name="update_err_mismatch">The download doesn\'t match the published update, so Bridget deleted it.</string>
+    <string name="update_err_not_apk">The download isn\'t a valid app file, so Bridget deleted it.</string>
+    <string name="update_err_wrong_build">The download isn\'t the version that was published, so Bridget deleted it.</string>
+    <string name="update_err_not_newer">The download isn\'t newer than the Bridget you have, so Bridget deleted it.</string>
+    <string name="update_err_signature">The download isn\'t signed with Bridget\'s key, so Bridget deleted it.</string>
+    <string name="update_err_storage">Bridget couldn\'t save the download. Free some space and try again.</string>
+
+    <!-- Access row (UPD-04). -->
+    <string name="access_installs">Install unknown apps</string>
+    <string name="access_installs_unlocks">Lets Bridget install its own updates after you confirm.</string>
+    <string-array name="access_how_installs">
+        <item>Tap Turn on.</item>
+        <item>Turn on \"Allow from this source\".</item>
+        <item>Come back here.</item>
+    </string-array>
+</resources>
