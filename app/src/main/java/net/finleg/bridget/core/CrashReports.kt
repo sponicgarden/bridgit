@@ -47,6 +47,7 @@ object CrashReports {
     private fun scrub(e: SentryEvent): SentryEvent {
         e.user = null
         e.serverName = null
+        e.contexts.device?.let { it.id = null } // Sentry's per-install id
         e.message?.let { m -> m.formatted = m.formatted?.let(Keys::scrub); m.message = m.message?.let(Keys::scrub) }
         e.exceptions?.forEach { x -> x.value = x.value?.let(Keys::scrub) }
         e.breadcrumbs?.forEach { b -> b.message = b.message?.let(Keys::scrub) }
