@@ -47,6 +47,15 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp" />
-        <!-- P1b: "Report a bug about this" (text button) goes here, opening the report form with this entry attached. -->
+
+        <!-- FBK-01: opens the report form with this entry attached. -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/report"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="@string/feedback_report_about_this"
+            app:icon="@drawable/feedback_ic_bug" />
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

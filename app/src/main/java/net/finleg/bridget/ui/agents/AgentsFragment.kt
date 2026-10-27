@@ -31,6 +31,7 @@ import net.finleg.bridget.databinding.AgentsRowBinding
 import net.finleg.bridget.databinding.FragmentAgentsBinding
 import net.finleg.bridget.ui.common.Fmt
 import net.finleg.bridget.ui.common.themeColor
+import net.finleg.bridget.ui.feedback.handleFeedbackMenu
 
 /** Agents list (UI-12, ui-spec 5.3): one card per agent, Add agent FAB, empty state. */
 class AgentsFragment : Fragment() {
@@ -53,7 +54,8 @@ class AgentsFragment : Fragment() {
         ViewCompat.setOnApplyWindowInsetsListener(b.toolbar) { v, insets ->
             v.updatePadding(top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top); insets
         }
-        // Report a bug / Request a feature go in this toolbar's overflow in P1b.
+        b.toolbar.inflateMenu(R.menu.feedback_overflow) // Report a bug / Request a feature (FBK-01)
+        b.toolbar.setOnMenuItemClickListener { handleFeedbackMenu(it, "Agents") }
         adapter = Adapter { a -> findNavController().navigate(R.id.agentDetail, bundleOf("agentId" to a.id)) }
         b.list.adapter = adapter
         b.list.addOnScrollListener(object : RecyclerView.OnScrollListener() {
