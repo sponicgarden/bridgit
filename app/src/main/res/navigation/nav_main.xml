@@ -10,6 +10,10 @@
     <fragment android:id="@+id/interactionDetail" android:name="net.finleg.bridget.ui.interactions.InteractionDetailFragment">
         <argument android:name="interactionId" app:argType="long" />
     </fragment>
+    <!-- Owner, 27 Oct 2026: Applets is a tab in place of Agents; Agents opens from More (id kept). -->
+    <fragment android:id="@+id/applets" android:name="net.finleg.bridget.ui.tour.AppletsFragment" android:label="@string/nav_applets" />
+    <!-- City tour (8.25, D30): setup and the running tour. Full screen. -->
+    <fragment android:id="@+id/tour" android:name="net.finleg.bridget.ui.tour.TourFragment" />
     <fragment android:id="@+id/agents" android:name="net.finleg.bridget.ui.agents.AgentsFragment" android:label="@string/nav_agents" />
     <!-- Not a tab since 1.5 (D26): opened from More, Home's Today card and Agent detail. -->
     <fragment android:id="@+id/activity" android:name="net.finleg.bridget.ui.activity.ActivityFragment" android:label="@string/nav_activity" />
