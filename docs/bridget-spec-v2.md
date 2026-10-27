@@ -8,7 +8,7 @@
 | **Product** | Bridget, a general-purpose Android bridge for personal AI agents |
 | **Package** | `net.finleg.bridget` (sideloaded, not on the Play Store) |
 | **Device** | Google Pixel 10 Pro XL, Android 17 (API 37); minimum Android 14 (API 34) |
-| **Current build** | Bridget 1.2.0 (installed 26 Oct 2026) |
+| **Current build** | Bridget 1.2.0 (installed 26 Oct 2026); 1.3.0 (P1a) in review |
 | **Supersedes** | `spec-v1.0.pdf` (as amended), `spec-per-agent-permissions.md`, `spec-agent-inbox.md`, `spec-flashlight.md`, `spec-screenshot.md`, `spec-access-screen.md` |
 
 This document is written to be reviewed by people and by other AI systems
@@ -233,7 +233,13 @@ Agent host (on tailnet) ──WireGuard (Tailscale)──▶ Pixel: Bridget
 - **ARC-02b [P1] After a reboot.** A `BOOT_COMPLETED` receiver starts the
   service with `specialUse` only (allowed for that type; boot receivers may
   not start `camera`, `microphone` or `mediaProjection` on target 35+). Home
-  then shows the ARC-03 banner until Rahul opens the app.
+  then shows the ARC-03 banner until Rahul opens the app. **Expected
+  behaviour:** Android sends `BOOT_COMPLETED` only after the first unlock
+  following a reboot, so Bridget starts listening at the first unlock, not
+  before. The same receiver handles `MY_PACKAGE_REPLACED`, so an update
+  installed over ADB restarts the listener by itself (checked on the Pixel,
+  27 Oct 2026, debug build: back within seconds). A real reboot was not
+  tested in P1a.
 - **ARC-03 [Decided]** If Android restarts the service in the background, it
   comes back with `specialUse` only. Gallery, logs, interactions, files,
   status and Accessibility screenshots keep working; camera, microphone and
@@ -249,9 +255,12 @@ Agent host (on tailnet) ──WireGuard (Tailscale)──▶ Pixel: Bridget
   `ConnectivityManager.registerNetworkCallback` on the VPN network
   (`onLinkPropertiesChanged`, `onLost`), not a 10-second poll, to keep the
   process idle (NFR-06). A safety re-check runs every 5 minutes.
-  [Verify] On 27 Oct 2026 the Pixel had no Tailscale IPv6 address on `tun0`,
-  and `curl -6` to the MagicDNS name still reached Bridget; re-check on
-  Tailscale updates.
+  Checked on the Pixel 27 Oct 2026 (Tailscale 1.104.2): the VPN interface
+  (now `tun1`) has both 100.94.27.79 and `fd7a:115c:a1e0::d938:1b50`.
+  1.3.0 binds both and answers over IPv4, the IPv6 literal and `curl -6` to
+  the MagicDNS name. Re-check after Tailscale updates. A live Tailscale
+  off/on test was not run in P1a, because ADB to the Pixel runs over
+  Tailscale too.
 - **ARC-05 [Proposed]** Code is organised as **capability modules**. Each
   module declares its endpoints, the Android permissions or special access it
   needs, its foreground-service type, its master switch, and a `status()`
@@ -284,7 +293,8 @@ Agent host (on tailnet) ──WireGuard (Tailscale)──▶ Pixel: Bridget
 
 - **ARC-10 [Decided]** Reachable only over Tailscale. MagicDNS name
   `pixel-10-pro-xl.tail9c9221.ts.net`, IP 100.94.27.79, port 8734
-  (configurable).
+  (configurable). Debug builds (`net.finleg.bridget.debug`) default to
+  **8735**, so they never clash with a release build.
 - **ARC-11 [Decided]** Agent hosts running Tailscale in **userspace mode**
   (for example Grok's box) can't open direct connections to tailnet devices.
   They use the `tools/bridget` helper, which tunnels through
@@ -293,10 +303,14 @@ Agent host (on tailnet) ──WireGuard (Tailscale)──▶ Pixel: Bridget
 - **ARC-12 [Proposed]** HTTP only (WireGuard encrypts the tunnel). HTTPS with
   Tailscale certificates is listed as Open Q8.
 - **ARC-12a [P1]** Android blocks the app's own outgoing cleartext HTTP
-  (target 28+). Bridget ships a network security config that allows
-  cleartext only to the tailnet (`100.64.0.0/10` and the tailnet's `ts.net`
-  domain); everything else, including public callbacks, must be HTTPS. The
-  inbound listener isn't affected.
+  (target 28+). The setting never affects requests coming **in** to
+  Bridget's listener. **1.3.0 (P1a) makes no outgoing plain-HTTP calls at
+  all** (the Add-agent self-check opens a raw TCP socket, which this setting
+  doesn't cover), so it ships a minimal config with cleartext off. A network
+  security config can't express IP ranges such as `100.64.0.0/10`, only
+  domains: when P2 adds callbacks, cleartext can be allowed for the
+  tailnet's `ts.net` domain only, and IP-literal callbacks go over the raw
+  socket path (EVT-05a) or HTTPS.
 
 ### 4.4 Relay mode: reaching Bridget without Tailscale (push-woken mailbox)
 
@@ -589,6 +603,7 @@ under a minute, with nothing typed except the name.
   **direct** and **relay** prompts stay under 2,500 characters. The
   **userspace** prompt also embeds the helper source (about 7 KB), so it's
   longer; it is copy/share only (no QR). Templates are in Appendix B.
+  A unit test keeps the direct prompt under 2,500 characters.
 
 ### 6.5 Connection types
 
@@ -685,13 +700,20 @@ under a minute, with nothing typed except the name.
   (screen-share consent, relay jobs) returns **202** with one schema:
   `{"pending": true, "code": "consent_pending" | "job_queued", "id": "…",
   "poll_url": "/v1/…?wait=55", "retry_after_s": 1, "request_id": "…"}`. It
-  is not an error object: 2xx means "accepted, not done".
+  is not an error object: 2xx means "accepted, not done". 1.3.0 defines the
+  schema (guide, openapi.json `Pending`) but no endpoint returns it yet;
+  screen-share consent (P5) and relay jobs will.
 - **API-13 [Proposed] Idempotency.** POSTs with side effects (captures,
   ring, flashlight, DND, sound, brightness, files, interactions, feedback,
   clipboard) accept `Idempotency-Key: <uuid>`. A repeat with the same key
   within 24 hours returns the first result (or 409 `in_progress` while it's
   still running) instead of doing it twice. The helper sends one
-  automatically on retries.
+  automatically on retries. **As built in 1.3.0:** keys are per agent,
+  kept in memory (lost if the app restarts); small JSON results are
+  replayed for 24 h; photo and clip results are kept only 15 minutes
+  (SEC-13), after which a repeat gets 409 `idempotency_expired` instead of a
+  second capture; 5xx results aren't kept, so a retry really retries.
+  Endpoints in 1.3.0: camera snapshot, mic record, `POST /v1/log`.
 
 ---
 
@@ -1484,7 +1506,8 @@ somewhere is optional (11.6).
   **Monospace** (bundled JetBrains Mono, OFL licence, about 300 KB; Open Q7)
   for technical values only: keys, IPs, endpoints, request IDs, JSON, the
   setup prompt, log lines. That's the "techie" layer; everything else reads
-  like a friendly consumer app.
+  like a friendly consumer app. 1.3.0 uses the system monospace font; the
+  bundled JetBrains Mono (Q7) is not in P1a.
 - **UI-04 [Proposed] Shape and motion.** M3 default shapes (cards 12 dp,
   sheets 28 dp). Standard M3 motion; a gentle pulse on the beacon dot while
   something is live (capturing, waiting for an agent's first call, grant
@@ -1512,6 +1535,8 @@ somewhere is optional (11.6).
     and long-press tooltips, so it stays usable at 200 % (UI-29).
   - Inbox shows a badge with unanswered questions + unread items.
   - Single Activity; each destination is a Fragment with its own back stack.
+  - **P1a ships four tabs (Home, Agents, Activity, More); Inbox is added in
+    P2** with its feature (owner, 27 Oct 2026; ui-spec Q-D3).
 
 ### 12.3 First run
 
@@ -1688,7 +1713,8 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
   `capture` (default, shown during every capture, naming the agent),
   `questions` (high, heads-up), `notices` (default), `files` (default),
   `grants` (default, ongoing while a screenshot grant is active),
-  `feedback` (low).
+  `feedback` (low). 1.3.0 creates `listener` and `capture` only; each other
+  channel arrives with its feature.
 - **UI-22 [P1]** The ongoing listener notification shows state and the last
   request ("Grok · image/last · 2 min ago") with actions **Pause** and
   **Open**.
@@ -1708,7 +1734,8 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 - **UI-26 [P1]** **Show me how**: numbered steps with Pixel screenshots
   (taken on the device during the build, stored in the app and
   `docs/img/access-*.png`) for when a link lands somewhere
-  unexpected.
+  unexpected. 1.3.0 ships the numbered steps as text only; the Pixel
+  screenshots are still to do.
 - **UI-27 [P1] Blocked ("Restricted setting")**: since Android 13, an APK
   installed from a downloaded file can't receive notification access (and
   some other special access) until Rahul allows it. The row shows the steps:
@@ -1767,7 +1794,10 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
   script says so and skips them otherwise. Log checks filter by the test
   agent's id and wait until `latest_id` includes each request (the log is
   written asynchronously), so the owner's own agents' traffic doesn't
-  interfere.
+  interfere. Built in 1.3.0: `tools/acceptance.sh` (29 checks; results
+  written to `docs/acceptance/<date>-<version>-debug.md` with PASS, FAIL or
+  UNVERIFIED per check, including a secrets check over the log database,
+  preferences, API output and logcat).
 - **TST-04 [P1]** CI: a GitHub Actions job builds the debug APK and runs the
   unit tests on every push, plus instrumented smoke
   tests on emulators at API 34, 35 and 36 (service start, cleartext config,
