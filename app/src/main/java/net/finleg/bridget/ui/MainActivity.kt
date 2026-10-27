@@ -120,7 +120,15 @@ class MainActivity : AppCompatActivity() {
     /** Android lets an app see the clipboard only while its window has focus, so SEC-11 runs here, not in onResume. */
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
-        if (hasFocus) clearOurClip()
+        if (hasFocus) { clearOurClip(); leftApp = false }
+    }
+
+    /** True once Bridget went to the background; a copied callback secret is cleared only after that. */
+    private var leftApp = false
+
+    override fun onStop() {
+        super.onStop()
+        leftApp = true
     }
 
     override fun onResume() {
@@ -142,12 +150,15 @@ class MainActivity : AppCompatActivity() {
         val cm = getSystemService(ClipboardManager::class.java) ?: return
         val label = runCatching { cm.primaryClipDescription?.label?.toString() }.getOrNull() ?: return
         if (label == CLIP_LABEL) runCatching { cm.clearPrimaryClip() }
+        // The secret's Copy button closes a dialog, which refocuses this window at once: wait until Rahul has been away.
+        if (label == CLIP_LABEL_SECRET && leftApp) runCatching { cm.clearPrimaryClip() }
     }
 
     fun showBottomBar(show: Boolean) { b.bottomNav.visibility = if (show) View.VISIBLE else View.GONE }
 
     companion object {
         const val CLIP_LABEL = "Bridget setup prompt"
+        const val CLIP_LABEL_SECRET = "Bridget callback secret"
         /** Long extra: open this report (from the feedback notification). */
         const val EXTRA_REPORT_ID = "report_id"
         /** Long extra: open this interaction (from a question or notice notification). */

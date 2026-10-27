@@ -221,7 +221,7 @@ class AgentDetailFragment : Fragment() {
             .setCancelable(false)
             .setPositiveButton(R.string.callback_copy) { _, _ ->
                 val cm = ctx.getSystemService(android.content.ClipboardManager::class.java) ?: return@setPositiveButton
-                val clip = android.content.ClipData.newPlainText(net.finleg.bridget.ui.MainActivity.CLIP_LABEL, secret)
+                val clip = android.content.ClipData.newPlainText(net.finleg.bridget.ui.MainActivity.CLIP_LABEL_SECRET, secret)
                 // SEC-11: Android hides the preview of a sensitive clip; MainActivity clears it on return.
                 clip.description.extras = android.os.PersistableBundle().apply {
                     putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE, true)
