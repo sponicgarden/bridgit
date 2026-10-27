@@ -64,6 +64,12 @@ class BridgeApp : Application() {
         net.finleg.bridget.ui.interactions.SpeakHook.speak = { c, agent, title, text -> net.finleg.bridget.interact.Speaker.speak(c, agent, title, text) }
         feedback.onStatusChange { FeedbackNotifier.statusChanged(this, it) }
         interactions.addListener { i, what -> net.finleg.bridget.interact.InteractionNotifier.onChange(this, i, what) }
+        // UI-23: keep the Quick Settings tile in step when Home, the notification or the tile pauses or resumes.
+        var tileListening = settings.listenerEnabled
+        settings.addListener {
+            val now = settings.listenerEnabled
+            if (now != tileListening) { tileListening = now; net.finleg.bridget.ui.home.ListenerTile.requestUpdate(this) }
+        }
         applyAppearance()
         createChannels()
     }
