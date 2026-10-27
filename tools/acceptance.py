@@ -455,6 +455,13 @@ def main():
         assert len(im) == 1 and max(im[0]["width_px"], im[0]["height_px"]) <= 512, im[:1]
         return f"stored and returned {im[0]['width_px']}x{im[0]['height_px']}"
 
+    @c.check("F06", "report text and status notes never reach the log other agents can read")
+    def _():
+        time.sleep(1.5)  # async log writer
+        blob = c.call("GET", "/log/export?format=jsonl", T).body.decode()
+        for secret_text in ("acceptance: image/last was slow", "Looking at it", "Fix in PR #3", "acceptance: with image"):
+            assert secret_text not in blob, f"log contains report text: {secret_text!r}"
+
     @c.check("F05", "an agent may file at most 5 reports an hour (429)")
     def _():
         codes = [c.call("POST", "/feedback", T, {"kind": "bug", "description": f"acceptance flood {n}"}).status for n in range(5)]
