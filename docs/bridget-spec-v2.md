@@ -60,6 +60,7 @@ tied to a phase keep a status tag ([Decided], [Proposed], [Open]).
 | `TST` | 14. Testing and release |
 | `PER` | 15. Per-agent permissions (deferred) |
 | `—` | 16. Roadmap and phases; 17. Open questions; Appendices A-F |
+| `PLY` | 18. Play Store distribution (proposed) |
 
 ### 0.3 Glossary
 
@@ -1842,8 +1843,75 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 | Q15 | Log visibility default: every agent sees all agents' entries (D12 as written), or each agent sees only its own unless Rahul switches it (review recommendation)? | All entries (D12) until the owner decides |
 | Q16 | Add the per-agent **Developer** switch (AGT-15) now, so only chosen agents read bug reports with screenshots? It's one small exception to "per-agent permissions later" (D11). | Yes (Proposed); off for every agent until Rahul turns it on |
 | Q17 | Clipboard writes by agents: ask Rahul every time (CAP-40, proposed default), or allow silently with a notification? | Ask every time |
+| Q18 | Distribute Bridget through Google Play (section 18), accepting the feature changes Play policy forces, or stay sideloaded? | Stay sideloaded; revisit after P2 |
 
 ---
+
+## 18. Play Store distribution (proposed)
+
+The owner asked (27 Oct 2026) whether people should install Bridget from
+Google Play. This section lists what that would change. Nothing here is
+decided; Q18 holds the decision. Play policy statements are marked
+[Verify]: policies change, and the final word is the Play Console review.
+
+### 18.1 What gets better
+
+- **PLY-01 [Proposed]** Install and update in a few taps, with automatic
+  updates and no "install unknown apps" prompt or Play Protect warning.
+- **PLY-02 [Proposed]** Play installs aren't subject to Android's
+  "restricted settings" block (UI-27), so notification access and
+  Accessibility can be turned on without the extra unlock step.
+- **PLY-03 [Proposed]** Other people could use Bridget with their own
+  agents, which turns it from a personal tool into a product (changes
+  PRD-02).
+
+### 18.2 What Play policy would force us to change
+
+| Area | Play rule (summary) [Verify] | Effect on Bridget |
+|---|---|---|
+| Accessibility screenshots (D17, 8.10) | The Accessibility API is for apps that help people with disabilities; other uses need an approved declaration and are usually rejected | Likely **not allowed**. Screenshots fall back to the screen-share grants (CAP-26b), or to a separate sideloaded build |
+| Always-on service, `specialUse` type (ARC-02) | Each foreground-service type must be declared and justified in the Play Console, with a demo video for some types | Needs a written justification; `specialUse` is reviewed case by case |
+| Camera, microphone and screen access for remote callers | Apps that capture and send data without the user's clear, ongoing awareness fall under the spyware / stalkerware rules | Keep every visibility rule (PRD-04, PRD-11), a persistent notification, prominent disclosure before first use, and no hidden capture. Phone MCP shows this is possible on Play |
+| Background location (CAP-20a, Q5) | Needs a declaration, a core-feature justification and a video | Keep location "while in use"; no history on the Play build |
+| Usage access (8.16), notification access (8.18) | Restricted permissions with a declaration; only for apps whose core purpose needs them | Likely cut from the Play build, or reviewed as a stretch |
+| Health Connect (8.17) | Health apps need a Play declaration, a privacy policy and a review of each data type | Possible, with a public privacy policy page |
+| Package visibility (launching other apps, 8.20) | Seeing all installed apps needs justification | Use explicit `<queries>` for common apps instead |
+| Data safety form | Must describe every data type collected or shared | Bridget sends data only to the user's own agents; the form must still list camera, audio, photos, location and so on as "shared with the user's chosen apps" |
+| Privacy policy | Required, public URL | New page, for example on finleg.net |
+
+### 18.3 Signing and moving over
+
+- **PLY-04 [Proposed]** Play App Signing re-signs the app with Google's key.
+  The existing keystore ("Almusca Device Bridge — Android release keystore")
+  becomes the **upload key**. Because the installed sideloaded copy is
+  signed with that key, not Google's, the Play version **can't install over
+  it**: moving over means one uninstall, which deletes agents, keys and the
+  log. Agents need new setup prompts afterwards.
+- **PLY-05 [Proposed]** Keep two builds from one codebase:
+  - **play** flavour: Play-safe capability set (18.2), package
+    `net.finleg.bridget`;
+  - **full** flavour: everything in this spec, sideloaded, package
+    `net.finleg.bridget.full`, so both can be installed side by side.
+  Each capability module (ARC-05) declares which flavours include it.
+
+### 18.4 Account and listing
+
+- **PLY-06 [Proposed]** A Google Play developer account (one-time fee,
+  identity verification), store listing (screenshots, description,
+  feature graphic), content rating, target-audience form, data safety form
+  and privacy policy. Internal testing track first, then closed testing.
+- **PLY-07 [Verify]** Google has announced developer verification for apps
+  installed outside Play on certified Android devices, rolling out from
+  2026. If it applies to Rahul's region and device, even the sideloaded
+  build would need a verified developer identity. Check the current status
+  before relying on sideloading long term.
+
+### 18.5 Recommendation
+
+- **PLY-08 [Proposed]** Stay sideloaded while Bridget is a personal tool
+  (Q18 default). If Play becomes a goal, ship the **play** flavour first to
+  the internal testing track after P2, with Accessibility screenshots,
+  usage access and notification access left out.
 
 ## Appendix A. Endpoint reference
 
