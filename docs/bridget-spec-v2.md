@@ -1501,6 +1501,17 @@ one purpose, started by Rahul and run together with one agent. The first is
   Android's camera; the photo is saved to Pictures/Bridget and sent at once
   as `tour.photo`; the agent fetches it with `GET /v1/tour/photo/{n}` (its
   own tour only, no Gallery switch needed).
+- **TOUR-08** (owner report, 27 Oct 2026: "the agents don't message back")
+  Bridget never calls an agent without a callback URL, so an agent that isn't
+  looping on `GET /v1/events` never sees the tour. An agent is **listening**
+  when it has a callback URL or called `/v1/events` in the last 90 s. Setup
+  shows a warning row with **Copy prompt** when the picked agent isn't
+  listening (Start stays allowed); 20 s after Start, if the agent hasn't
+  fetched its events, the running screen shows the same warning. The prompt
+  (no key) tells the agent to read `GET /v1/tour`, loop on events until
+  `tour.ended` and speak; it carries the brief. The Interactions switch is
+  required (events live behind it). The brief tells the agent to keep looping
+  and to greet Rahul on the first tick, which carries location and compass.
 
 ### 8.22 Communications (not scheduled)
 

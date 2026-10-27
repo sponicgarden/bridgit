@@ -164,7 +164,7 @@ object Guide {
         sb.appendLine("Send `POST /v1/me {\"model\",\"harness\"}` once after pairing and whenever it changes. Rahul sees it on your agent card; until then the card says \"Model not reported\".")
         sb.appendLine()
         sb.appendLine("## City tour")
-        sb.appendLine("When Rahul starts a tour with you, you get `tour.started` (with `brief`), then `tour.tick` every interval, `tour.question` when he asks, `tour.photo` when he takes a photo for you (fetch `/v1/tour/photo/{n}`), and `tour.ended`. The brief for all topics:")
+        sb.appendLine("When Rahul starts a tour with you, you get `tour.started` (with `brief`), then `tour.tick` every interval, `tour.question` when he asks, `tour.photo` when he takes a photo for you (fetch `/v1/tour/photo/{n}`), and `tour.ended`. You only get them while you loop on `/v1/events` (or have a callback URL): the tour screen tells Rahul when you aren't listening. The brief for all topics:")
         sb.appendLine()
         net.finleg.bridget.tour.TourKinds.brief(net.finleg.bridget.tour.TourKinds.all).lines().forEach { sb.appendLine("> $it") }
         sb.appendLine()

@@ -114,4 +114,9 @@
     <string name="tour_home_card">City tour with %1$s · %2$s</string>
     <string name="tour_home_open">Open</string>
     <string name="tour_home_paused">Paused</string>
+    <string name="tour_need_interactions_switch">Interactions switch is off, so your agent can\'t read tour events</string>
+    <string name="tour_need_agent_listening">%1$s isn\'t listening for Bridget events, so it won\'t hear the tour. Copy the prompt and paste it into %1$s\'s chat.</string>
+    <string name="tour_fix_copy_prompt">Copy prompt</string>
+    <string name="tour_prompt_copied">Copied. Paste it into %1$s\'s chat.</string>
+    <string name="tour_waiting_agent">%1$s hasn\'t picked up the tour yet. It may not be listening for Bridget events. Copy the prompt and paste it into %1$s\'s chat.</string>
 </resources>

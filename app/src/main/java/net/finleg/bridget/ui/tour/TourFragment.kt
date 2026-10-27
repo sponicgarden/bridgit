@@ -43,6 +43,7 @@ import net.finleg.bridget.BridgeService
 import net.finleg.bridget.R
 import net.finleg.bridget.capability.Compass
 import net.finleg.bridget.capability.LocationReader
+import net.finleg.bridget.capability.address
 import net.finleg.bridget.capability.granted
 import net.finleg.bridget.databinding.FragmentTourBinding
 import net.finleg.bridget.databinding.TourRowAgentBinding
@@ -153,6 +154,8 @@ class TourFragment : Fragment() {
                 launch { app.tours.state.collect { render() } }
                 launch { dirty.collect { render(); delay(250) } }
                 launch { compassLoop() }
+                // Whether the picked agent is listening changes with its polls, which fire no listener.
+                launch { while (true) { delay(LISTEN_CHECK_MS); if (app.tours.current() == null) requestRender() } }
             }
         }
     }
@@ -281,15 +284,17 @@ class TourFragment : Fragment() {
                     info.isChecked = checked
                 }
             })
-            r.root.setOnClickListener { agentId = a.id; renderAgents(); renderStart() }
+            r.root.setOnClickListener { agentId = a.id; renderAgents(); renderStart(); requestRender() }
             s.agents.addView(r.root)
         }
     }
 
-    private data class Need(val key: String, val text: Int, val action: Int, val fix: () -> Unit)
+    /** [label], when set, is shown instead of [text] (a string with the agent's name). */
+    private data class Need(val key: String, val text: Int, val action: Int, val label: String? = null, val fix: () -> Unit)
 
     private fun needs(): List<Need> = listenerNeed() + app.tours.missing().map { m ->
         when (m) {
+            "Interactions switch" -> Need(m, R.string.tour_need_interactions_switch, R.string.tour_fix_turn_on) { turnOn("interactions") }
             "Location switch" -> Need(m, R.string.tour_need_location_switch, R.string.tour_fix_turn_on) { turnOn("location") }
             "Location permission" -> Need(m, R.string.tour_need_location_permission, R.string.tour_fix_allow) {
                 perms.request(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -305,6 +310,21 @@ class TourFragment : Fragment() {
             }
             else -> Need(m, 0, 0) {}
         }.let { n -> if (n.text == 0) Need(m, 0, 0) {} else n }
+    }
+
+    /** Not blocking (the agent may start polling after Start), but without it nothing reaches the agent. */
+    private fun listeningNeed(): List<Need> {
+        val a = agentId?.let { app.agents.get(it) } ?: return emptyList()
+        if (app.tours.listening(a.id)) return emptyList()
+        return listOf(Need("listening:${a.id}", R.string.tour_need_agent_listening, R.string.tour_fix_copy_prompt,
+            label = getString(R.string.tour_need_agent_listening, a.name)) { copyStartPrompt(a.name, TourKinds.all.filter { it in kinds }.ifEmpty { listOf("anything") }, false) })
+    }
+
+    /** The prompt that gets a non-listening agent onto GET /v1/events (TourKinds.startPrompt). */
+    private fun copyStartPrompt(agentName: String, tourKinds: List<String>, running: Boolean) {
+        val ctx = context ?: return
+        UiActions.copy(ctx, "City tour prompt", TourKinds.startPrompt(agentName, app.address().baseUrl, tourKinds, running))
+        Snackbar.make(b.coordinator, getString(R.string.tour_prompt_copied, agentName), Snackbar.LENGTH_LONG).show()
     }
 
     /** The agent gets ticks only while the listener runs; BridgeService.start does nothing while paused. */
@@ -338,7 +358,7 @@ class TourFragment : Fragment() {
 
     private fun renderNeeded() {
         val s = b.setup
-        val need = needs()
+        val need = needs() + listeningNeed()
         val opt = optional()
         val key = need.joinToString("|") { it.key } + "#" + opt.joinToString("|") { it.key }
         s.ready.isVisible = need.isEmpty()
@@ -353,7 +373,7 @@ class TourFragment : Fragment() {
         parent.removeAllViews()
         for (n in items) {
             val r = TourRowNeededBinding.inflate(layoutInflater, parent, false)
-            r.text.text = if (n.text != 0) getString(n.text) else n.key
+            r.text.text = n.label ?: if (n.text != 0) getString(n.text) else n.key
             if (!warn) {
                 r.icon.setImageResource(R.drawable.ic_info)
                 r.icon.imageTintList = android.content.res.ColorStateList.valueOf(
@@ -483,6 +503,12 @@ class TourFragment : Fragment() {
         }
         r.accuracy.isVisible = r.accuracy.text.isNotEmpty()
         r.paused.isVisible = t.paused
+        val waiting = !app.tours.pickedUp(t) && System.currentTimeMillis() - t.startedAt > PICKUP_GRACE_MS
+        r.waitingCard.isVisible = waiting
+        if (waiting) {
+            r.waitingText.text = getString(R.string.tour_waiting_agent, t.agent)
+            r.waitingCopy.setOnClickListener { copyStartPrompt(t.agent, t.kinds, true) }
+        }
         r.pause.setText(if (t.paused) R.string.tour_resume else R.string.tour_pause)
 
         val playing = app.speaker.current?.takeIf { it.agentId == t.agentId }
@@ -681,6 +707,9 @@ class TourFragment : Fragment() {
         private const val HOLD_MS = 400L
         private const val MAX_ASK_MS = 30_000L
         private const val COMPASS_MS = 2_000L
+        /** How long after Start the agent has to fetch its events before the screen says it isn't listening. */
+        private const val PICKUP_GRACE_MS = 20_000L
+        private const val LISTEN_CHECK_MS = 5_000L
         private const val KEY_KINDS = "tour_kinds"
         private const val KEY_AGENT = "tour_agent"
         private const val KEY_INTERVAL = "tour_interval"

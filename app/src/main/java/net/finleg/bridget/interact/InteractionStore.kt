@@ -248,6 +248,15 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
         }
     }
 
+    /** When each agent last called GET /v1/events (memory only): City tour checks the agent is listening. */
+    private val polledAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** Called at the start and end of every GET /v1/events, so an agent holding a 55 s wait stays "listening". */
+    fun notePoll(agentId: String) { polledAt[agentId] = clock() }
+
+    /** When [agentId] last called GET /v1/events since the app started; 0 = never. */
+    fun lastPoll(agentId: String): Long = polledAt[agentId] ?: 0L
+
     /** The agent's events after [sinceId] (oldest first), or its last 50 when [sinceId] is null. */
     fun eventsFor(agentId: String, sinceId: Long?, types: Set<String>, limit: Int = 100): List<Event> {
         // Never older than the retention window, even before the next prune has run.

@@ -47,8 +47,13 @@ object TourKinds {
     fun brief(kinds: List<String>): String {
         val topics = kinds.joinToString(", ") { labels[it]?.lowercase() ?: it }
         return listOf(
-            "You are Rahul's walking tour guide. Topics: $topics. Every tour.tick has his location, the compass " +
-                "(azimuth_deg = the way the phone points, 0 = north) and how far he moved.",
+            "You are Rahul's walking tour guide. Topics: $topics. He is walking now and listening on his phone's speaker.",
+            "Keep listening until tour.ended: loop GET /v1/events?since=<next_cursor>&wait=55 (60 s timeout). If your " +
+                "harness only acts during a turn, run each wait as a background command so the next event wakes you. " +
+                "Don't stop or end your turn while the tour runs; if you stop, he walks in silence.",
+            "The first tour.tick comes seconds after tour.started: greet him in 1-2 sentences, say where he is and what's " +
+                "around for these topics. Every tour.tick has location {latitude, longitude, accuracy_m}, compass " +
+                "{azimuth_deg = the way the phone points, 0 = north; direction}, moved_m and new_photos (photos he took since the last tick).",
             "Speak with POST /v1/speaker/say {\"text\",\"tour_id\"}: 2-4 short sentences per tick, spoken style, no lists. " +
                 "Don't repeat what you already said; if he hasn't moved and you have nothing new, stay silent.",
             "Say where things are relative to him: work out the bearing from his position to the place, compare it with " +
@@ -57,9 +62,27 @@ object TourKinds {
             "When there is nothing more of interest right here, say so in one sentence, then name the 2-3 nearest " +
                 "interesting places for these topics with their direction relative to him and distance, so he can choose where to walk.",
             "tour.question is him asking; answer it first with \"urgent\": true. tour.photo is a photo he just took for you: " +
-                "fetch it, say what it shows and why it matters for these topics.",
+                "GET its fetch link, say what it shows and why it matters for these topics. Fetch new_photos on a tick the same way.",
             "If location accuracy is worse than 100 m, say places are approximate. Never invent facts; say when you're not sure.",
         ).joinToString("\n")
+    }
+
+    /**
+     * What Rahul pastes into the agent's chat when it isn't listening for events (owner report 27 Oct
+     * 2026: agents never answered because nothing woke them). No key: the agent has it from pairing.
+     */
+    fun startPrompt(agentName: String, baseUrl: String, kinds: List<String>, tourRunning: Boolean): String = buildString {
+        appendLine("Bridget City tour: Rahul ${if (tourRunning) "has started" else "is starting"} a walking tour with you ($agentName) " +
+            "and you are not listening for Bridget events yet, so nothing reaches you.")
+        appendLine("Bridget is at $baseUrl (use your Bridget key from pairing, as before).")
+        appendLine("1. GET /v1/tour now. If a tour runs, its brief is there; follow it.")
+        appendLine("2. GET /v1/events (no since) and keep its next_cursor, then loop GET /v1/events?since=<next_cursor>&wait=55 " +
+            "with a 60 s timeout until tour.ended. If your harness only acts during a turn, run each wait as a background " +
+            "command so each event wakes you, answer, then start the next wait.")
+        appendLine("3. Answer every tour.tick, tour.question and tour.photo by speaking with POST /v1/speaker/say {\"text\",\"tour_id\"}.")
+        appendLine()
+        appendLine("The brief:")
+        append(brief(kinds))
     }
 }
 
@@ -168,6 +191,11 @@ object TourPrivacy {
  * switch is re-checked right before each tick or question is built.
  */
 class TourManager(private val app: BridgeApp) {
+    companion object {
+        /** A long-poll holds 55 s, so an agent that polled within 90 s is still looping. */
+        const val LISTEN_WINDOW_MS = 90_000L
+    }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var job: Job? = null
     private val tour = TourState()
@@ -196,8 +224,16 @@ class TourManager(private val app: BridgeApp) {
         return TourBattery.used(cur.batteryStartPct, batteryPct(), cur.charged || chargingNow)
     }
 
+    /** The agent hears its events: it has a callback URL, or called GET /v1/events in the last [LISTEN_WINDOW_MS]. */
+    fun listening(agentId: String): Boolean = app.callbacks.get(agentId) != null ||
+        System.currentTimeMillis() - app.interactions.lastPoll(agentId) < LISTEN_WINDOW_MS
+
+    /** The tour's agent has fetched its events since [t] started (or gets them pushed to a callback URL). */
+    fun pickedUp(t: Tour): Boolean = app.callbacks.get(t.agentId) != null || app.interactions.lastPoll(t.agentId) >= t.startedAt
+
     /** What's missing before a tour can start (TOUR-01); empty = ready. */
     fun missing(): List<String> = buildList {
+        if (!app.settings.isOn("interactions")) add("Interactions switch")
         if (!app.settings.isOn("location")) add("Location switch")
         if (reader.precision() == null) add("Location permission")
         if (!reader.enabled()) add("Android's Location setting")
