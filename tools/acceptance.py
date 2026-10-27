@@ -413,6 +413,56 @@ def main():
         assert r2.json()["whats_new"] is None and "x-bridget-whats-new" not in r2.headers, "still nagging after reading the changes"
         return f"revision {rev}"
 
+    # ---- 1.5: location, speaker, City tour (D30) ------------------------------------------------------
+    @c.check("L01", "location: a fix with latitude, longitude, altitude, accuracy, and the compass heading")
+    def _():
+        c.hook(location=True); time.sleep(0.5)
+        r = c.call("GET", "/location?fresh=false", T, timeout=40)
+        if r.status == 504:
+            raise Unverified("no location fix available on the phone")
+        expect(r, 200); j = r.json()
+        assert -90 <= j["latitude"] <= 90 and -180 <= j["longitude"] <= 180 and j["precision"] in ("precise", "approximate"), j
+        comp = j.get("compass")
+        return f"accuracy {j.get('accuracy_m')} m, altitude {j.get('altitude_m')}, heading " + (f"{comp['azimuth_deg']}° {comp['direction']}" if comp else "none")
+
+    @c.check("S01", "speaker: say queues speech on the phone; unsafe audio URLs are refused; stop clears it")
+    def _():
+        c.hook(speaker=True, speaker_ceiling="30"); time.sleep(0.5)
+        for bad in ("http://example.com/a.mp3", "https://192.168.1.1/a.mp3", "https://user:pw@example.com/a.mp3", "https://localhost/a.mp3"):
+            expect(c.call("POST", "/speaker/play", T, {"url": bad}, timeout=40), 422, "invalid_parameter")
+        r = c.call("POST", "/speaker/say", T, {"text": "Bridget test."}, timeout=40)
+        expect(r, 200)
+        st = c.call("GET", "/speaker", T); expect(st, 200)
+        expect(c.call("DELETE", "/speaker", T), 200)
+        return f"say -> {r.json()['status']}, quiet mode {st.json()['quiet']}"
+
+    @c.check("TOUR", "City tour: start sends tour.started, a tick carries location + compass, a question arrives, the agent ends it")
+    def _():
+        c.hook(location=True, speaker=True); time.sleep(0.5)
+        start = c.call("GET", "/events", T).json()
+        cur = start["events"][-1]["id"] if start["events"] else "0"
+        c.hook(tour_start=f"{T}:history,architecture:30")
+        t = c.call("GET", "/tour", T); expect(t, 200)
+        tour = t.json()["tour"]; assert tour and tour["interval_s"] == 30, t.json()
+        got, deadline = {}, time.time() + 45
+        while time.time() < deadline and not {"tour.started", "tour.tick"} <= set(got):
+            ev = c.call("GET", f"/events?since={cur}&wait=20", T, timeout=30).json()
+            for e in ev["events"]:
+                got.setdefault(e["type"], e)
+            cur = ev["next_cursor"]
+        assert "tour.started" in got and "tour.tick" in got, sorted(got)
+        tick = got["tour.tick"]["data"]
+        c.hook(tour_ask="What is that tower?")
+        ev = c.call("GET", f"/events?since={cur}&wait=15&types=tour.question", T, timeout=25).json()
+        assert ev["events"] and ev["events"][0]["data"]["question"] == "What is that tower?", ev
+        expect(c.call("POST", "/speaker/say", T, {"text": "That is the town hall.", "tour_id": tour["tour_id"], "urgent": True}, timeout=40), 200)
+        c.call("DELETE", "/speaker", T)
+        expect(c.call("DELETE", "/tour", T), 200)
+        end = c.call("GET", f"/events?since={ev['next_cursor']}&wait=10&types=tour.ended", T, timeout=20).json()
+        assert end["events"], "no tour.ended"
+        loc = tick.get("location") or {}
+        return f"tick: lat {loc.get('latitude')}, heading {(tick.get('compass') or {}).get('direction')}, {len(tick['new_photos'])} new photos"
+
     # ---- P1b: feedback (section 11) ----------------------------------------------------------------
     fb = {}
 

@@ -3,6 +3,7 @@ package net.finleg.bridget
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import kotlinx.coroutines.launch
 import net.finleg.bridget.core.Connection
 
 /**
@@ -34,7 +35,13 @@ class DebugSetupReceiver : BroadcastReceiver() {
             val p = spec.split(":")
             app.agents.byName(p[0])?.let { a -> runCatching { app.tours.start(a.id, p.getOrElse(1) { "history" }.split(","), p.getOrElse(2) { "60" }.toInt()) } }
         }
-        intent.getStringExtra("tour_ask")?.let { q -> kotlinx.coroutines.runBlocking { app.tours.ask(q, spoken = false) } }
+        // Never block the main thread here: ask() reads the compass on it.
+        intent.getStringExtra("tour_ask")?.let { q ->
+            val pending = goAsync()
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                try { app.tours.ask(q, spoken = false) } finally { pending.finish() }
+            }
+        }
         if (intent.hasExtra("tour_end")) app.tours.end("ended from the test hook")
         intent.getStringExtra("remove")?.let { n -> app.agents.byName(n)?.let { app.agents.remove(it.id) } }
         intent.getStringExtra("developer")?.let { spec ->
