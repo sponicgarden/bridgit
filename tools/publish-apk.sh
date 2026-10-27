@@ -146,10 +146,10 @@ echo "==> latest.json"
 cat "${MANIFEST}"
 
 # Refuse to publish a version that isn't newer than what's already public.
-CUR_CODE="$(curl -sS -A "${UA}" --max-time 20 "${PUBLIC_BASE}/latest.json" 2>/dev/null | python3 -c '
+CUR_CODE="$( (curl -sS -A "${UA}" --max-time 20 "${PUBLIC_BASE}/latest.json" 2>/dev/null || true) | python3 -c '
 import json, sys
 try: print(int(json.load(sys.stdin).get("version_code", 0)))
-except Exception: print(0)' || echo 0)"
+except Exception: print(0)')"
 if (( CUR_CODE >= VCODE )); then
   if [[ ${FORCE} -eq 1 ]]; then echo "==> Public latest.json has version_code ${CUR_CODE}; publishing ${VCODE} anyway (--force)"
   else die "public latest.json already has version_code ${CUR_CODE} (this APK is ${VCODE}); bump versionCode or pass --force"; fi
