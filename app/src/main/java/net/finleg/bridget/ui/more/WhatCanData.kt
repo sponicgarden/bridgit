@@ -1,5 +1,7 @@
 package net.finleg.bridget.ui.more
 
+import net.finleg.bridget.api.ApiDocs
+
 /**
  * "What can Bridget do?" (owner request, 1.4.2): one card per feature with a use case,
  * covering everything in the spec, marked built or with its planned phase (section 16).
@@ -100,6 +102,30 @@ object WhatCanData {
             "Location, heading (compass) and new photos each time", "Ask out loud or type a question", "Pause, skip, end; ends by itself after 4 hours"),
         "Everything is logged" to listOf("Filter by agent, type, endpoint, result, level, time or text", "Follow it live", "Stats per agent and endpoint", "Export as JSONL or CSV", "\"All entries\" or \"only their own\" for agents"),
         "Report a bug or ask for a feature" to listOf("Last screen, up to 5 screenshots and the recent log attached", "\"Don't auto-fix\" keeps it for a person", "Statuses: new, seen, in progress, fixed, won't fix, duplicate", "You confirm a fix or say it's still broken"),
+    )
+
+    /**
+     * The calls each card uses, for its section on the public API page (ApiDocs, card Share links).
+     * Keys are card titles; ApiDocsTest checks every title and call exists.
+     */
+    val endpoints: Map<String, List<String>> = mapOf(
+        "Add an agent in a minute" to listOf("GET /v1/health", "POST /v1/pair", "GET /v1/tools/bridget"),
+        "One key per agent" to listOf("GET /v1/health"),
+        "Take a photo" to listOf("POST /v1/camera/snapshot"),
+        "Record a short clip" to listOf("POST /v1/mic/record"),
+        "Your latest screenshot or photo" to listOf("GET /v1/image/last"),
+        "Find photos in your gallery" to listOf("GET /v1/gallery/recent", "GET /v1/gallery/photo/{id}"),
+        "Everything is logged" to listOf("GET /v1/log", "GET /v1/log/{id}", "GET /v1/log/stats", "GET /v1/log/export"),
+        "Agent notes" to listOf("POST /v1/log"),
+        "The API explains itself" to listOf("GET /v1/guide", "GET /v1/openapi.json", "GET /v1/capabilities"),
+        "Agents learn what's new" to listOf("GET /v1/changes"),
+        "Report a bug or ask for a feature" to listOf("GET /v1/feedback", "GET /v1/feedback/{id}", "POST /v1/feedback/{id}/status", "POST /v1/feedback"),
+        "You stay in control" to listOf("GET /v1/capabilities"),
+        "Questions and notices to you" to listOf("POST /v1/interactions", "GET /v1/interactions", "GET /v1/interactions/{id}", "DELETE /v1/interactions/{id}", "GET /v1/events"),
+        "Events and callbacks" to listOf("GET /v1/events"),
+        "Location details" to listOf("GET /v1/location"),
+        "City tour" to listOf("GET /v1/tour", "DELETE /v1/tour", "GET /v1/events", "POST /v1/speaker/say", "POST /v1/speaker/play", "GET /v1/gallery/photo/{id}"),
+        "Play an audio file" to listOf("POST /v1/speaker/play", "POST /v1/speaker/say", "GET /v1/speaker", "DELETE /v1/speaker"),
     )
 
     val all = listOf(
@@ -227,4 +253,10 @@ object WhatCanData {
         Feature(Stage.IDEA, "Location history and places",
             "Optional history kept on the phone, and \"tell me when I get home\".", "Grok reminds you to water the plants when you arrive home.", "CAP-20a, Q14"),
     )
+
+    /** The cards as the public API page (ApiDocs) shows them. */
+    fun apiCards(): List<ApiDocs.Card> = all.map {
+        ApiDocs.Card(it.title, it.stage.label, it.kind == Kind.MECHANIC, it.what, it.useCase,
+            options[it.title].orEmpty(), endpoints[it.title].orEmpty(), it.ref)
+    }
 }

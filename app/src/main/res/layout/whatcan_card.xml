@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One feature: picture, stage chip, title, what it does, options (in an inset panel), a use case. -->
+<!-- One feature: picture, stage chip, title, what it does, options (in an inset panel), a use case, and a Share button linking to its API section. -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     style="@style/Widget.Bridget.Card"
@@ -12,7 +12,6 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:importantForAccessibility="noHideDescendants"
         android:orientation="vertical">
 
         <!-- Edge to edge; MaterialCardView doesn't clip children, so the image rounds its own top corners. -->
@@ -22,11 +21,17 @@
             android:layout_height="wrap_content"
             android:adjustViewBounds="true"
             android:scaleType="centerCrop"
+            android:importantForAccessibility="no"
             app:shapeAppearanceOverlay="@style/ShapeAppearance.Bridget.CardTop" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:importantForAccessibility="noHideDescendants"
             android:orientation="vertical"
             android:padding="16dp">
 
@@ -46,6 +51,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
+                android:layout_marginEnd="32dp"
                 android:textAppearance="?attr/textAppearanceTitleLarge"
                 android:textColor="?attr/colorOnSurface" />
 
@@ -130,5 +136,18 @@
                 android:textAppearance="@style/TextAppearance.Bridget.Mono"
                 android:textColor="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
+
+        <!-- Outside the hidden-descendants group so TalkBack reaches it; top right of the text, under the picture. -->
+        <ImageButton
+            android:id="@+id/share"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="top|end"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="4dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_share"
+            app:tint="?attr/colorPrimary" />
+        </FrameLayout>
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>
