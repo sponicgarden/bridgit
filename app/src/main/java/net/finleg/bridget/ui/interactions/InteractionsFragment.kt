@@ -162,6 +162,7 @@ class InteractionsFragment : Fragment() {
             val bb = _b ?: return@launch
             r.onSuccess {
                 drafts.clear(i.id)
+                adapter?.overrides?.put(i.id, true) // keep "You answered ..." on screen after the refresh
                 Snackbar.make(bb.root, getString(R.string.interactions_sent_snack, InteractionUi.agentName(i)), Snackbar.LENGTH_SHORT).show()
             }.onFailure { e ->
                 Snackbar.make(bb.root, getString(R.string.interactions_answer_failed, e.message ?: e.javaClass.simpleName), Snackbar.LENGTH_LONG).show()

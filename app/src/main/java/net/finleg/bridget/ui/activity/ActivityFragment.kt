@@ -126,6 +126,11 @@ class ActivityFragment : Fragment() {
         }
         // D26: Activity is no longer a tab (opened from More, Home, Agent detail), so it has a back arrow.
         b.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+        // No bottom bar any more, so the list pads for the system navigation bar (edge-to-edge).
+        val listPad = b.list.paddingBottom
+        ViewCompat.setOnApplyWindowInsetsListener(b.list) { v, insets ->
+            v.updatePadding(bottom = listPad + insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom); insets
+        }
         b.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.activity_export -> ExportSheet().show(childFragmentManager, "export")
