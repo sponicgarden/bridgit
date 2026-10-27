@@ -22,8 +22,8 @@ android {
         targetSdk = 35
         // -PbridgetVersionCode / -PbridgetVersionName build an older-looking copy, used only to test
         // the in-app update path (UPD-03/04) against the published release. Never published.
-        versionCode = (project.findProperty("bridgetVersionCode") as String?)?.toInt() ?: 14
-        versionName = (project.findProperty("bridgetVersionName") as String?) ?: "1.5.2"
+        versionCode = (project.findProperty("bridgetVersionCode") as String?)?.toInt() ?: 15
+        versionName = (project.findProperty("bridgetVersionName") as String?) ?: "1.5.3"
         buildConfigField("int", "DEFAULT_PORT", "8734")
         buildConfigField("String", "GIT_COMMIT", "\"${gitCommit()}\"")
         buildConfigField("boolean", "DIRTY_BUILD", "${gitDirty()}")
@@ -118,6 +118,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.viewpager2:viewpager2:1.1.0")
+    // Crash reports (D32). Core only: no NDK, replay or Gradle plugin, so nothing is uploaded at build time.
+    implementation("io.sentry:sentry-android-core:7.18.1")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")

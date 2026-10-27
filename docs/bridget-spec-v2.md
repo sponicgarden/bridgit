@@ -104,6 +104,7 @@ should treat these as settled unless a serious problem is found.
 | D15 | 27 Oct 2026 | Screens use **native Kotlin Android Views with Material 3 components**, with a "techie but friendly" look (section 12). | Decided |
 | D16 | 27 Oct 2026 | Spec **"maximum capabilities"**: describe everything Android allows that's useful to a personal agent, phased (section 16). | Decided |
 | D17 | 27 Oct 2026 | **Screenshots use an Accessibility service**, with no per-screenshot approval (replaces D10's approve-each-time design). Default mode: a private in-memory copy; optional mode: Android's normal screenshot, saved to the gallery. The screen-share grant flow (once / 1 h / 16 h) stays only as the fallback when Accessibility is off. | Decided |
+| D32 | 27 Oct 2026 | **Crash reports go to Sentry** (owner request). Exception to "no crash SDKs" (ARC-09): `sentry-android-core` only, project `sponic-gardens-inc/bridget-android`. Crashes, ANRs and unhandled errors with stack, app version and basic device facts (model, Android version, battery, memory); no screenshots, view hierarchy, user or install ids, sessions, breadcrumbs from user, network or system events, or tracing; agent keys scrubbed; the project drops the IP and inferred city. On by default; **Settings > Privacy > Send crash reports** turns it off. | Decided |
 | D31 | 27 Oct 2026 | **Screenshots ship in 1.5.2, private mode only** (owner asked for screenshots on request while testing). CAP-25 private mode, CAP-25b limits, CAP-26 and CAP-26a move from 1.6 to 1.5.2: `POST /v1/screen/capture`, Accessibility service off until Rahul turns it on, Screenshots switch off by default. System mode, the CAP-25a after-capture notification (the ongoing capture notification shows instead) and the CAP-26b screen-share fallback stay where they were. | Decided |
 | D30 | 27 Oct 2026 | **Bridget applications; first: City tour** (owner). Rahul picks the kind of tour; every minute Bridget sends the agent location, compass and new photos; the agent narrates with audio that keeps changing as he moves; he can ask spoken questions. Pulls forward a minimal location (8.8), compass (8.21) and speaker (CAP-51/53) for it. Section 8.25, prototype in 1.5.x. | Decided |
 | D29 | 27 Oct 2026 | **Playing mirrors listening, and video goes with audio** (owner): play an audio file, stream audio to the speaker (two-way voice with the mic stream), speak text, play a video on screen, and a **live camera video stream** with optional audio; the video clip (8.3) moves to P2. Section 8.24, all in 1.6. | Decided |
@@ -128,7 +129,7 @@ are the deliberate departures. Anything not listed still applies.
 | Pairing: on-screen code, the agent calls `/v1/pair` | Primary: a **setup prompt** with the key, copied from the phone. The code flow stays as an alternative. | D13 |
 | "Smallest possible surface. Three capabilities in v1." | Many capabilities, each behind its own master switch, phased in | D16 |
 | "No network calls other than answering API requests" | Also: (a) **callbacks** to agent webhook URLs Rahul approves on the phone, (b) **feedback upload** if Rahul turns it on, (c) optional address lookup for location. Each is off by default. | Sections 9, 11, 8.8 |
-| "No third-party SDKs" | Still none for analytics or ads. Allowed: Ktor, CameraX, ZXing, AndroidX, Material, and Google ML Kit's **bundled, offline** text recognition (if OCR is built) | 8.15 |
+| "No third-party SDKs" | Still none for analytics or ads; Sentry crash reports only (D32). Allowed: Ktor, CameraX, ZXing, AndroidX, Material, and Google ML Kit's **bundled, offline** text recognition (if OCR is built) | 8.15 |
 | No access to messages, contacts, other apps' data | Unchanged for v2. Communications is listed as a possible later module, **not scheduled** (8.22) | Owner decision pending, Open Q1 |
 | "Version 1 accepts Android stopping the listener" | Same, plus the always-on service (D1) and battery exemption on the Access screen | D1 |
 | Audit log: 1,000 entries, read via `/v1/audit` | Structured log store with query, tail and agent notes; 20,000 entries / 30 days; `/v1/audit` kept as an alias in the new entry shape | D12, D20 |
@@ -300,8 +301,8 @@ Agent host (on tailnet) ──WireGuard (Tailscale)──▶ Pixel: Bridget
 - **ARC-09 [Proposed]** Libraries: Kotlin 2.x, AndroidX (core, appcompat,
   fragment, navigation, lifecycle, recyclerview, exifinterface, health
   connect client if built), Material Components 1.12+, CameraX, Ktor server
-  CIO, ZXing core, ML Kit text recognition (bundled) if OCR is built. No
-  analytics or crash SDKs.
+  CIO, ZXing core, ML Kit text recognition (bundled) if OCR is built, and
+  Sentry's Android core for crash reports only (D32). No analytics SDKs.
 
 ### 4.3 Transport
 

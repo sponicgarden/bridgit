@@ -169,6 +169,15 @@ receiver didn't answer 2xx).
 - App backup is disabled. The only outgoing call is the update check (from 1.4.0): HTTPS to
   Sponic's public R2 host, verified before Android asks you to install.
 
+## Crash reports
+
+Crashes and freezes (ANRs) go to Sentry, project `bridget-android` in the
+`sponic-gardens-inc` org (decision D32). Sent: the error and stack, app version,
+Android version and basic device facts (model, battery, memory). Not sent:
+screenshots, photos, keys, request data, install ids or sessions; the project
+drops the IP address and the city inferred from it. Turn it off on
+the phone under Settings > Privacy > Send crash reports.
+
 ## Build
 
 Needs JDK 17 and the Android SDK (platform 35, build-tools 35).
