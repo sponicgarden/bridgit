@@ -77,6 +77,12 @@
     <string name="tour_ask_heard_nothing">Didn\'t catch that. Try again, or type your question.</string>
     <string name="tour_ask_unavailable">Speech recognition isn\'t available on this phone. Type your question instead.</string>
     <string name="tour_type">Type</string>
+    <string name="tour_photo">Photo</string>
+    <string name="tour_photo_cd">Take a photo and send it to your agent</string>
+    <string name="tour_said_photo">(sent a photo)</string>
+    <string name="tour_photo_sent">Photo sent to %1$s</string>
+    <string name="tour_photo_failed">Couldn\'t save the photo. Try again.</string>
+    <string name="tour_photo_no_camera">No camera app on this phone.</string>
     <string name="tour_type_cd">Type a question</string>
     <string name="tour_type_title">Ask %1$s</string>
     <string name="tour_type_hint">Your question</string>
@@ -96,6 +102,12 @@
     <string name="applets_title">Applets</string>
     <string name="applets_intro">Ready-made things to do with an agent.</string>
     <string name="applets_city_tour_desc">A guided walk: your agent tells you about what\'s around you, and you can ask it questions out loud.</string>
+    <string name="applets_build_title">How to build a ready-made applet</string>
+    <string name="applets_build_desc">Instructions for an AI agent: run your own applet with what Bridget has today, or add one to the app like City tour.</string>
+    <string name="applets_build_open">Open instructions</string>
+    <string name="applets_build_share">Share</string>
+    <string name="applets_build_share_title">Send the applet instructions to</string>
+    <string name="applets_build_share_text">Instructions for building a Bridget applet: %1$s</string>
     <string name="applets_running_with">Running with %1$s</string>
     <string name="applets_paused_with">Paused with %1$s</string>
     <string name="more_agents">Agents</string>
