@@ -17,6 +17,7 @@ import net.finleg.bridget.core.Connection
 class DebugSetupReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val app = context.applicationContext as BridgeApp
+        intent.getStringExtra("speaker_ceiling")?.toIntOrNull()?.let { app.settings.speakerCeiling = it }
         for (m in app.registry.switchable()) {
             val k = m.switchKey!!
             if (intent.hasExtra(k)) app.settings.setOn(k, intent.getBooleanExtra(k, false))
@@ -28,6 +29,13 @@ class DebugSetupReceiver : BroadcastReceiver() {
             runCatching { app.interactions.answer(id, button, emptyMap()) }
         }
         intent.getStringExtra("dismiss")?.let { runCatching { app.interactions.dismiss(it.toLong()) } }
+        // tour_start=<agent name>:<kind,kind>:<interval s>, tour_ask=<text>, tour_end=1 stand in for the City tour screen.
+        intent.getStringExtra("tour_start")?.let { spec ->
+            val p = spec.split(":")
+            app.agents.byName(p[0])?.let { a -> runCatching { app.tours.start(a.id, p.getOrElse(1) { "history" }.split(","), p.getOrElse(2) { "60" }.toInt()) } }
+        }
+        intent.getStringExtra("tour_ask")?.let { q -> kotlinx.coroutines.runBlocking { app.tours.ask(q, spoken = false) } }
+        if (intent.hasExtra("tour_end")) app.tours.end("ended from the test hook")
         intent.getStringExtra("remove")?.let { n -> app.agents.byName(n)?.let { app.agents.remove(it.id) } }
         intent.getStringExtra("developer")?.let { spec ->
             val (n, v) = spec.split("=").let { it[0] to (it.getOrNull(1) != "false") }

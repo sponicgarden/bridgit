@@ -39,7 +39,7 @@ sealed class Reply {
 
 /** One authenticated request, as seen by an endpoint. */
 class Req(val call: ApplicationCall, val spec: EndpointSpec, val agent: Agent?, val requestId: String,
-          val source: String, val body: JSONObject) {
+          val source: String, val body: JSONObject, val rawBody: ByteArray? = null) {
     /** What goes into the log entry's params (redacted before storing). */
     val params = JSONObject()
     var bytesOut = 0L
@@ -144,16 +144,21 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
             }
             // Pairing has no key, but wrong codes count as failed sign-ins (SEC-06).
             if (spec.path == "/pair" && limiter.count("auth:$source") >= RateLimiter.AUTH_FAILS_PER_IP) throw authBlockedError(source)
+            var raw: ByteArray? = null
             val body = if (spec.method == "POST") {
-                val bytes = readBody(call)
+                val bytes = readBody(call, spec.maxBody)
                 bytesIn = bytes.size.toLong()
-                parseBody(bytes)
+                val ctype = call.request.headers["Content-Type"] ?: ""
+                // Media endpoints take raw bytes (audio/*, image/*, …); everything else is a JSON object.
+                if (spec.maxBody > MAX_BODY && ctype.isNotEmpty() && !ctype.startsWith("application/json") && !ctype.startsWith("text/")) {
+                    raw = bytes; JSONObject()
+                } else parseBody(bytes)
             } else JSONObject()
             body.keys().forEach { k ->
                 val v = body.get(k)
                 logParams.put(k, if (k in spec.privateFields) "[${(v as? org.json.JSONArray)?.length()?.let { "$it items" } ?: "${v.toString().length} chars"}]" else v)
             }
-            val r = Req(call, spec, agent, rid, source, body)
+            val r = Req(call, spec, agent, rid, source, body, raw)
             req = r
 
             // API-13: one result per (agent, Idempotency-Key) for 24 h.
@@ -262,11 +267,12 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
     }
 
     /** API-11: 2 MB request bodies outside file uploads. */
-    private suspend fun readBody(call: ApplicationCall): ByteArray {
+    private suspend fun readBody(call: ApplicationCall, max: Int): ByteArray {
+        val limit = "Request bodies are limited to ${max / 1024 / 1024} MB."
         val declared = call.request.headers["Content-Length"]?.toLongOrNull()
-        if (declared != null && declared > MAX_BODY) throw ErrorCatalog.error("payload_too_large", "Request bodies are limited to 2 MB.")
-        val bytes = call.receiveChannel().readRemaining(MAX_BODY + 1L).readBytes()
-        if (bytes.size > MAX_BODY) throw ErrorCatalog.error("payload_too_large", "Request bodies are limited to 2 MB.")
+        if (declared != null && declared > max) throw ErrorCatalog.error("payload_too_large", limit)
+        val bytes = call.receiveChannel().readRemaining(max + 1L).readBytes()
+        if (bytes.size > max) throw ErrorCatalog.error("payload_too_large", limit)
         return bytes
     }
 

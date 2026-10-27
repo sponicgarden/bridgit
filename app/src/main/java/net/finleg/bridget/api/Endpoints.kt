@@ -26,6 +26,8 @@ data class EndpointSpec(
     val developerOnly: Boolean = false,
     /** Body fields never copied into the log, only their length (report text, notes, images). */
     val privateFields: Set<String> = emptySet(),
+    /** Largest request body (API-11): 2 MB unless the endpoint takes media. Non-JSON bodies reach the endpoint as Req.rawBody. */
+    val maxBody: Int = 2 * 1024 * 1024,
 ) {
     val fullPath get() = "/v1$path"
 }
@@ -194,7 +196,39 @@ object Endpoints {
         example = "GET /v1/events?since=0&wait=55", returns = "events[id, type, at, data], next_cursor",
         errors = listOf("invalid_parameter", "too_many_waits"))
 
+    val LOCATION = EndpointSpec("GET", "/location", "location", "Where the phone is now, with altitude, speed, heading and the compass",
+        capture = true,
+        query = listOf(Param("fresh", "boolean", "true (default): a new fix, up to 15 s; false: the last known one at once"),
+            Param("accuracy", "string", "high (GPS, default) or balanced", enum = listOf("high", "balanced")),
+            Param("compass", "boolean", "Include the compass (default true)")),
+        example = "GET /v1/location", returns = "latitude, longitude, altitude_m, accuracy_m, vertical_accuracy_m, speed_mps, bearing_deg, fix_time, age_s, precision, compass{azimuth_deg, direction, pitch_deg, roll_deg}",
+        errors = listOf("capability_disabled", "permission_denied", "notifications_required", "capture_timeout", "service_start_blocked"))
+    val SPEAKER_PLAY = EndpointSpec("POST", "/speaker/play", "speaker", "Play audio on the phone's speaker: send audio/* bytes as the body, or {\"url\"} (public https)",
+        idempotent = true, maxBody = 25 * 1024 * 1024, privateFields = setOf("text"),
+        query = listOf(Param("replace", "string", "after_current (default: replace what's queued from you), now, or queue", enum = listOf("after_current", "now", "queue")),
+            Param("tour_id", "string", "Narration for your running City tour"), Param("urgent", "boolean", "Jump the queue (answers to questions)"),
+            Param("text", "string", "Caption shown on the phone while it plays")),
+        body = listOf(Param("url", "string", "https:// audio file (MP3, M4A, OGG, WAV, FLAC), up to 25 MB")),
+        example = "POST /v1/speaker/play (Content-Type: audio/mpeg, body = the MP3)", returns = "play_id, position, status",
+        errors = listOf("capability_disabled", "notifications_required", "invalid_parameter", "payload_too_large", "rate_limited", "not_found"))
+    val SPEAKER_SAY = EndpointSpec("POST", "/speaker/say", "speaker", "Read text aloud on the phone (its own text-to-speech)",
+        idempotent = true, privateFields = setOf("text"),
+        body = listOf(Param("text", "string", "Up to 4,000 characters", required = true), Param("language", "string", "e.g. en-GB, de-DE"),
+            Param("rate", "number", "0.5-2, default 1"), Param("pitch", "number", "0.5-2, default 1"),
+            Param("replace", "string", "after_current (default), now, or queue"), Param("tour_id", "string", "Narration for your City tour"),
+            Param("urgent", "boolean", "Jump the queue")),
+        example = "POST /v1/speaker/say {\"text\":\"On your left is the old town hall, built in 1360.\",\"tour_id\":\"t123\"}",
+        returns = "play_id, position, status", errors = listOf("capability_disabled", "invalid_parameter", "rate_limited", "not_found"))
+    val SPEAKER_STATUS = EndpointSpec("GET", "/speaker", "speaker", "What's playing, and your queued sounds",
+        example = "GET /v1/speaker", returns = "playing{play_id, agent, text}, queued[], quiet")
+    val SPEAKER_STOP = EndpointSpec("DELETE", "/speaker", "speaker", "Stop your audio and clear your queue",
+        example = "DELETE /v1/speaker", returns = "stopped")
+    val TOUR_GET = EndpointSpec("GET", "/tour", "tour", "Your running City tour, if Rahul started one with you (D30)",
+        example = "GET /v1/tour", returns = "tour{tour_id, kinds, interval_s, started_at, ticks, last_tick_at, distance_m, photos_sent} or null")
+    val TOUR_END = EndpointSpec("DELETE", "/tour", "tour", "End your City tour", example = "DELETE /v1/tour", returns = "ended", errors = listOf("not_found"))
+
     val all = listOf(HEALTH, CAPABILITIES, GUIDE, OPENAPI, CHANGES, HELPER, PAIR, SNAPSHOT, MIC, GALLERY_RECENT, GALLERY_PHOTO,
         IMAGE_LAST, LOG, LOG_ENTRY, LOG_STATS, LOG_EXPORT, LOG_NOTE, AUDIT, FEEDBACK_LIST, FEEDBACK_GET, FEEDBACK_STATUS, FEEDBACK_POST,
-        INTERACTION_CREATE, INTERACTION_LIST, INTERACTION_GET, INTERACTION_CANCEL, EVENTS)
+        INTERACTION_CREATE, INTERACTION_LIST, INTERACTION_GET, INTERACTION_CANCEL, EVENTS,
+        LOCATION, SPEAKER_PLAY, SPEAKER_SAY, SPEAKER_STATUS, SPEAKER_STOP, TOUR_GET, TOUR_END)
 }

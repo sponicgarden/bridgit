@@ -46,6 +46,11 @@ class Settings(context: Context) {
         get() = prefs.getString("appearance", "system") ?: "system"
         set(v) { prefs.edit().putString("appearance", v).apply(); changed() }
 
+    /** SPK-01: agents' audio is never louder than this share of the media volume. */
+    var speakerCeiling: Int
+        get() = prefs.getInt("speaker_ceiling", 70)
+        set(v) { prefs.edit().putInt("speaker_ceiling", v.coerceIn(10, 100)).apply(); changed() }
+
     var firstRunDone: Boolean
         get() = prefs.getBoolean("first_run_done", false)
         set(v) { prefs.edit().putBoolean("first_run_done", v).apply() }

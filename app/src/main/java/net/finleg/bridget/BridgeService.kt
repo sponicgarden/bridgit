@@ -88,6 +88,10 @@ class BridgeService : LifecycleService() {
         var types = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
         if (wantCamera) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
         if (wantMic) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+        // Location (8.8, City tour) needs the type while in use; playback needs mediaPlayback (SPK-03).
+        if (!background && (granted(Manifest.permission.ACCESS_FINE_LOCATION) || granted(Manifest.permission.ACCESS_COARSE_LOCATION)))
+            types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+        if (!background) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
         if (types != ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) {
             try {
                 ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(), types)

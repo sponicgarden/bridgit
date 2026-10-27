@@ -103,6 +103,7 @@
     <string name="features_group_capture">Capture</string>
     <string name="features_group_photos">Photos &amp; files</string>
     <string name="features_group_talk">Talk to you</string>
+    <string name="features_group_where">Where and what</string>
     <string name="features_needs_permission">Needs %1$s permission.</string>
     <string name="features_open_once">Needs the app opened once</string>
     <string name="features_notifications_off">Notifications are off.</string>

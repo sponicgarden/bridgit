@@ -38,6 +38,13 @@ object ApiChanges {
             Item("Wait for his answer (wait=55), list or cancel your interactions", "/v1/interactions/{id}"),
             Item("Events: answers, closes and expiries for you, oldest first, with long-poll", "/v1/events"),
         )),
+        Revision(5, "1.5.1", "2026-10-27", listOf(
+            Item("Location with altitude, speed, heading and the compass", "/v1/location"),
+            Item("Play audio or read text aloud on the phone; newer narration replaces what's queued", "/v1/speaker/play"),
+            Item("Speak text with the phone's own voice", "/v1/speaker/say"),
+            Item("What's playing; stop your audio", "/v1/speaker"),
+            Item("City tour: your running tour (tour.started / tour.tick / tour.question / tour.ended events)", "/v1/tour"),
+        )),
     )
 
     val CURRENT: Int = revisions.maxOf { it.revision }
