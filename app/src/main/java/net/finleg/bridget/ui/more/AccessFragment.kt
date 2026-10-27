@@ -154,7 +154,10 @@ class AccessFragment : Fragment() {
                 R.string.access_btn_turn_on, R.array.access_how_battery) {
                 open(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${ctx.packageName}")))
             },
+        ) + listOfNotNull(
             // UPD-04: Android asks for this the first time Bridget installs its own update.
+            // Debug builds never update themselves (UPD-06), so they don't show the row.
+            if (net.finleg.bridget.BuildConfig.DEBUG) null else
             Item("installs", R.string.access_installs, R.string.access_installs_unlocks, installs,
                 R.string.access_btn_turn_on, R.array.access_how_installs) {
                 open(UpdateInstaller.unknownSourcesIntent(ctx))
