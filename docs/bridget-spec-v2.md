@@ -104,6 +104,7 @@ should treat these as settled unless a serious problem is found.
 | D15 | 27 Oct 2026 | Screens use **native Kotlin Android Views with Material 3 components**, with a "techie but friendly" look (section 12). | Decided |
 | D16 | 27 Oct 2026 | Spec **"maximum capabilities"**: describe everything Android allows that's useful to a personal agent, phased (section 16). | Decided |
 | D17 | 27 Oct 2026 | **Screenshots use an Accessibility service**, with no per-screenshot approval (replaces D10's approve-each-time design). Default mode: a private in-memory copy; optional mode: Android's normal screenshot, saved to the gallery. The screen-share grant flow (once / 1 h / 16 h) stays only as the fallback when Accessibility is off. | Decided |
+| D22 | 27 Oct 2026 | **Name and icon:** the app is "Bridget", full name **"Bridget: Agentic Android Device Bridge"** (first run, Home's top bar with the icon and the version in small type, About). New icon from the owner's artwork (phone outline, stone bridge, cursor), 1.4.1. | Decided |
 | D21 | 27 Oct 2026 | **In-app update check, like Spotka's**: release APKs and a small `latest.json` are published to Sponic's **public R2** bucket; Bridget checks it over HTTPS, verifies the download (SHA-256, package, versionCode, signing certificate) and hands it to Android's installer, which always asks Rahul to confirm. Shipped with P1b as 1.4.0, with a new app icon. Section 12.14. | Decided |
 | D20 | 27 Oct 2026 | No production users before P1a; no migration from 1.2; old 64-hex keys and 1.2 field names are not kept. P1a is installed fresh (uninstall 1.2.0 first) and every agent is paired again with a new `brg_` key. Appendix F (MIG-01..05) is dropped. | Decided |
 
@@ -1798,6 +1799,12 @@ its debug builds; Bridget's is for its **release** build.
   entry with the host only (no full URL query), the versions and the result.
 - **UPD-08 [P1b]** An update keeps agents, keys, switches and the log
   (NFR-12): same package, same signing key.
+- **As tested on the Pixel (27 Oct 2026):** a release build updated itself
+  from R2 twice (test build → 1.4.0 → 1.4.1); agents kept working each time.
+  The first update needs "Install unknown apps" for Bridget, and Google Play
+  Protect may show "App scan recommended" for a sideloaded APK; both are
+  Rahul's taps. Turning on "Install unknown apps" can restart Bridget, so it
+  remembers the request and carries on when he comes back (1.4.1).
 
 ## 13. Non-functional requirements
 
@@ -1886,7 +1893,7 @@ its debug builds; Bridget's is for its **release** build.
 |---|---|---|---|
 | Built | 1.0-1.2 | Listener, keys, camera photo, mic clip, gallery, last image, audit log, four agents | Done 26 Oct 2026 |
 | **P1a** | 1.3.0 (owner, 27 Oct 2026) | New UI shell (12.1-12.5, 12.7-12.9, 12.11-12.13), setup prompt flow (6) with AGT-05a, `brg_` keys, Developer switch, `/v1/guide`, `/v1/openapi.json`, `/v1/tools/bridget`, log store and API with the visibility setting (10), Access screen, boot receiver, network callbacks, cleartext config, size presets, `raw=1` for snapshots, `image/last?wait`, idempotency and pending schema | TST-03 passes; Rahul adds a new agent from the prompt in under 1 minute |
-| **P1b** | 1.4.0 (owner, 27 Oct 2026) | Bug reports and feature requests on the phone, copied in concept from Spotka (11.1-11.5, 12.10); upload (11.6) only after Q6; **app updates** (12.14, D21); new app icon | A report filed on the phone is read and moved to `fixed` by a developer agent; an installed 1.4.0 finds and verifies a published update |
+| **P1b** | 1.4.0 / 1.4.1 (owner, 27 Oct 2026) | Bug reports and feature requests on the phone, copied in concept from Spotka (11.1-11.5, 12.10); upload (11.6) only after Q6; **app updates** (12.14, D21); new app icon | A report filed on the phone is read and moved to `fixed` by a developer agent; an installed 1.4.0 finds and verifies a published update |
 | Gate | before P3 | Battery measurement (NFR-06) over 3 days with the always-on service; Downloads spike (CAP-13) | Both written up in `docs/reviews/` |
 | **P2** | 2.1 | Interactions (8.13) + Inbox (12.6) + events and callbacks (9), open link (8.20), Quick Settings tile, **Accessibility screenshots** (8.10) | A no-webhook agent gets an answer within 1 s of the tap; an agent gets a screenshot in under 1 s with no prompt |
 | **P3** | 2.2 | Phone status and context (8.7), sensors (8.21), location (8.8), flashlight and controls (8.9), find my phone (8.14), gallery filters, videos and downloads (8.5) | Each endpoint's acceptance test on the Pixel |
