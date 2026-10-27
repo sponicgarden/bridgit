@@ -9,7 +9,6 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
-import android.media.AudioManager
 import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.StyleSpan
@@ -55,11 +54,11 @@ object NotifRules {
     }
 
     /**
-     * CAP-31 speak: never unless the agent asked; when the phone is quiet (silent, vibrate, DND or a call)
-     * only an urgent one, and only if Rahul allowed it in Settings.
+     * CAP-31 speak: never unless the agent asked; never during a phone call (SPK-03), urgent or not; when the
+     * phone is silent, vibrate or DND only an urgent one, and only if Rahul allowed it in Settings.
      */
-    fun shouldSpeak(speak: Boolean, quiet: Boolean, urgent: Boolean, urgentInQuietAllowed: Boolean): Boolean =
-        speak && (!quiet || (urgent && urgentInQuietAllowed))
+    fun shouldSpeak(speak: Boolean, inCall: Boolean, quiet: Boolean, urgent: Boolean, urgentInQuietAllowed: Boolean): Boolean =
+        speak && !inCall && (!quiet || (urgent && urgentInQuietAllowed))
 
     enum class LinkOpen { VIEW, DIAL, LAUNCH, NONE }
 
@@ -166,16 +165,15 @@ object InteractionNotifier {
 
     private fun maybeSpeak(ctx: Context, i: Interaction) {
         if (!i.speak) return
-        val am = ctx.getSystemService(AudioManager::class.java)
-        val nm = ctx.getSystemService(NotificationManager::class.java)
-        val quiet = am.ringerMode != AudioManager.RINGER_MODE_NORMAL ||
-            nm.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL ||
-            am.mode == AudioManager.MODE_IN_CALL || am.mode == AudioManager.MODE_IN_COMMUNICATION
+        val app = ctx.applicationContext as BridgeApp
+        val speaker = app.speaker
+        val quiet = speaker.silenced()
         val allowed = prefs(ctx).getBoolean(PREF_SPEAK_URGENT_IN_DND, false)
-        if (!NotifRules.shouldSpeak(true, quiet, i.priority == "urgent", allowed)) return
-        Speaker.speak(ctx, i.agent, i.title, i.text)
+        if (!NotifRules.shouldSpeak(true, speaker.inCall(), quiet, i.priority == "urgent", allowed)) return
+        // SPK-01: the shared speaker queue, so the volume ceiling, the 5-item queue and Stop apply.
+        speaker.speakText(i.agentId, i.agent, NotifRules.utterance(i.agent, i.title, i.text), allowInQuiet = quiet)
         val what = if (i.kind == IKind.QUESTION) "question" else "notice"
-        (ctx.applicationContext as BridgeApp).log.system("audit", "interaction", "Read aloud: ${i.agent}'s $what")
+        app.log.system("audit", "interaction", "Read aloud: ${i.agent}'s $what")
     }
 
     /** A circle with the agent's initial, in the same colours as AgentAvatarView. */
