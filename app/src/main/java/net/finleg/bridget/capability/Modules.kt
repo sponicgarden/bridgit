@@ -64,7 +64,7 @@ class StatusModule(app: BridgeApp) : Capability(app) {
     override val titleRes = R.string.cap_status
     override val descriptionRes = R.string.cap_status_desc
     override val group = "status"
-    override val endpoints = listOf(Endpoints.HEALTH, Endpoints.CAPABILITIES, Endpoints.GUIDE, Endpoints.OPENAPI, Endpoints.CHANGES, Endpoints.HELPER, Endpoints.PAIR)
+    override val endpoints = listOf(Endpoints.HEALTH, Endpoints.CAPABILITIES, Endpoints.GUIDE, Endpoints.OPENAPI, Endpoints.CHANGES, Endpoints.HELPER, Endpoints.PAIR, Endpoints.MCP)
 
     /** Reading the guide, openapi.json or the changes means the agent now knows the current API (API-14). */
     private fun markKnown(r: Req) {
@@ -110,6 +110,9 @@ class StatusModule(app: BridgeApp) : Capability(app) {
                 agent?.developer == true), "text/markdown; charset=utf-8")
         }
         endpoint(Endpoints.OPENAPI) { markKnown(this); Reply.Json(OpenApi.build(app.appVersion(), app.address())) }
+        // API-15: JSON-RPC in, each tools/call dispatched in-process to the endpoint's own handler.
+        endpoint(Endpoints.MCP) { api.mcp.handle(this) }
+        with(api.mcp) { installExtras() }
         endpoint(Endpoints.HELPER) {
             val src = app.assets.open("bridget-helper.py").use { it.readBytes() }
             Reply.Bytes(src, "text/x-python; charset=utf-8", mapOf("Content-Disposition" to "attachment; filename=\"bridget\""))
@@ -342,7 +345,7 @@ class LogModule(app: BridgeApp) : Capability(app) {
     }
 
     private fun parse(r: Req, extra: Map<String, String> = emptyMap()): LogQuery {
-        val p = r.call.request.queryParameters.entries().associate { it.key to (it.value.firstOrNull() ?: "") }.toMutableMap()
+        val p = r.queries.toMutableMap()
         p.putAll(extra)
         p["agent"]?.let { a -> p["agent"] = a.split(",").joinToString(",") { if (it.trim() == "me") r.agent!!.id else it.trim() } }
         val q = try {
