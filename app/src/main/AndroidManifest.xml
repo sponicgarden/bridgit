@@ -54,6 +54,8 @@
                 android:value="Private API listener on the owner's Tailscale network; answers camera, microphone and gallery requests from the owner's agents." />
         </service>
 
+        <receiver android:name=".feedback.FeedbackActionReceiver" android:exported="false" />
+
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />

@@ -125,6 +125,35 @@ object Endpoints {
         query = listOf(Param("limit", "integer", "1-500, default 50")),
         example = "GET /v1/audit?limit=50", returns = "entries[] (same shape as /v1/log)")
 
+    val FEEDBACK_LIST = EndpointSpec("GET", "/feedback", "feedback", "Bug reports and feature requests filed on the phone (developer agents only)",
+        query = listOf(
+            Param("status", "string", "new, seen, in_progress, fixed, wont_fix, duplicate, confirmed, reopened"),
+            Param("kind", "string", "bug or feature", enum = listOf("bug", "feature")),
+            Param("since", "string", "ISO time: only reports updated after it"),
+            Param("wait", "integer", "With since: hold up to this many seconds (max 55) for a new or changed report"),
+            Param("limit", "integer", "1-100, default 50"),
+        ),
+        example = "GET /v1/feedback?status=new", returns = "reports[id, number, kind, status, first_line, created_at, updated_at, no_autofix, image_count, filed_by]",
+        errors = listOf("forbidden", "invalid_parameter", "too_many_waits"))
+    val FEEDBACK_GET = EndpointSpec("GET", "/feedback/{id}", "feedback", "One report with its text, images, attached log and history (developer agents only; marks a new report seen)",
+        media = true, query = sizing.filter { it.name != "raw" },
+        example = "GET /v1/feedback/7", returns = "report: description, no_autofix, context, images[data_base64], log[], history[]",
+        errors = listOf("forbidden", "not_found"))
+    val FEEDBACK_STATUS = EndpointSpec("POST", "/feedback/{id}/status", "feedback", "Move a report: in_progress, fixed, wont_fix or duplicate (developer agents only; FBK-11a)",
+        idempotent = true,
+        body = listOf(Param("status", "string", "in_progress, fixed, wont_fix or duplicate", required = true),
+            Param("note", "string", "Short note shown to Rahul, e.g. \"Fix in PR #412\" (500 chars)")),
+        example = "POST /v1/feedback/7/status {\"status\":\"in_progress\",\"note\":\"Looking at it\"}", returns = "the report summary",
+        errors = listOf("forbidden", "not_found", "invalid_parameter"))
+    val FEEDBACK_POST = EndpointSpec("POST", "/feedback", "feedback", "File a bug report or feature request yourself (any agent; images from developer agents only)",
+        idempotent = true,
+        body = listOf(Param("kind", "string", "bug or feature", required = true, enum = listOf("bug", "feature")),
+            Param("description", "string", "What happened, up to 10,000 characters", required = true),
+            Param("no_autofix", "boolean", "true = leave it for a person"),
+            Param("images", "array", "Developer agents only: up to 5 {\"data_base64\"} images")),
+        example = "POST /v1/feedback {\"kind\":\"bug\",\"description\":\"image/last returned 500 twice\"}", returns = "id, number, status",
+        errors = listOf("forbidden", "invalid_parameter", "rate_limited"))
+
     val all = listOf(HEALTH, CAPABILITIES, GUIDE, OPENAPI, HELPER, PAIR, SNAPSHOT, MIC, GALLERY_RECENT, GALLERY_PHOTO,
-        IMAGE_LAST, LOG, LOG_ENTRY, LOG_STATS, LOG_EXPORT, LOG_NOTE, AUDIT)
+        IMAGE_LAST, LOG, LOG_ENTRY, LOG_STATS, LOG_EXPORT, LOG_NOTE, AUDIT, FEEDBACK_LIST, FEEDBACK_GET, FEEDBACK_STATUS, FEEDBACK_POST)
 }

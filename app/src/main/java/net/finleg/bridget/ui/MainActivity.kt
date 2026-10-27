@@ -84,6 +84,8 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val CLIP_LABEL = "Bridget setup prompt"
+        /** Long extra: open this report (from the feedback notification). */
+        const val EXTRA_REPORT_ID = "report_id"
         val TOP_LEVEL = setOf(R.id.home, R.id.agents, R.id.activity, R.id.more)
     }
 }

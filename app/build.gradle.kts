@@ -20,8 +20,8 @@ android {
         applicationId = "net.finleg.bridget"
         minSdk = 34
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.3.0"
+        versionCode = 5
+        versionName = "1.4.0"
         buildConfigField("int", "DEFAULT_PORT", "8734")
         buildConfigField("String", "GIT_COMMIT", "\"${gitCommit()}\"")
         buildConfigField("boolean", "DIRTY_BUILD", "${gitDirty()}")
