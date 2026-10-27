@@ -26,7 +26,7 @@ data class EndpointSpec(
     val developerOnly: Boolean = false,
     /** Body fields never copied into the log, only their length (report text, notes, images). */
     val privateFields: Set<String> = emptySet(),
-    /** Largest request body (API-11): 2 MB unless the endpoint takes media. Non-JSON bodies reach the endpoint as Req.rawBody. */
+    /** Largest request body (API-11): 2 MB unless the endpoint takes media. Non-JSON bodies on such endpoints are streamed to a temp file (Req.takeRawFile); JSON stays at 2 MB. */
     val maxBody: Int = 2 * 1024 * 1024,
 ) {
     val fullPath get() = "/v1$path"
@@ -237,12 +237,14 @@ object Endpoints {
         example = "POST /v1/speaker/say {\"text\":\"On your left is the old town hall, built in 1360.\",\"tour_id\":\"t123\"}",
         returns = "play_id, position, status", errors = listOf("capability_disabled", "invalid_parameter", "rate_limited", "not_found"))
     val SPEAKER_STATUS = EndpointSpec("GET", "/speaker", "speaker", "What's playing, and your queued sounds",
-        example = "GET /v1/speaker", returns = "playing{play_id, agent, text}, queued[], quiet")
+        example = "GET /v1/speaker", returns = "playing{play_id, agent, text} (yours only, else null), busy (someone else's sound is playing), paused, queued[], quiet")
     val SPEAKER_STOP = EndpointSpec("DELETE", "/speaker", "speaker", "Stop your audio and clear your queue",
         example = "DELETE /v1/speaker", returns = "stopped")
     val TOUR_GET = EndpointSpec("GET", "/tour", "tour", "Your running City tour, if Rahul started one with you (D30)",
         example = "GET /v1/tour", returns = "tour{tour_id, kinds, interval_s, started_at, ticks, last_tick_at, distance_m, photos_sent} or null")
-    val TOUR_END = EndpointSpec("DELETE", "/tour", "tour", "End your City tour", example = "DELETE /v1/tour", returns = "ended", errors = listOf("not_found"))
+    val TOUR_END = EndpointSpec("DELETE", "/tour", "tour", "End your City tour",
+        query = listOf(Param("tour_id", "string", "Only end this tour (it must be yours and still running)")),
+        example = "DELETE /v1/tour", returns = "ended", errors = listOf("not_found"))
 
     val all = listOf(HEALTH, CAPABILITIES, GUIDE, OPENAPI, CHANGES, HELPER, PAIR, SNAPSHOT, MIC, GALLERY_RECENT, GALLERY_PHOTO,
         IMAGE_LAST, LOG, LOG_ENTRY, LOG_STATS, LOG_EXPORT, LOG_NOTE, AUDIT, FEEDBACK_LIST, FEEDBACK_GET, FEEDBACK_STATUS, FEEDBACK_POST,

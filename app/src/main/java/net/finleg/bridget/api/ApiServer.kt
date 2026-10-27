@@ -42,13 +42,20 @@ sealed class Reply {
  * headers, so the same handler runs for an HTTP call or in-process for an MCP tool call (API-15).
  */
 class Req(val spec: EndpointSpec, val agent: Agent?, val requestId: String, val source: String,
-          val body: JSONObject, val rawBody: ByteArray?, val queries: Map<String, String>,
+          val body: JSONObject, private var rawFile: java.io.File?, val queries: Map<String, String>,
           private val pathParams: Map<String, String>, private val headers: (String) -> String?) {
     constructor(call: ApplicationCall, spec: EndpointSpec, agent: Agent?, requestId: String, source: String,
-                body: JSONObject, rawBody: ByteArray? = null) : this(spec, agent, requestId, source, body, rawBody,
+                body: JSONObject, rawFile: java.io.File? = null) : this(spec, agent, requestId, source, body, rawFile,
         call.request.queryParameters.entries().associate { it.key to (it.value.firstOrNull() ?: "") },
         call.parameters.names().associateWith { call.parameters[it] ?: "" }, { call.request.headers[it] })
 
+    /**
+     * A non-JSON body on a large-body endpoint, streamed to a temp file (API-11). The caller takes ownership:
+     * it must move or delete the file. Files nobody took are deleted when the request ends.
+     */
+    fun takeRawFile(): java.io.File? = rawFile.also { rawFile = null }
+    fun hasRawFile(): Boolean = rawFile != null
+    internal fun leftoverRawFile(): java.io.File? = rawFile
     /** What goes into the log entry's params (redacted before storing). */
     val params = JSONObject()
     var bytesOut = 0L
@@ -73,6 +80,9 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
     val waits = WaitGate()
     private val idempotency = IdempotencyCache()
     private var engine: ApplicationEngine? = null
+    /** Large uploads read at once (finding: concurrent 25 MB bodies). */
+    private val uploadSlots = kotlinx.coroutines.sync.Semaphore(MAX_CONCURRENT_UPLOADS)
+    private val uploads = java.io.File(app.cacheDir, "uploads").apply { mkdirs(); listFiles()?.forEach { it.delete() } }
 
     fun start() {
         val env = applicationEngineEnvironment {
@@ -92,11 +102,17 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
         engine = null
     }
 
-    /** Registers [spec] on this route and runs [block] through the full pipeline. */
-    fun Route.endpoint(spec: EndpointSpec, block: suspend Req.() -> Reply) {
+    /**
+     * Registers [spec] on this route and runs [block] through the full pipeline. [admit] runs before the body is
+     * read (after source, key and developer checks): endpoints with large bodies refuse switched-off or
+     * rate-limited calls there, before any upload is accepted. It is skipped for idempotent replays.
+     * The handler is also recorded for in-process MCP tool calls (API-15).
+     */
+    fun Route.endpoint(spec: EndpointSpec, admit: (suspend (Map<String, String>, Agent?) -> Unit)? = null, block: suspend Req.() -> Reply) {
         handlers[handlerKey(spec)] = block
+        admit?.let { admits[handlerKey(spec)] = it }
         val method = io.ktor.http.HttpMethod.parse(spec.method)
-        route(spec.path, method) { handle { pipeline(call, spec, block) } }
+        route(spec.path, method) { handle { pipeline(call, spec, admit, block) } }
     }
 
     private suspend fun notFound(call: ApplicationCall) {
@@ -111,7 +127,8 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
             http = err.http, result = err.code, requestId = rid, message = "Unknown endpoint"))
     }
 
-    private suspend fun pipeline(call: ApplicationCall, spec: EndpointSpec, block: suspend Req.() -> Reply) {
+    private suspend fun pipeline(call: ApplicationCall, spec: EndpointSpec, admit: (suspend (Map<String, String>, Agent?) -> Unit)?,
+                                 block: suspend Req.() -> Reply) {
         val started = System.currentTimeMillis()
         val rid = newRequestId()
         val source = sourceOf(call)
@@ -127,6 +144,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
         var req: Req? = null
         var revokedReason: String? = null
         var idemKey: String? = null
+        var rawFile: java.io.File? = null
         try {
             if (!Net.isTailnet(source)) throw ErrorCatalog.error("forbidden_source", "Only devices on Rahul's Tailscale network may call Bridget.")
             if (spec.auth) {
@@ -155,21 +173,33 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
             }
             // Pairing has no key, but wrong codes count as failed sign-ins (SEC-06).
             if (spec.path == "/pair" && limiter.count("auth:$source") >= RateLimiter.AUTH_FAILS_PER_IP) throw authBlockedError(source)
-            var raw: ByteArray? = null
+            // Before any body is read: the endpoint's own admission (switch, rate, queue). A request that will be
+            // answered from the idempotency cache skips it, as it never runs the endpoint.
+            if (admit != null) {
+                val key = call.request.headers["Idempotency-Key"]?.trim()
+                val replay = spec.idempotent && agent != null && key != null && IdempotencyCache.KEY_RE.matches(key) && idempotency.hasResult(agent!!.id, key)
+                if (!replay) admit(call.request.queryParameters.entries().associate { it.key to (it.value.firstOrNull() ?: "") }, agent)
+            }
             val body = if (spec.method == "POST") {
-                val bytes = readBody(call, spec.maxBody)
-                bytesIn = bytes.size.toLong()
                 val ctype = call.request.headers["Content-Type"] ?: ""
-                // Media endpoints take raw bytes (audio/*, image/*, …); everything else is a JSON object.
+                // Media endpoints take raw bytes (audio/*, image/*, ...), streamed to a size-limited temp file;
+                // everything else is a JSON object, held to the normal 2 MB even on those endpoints.
                 if (spec.maxBody > MAX_BODY && ctype.isNotEmpty() && !ctype.startsWith("application/json") && !ctype.startsWith("text/")) {
-                    raw = bytes; JSONObject()
-                } else parseBody(bytes)
+                    val f = readBodyToFile(call, spec.maxBody)
+                    rawFile = f
+                    bytesIn = f.length()
+                    JSONObject()
+                } else {
+                    val bytes = readBody(call, minOf(spec.maxBody, MAX_BODY))
+                    bytesIn = bytes.size.toLong()
+                    parseBody(bytes)
+                }
             } else JSONObject()
             body.keys().forEach { k ->
                 val v = body.get(k)
                 logParams.put(k, if (k in spec.privateFields) "[${(v as? org.json.JSONArray)?.length()?.let { "$it items" } ?: "${v.toString().length} chars"}]" else v)
             }
-            val r = Req(call, spec, agent, rid, source, body, raw)
+            val r = Req(call, spec, agent, rid, source, body, rawFile)
             req = r
 
             // API-13: one result per (agent, Idempotency-Key) for 24 h.
@@ -231,6 +261,8 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
             val err = ErrorCatalog.error("internal_error", "Bridget hit a bug (${e.javaClass.simpleName}). It's in the diagnostic log.")
             runCatching { call.respondBytes(err.toJson(rid).toString().toByteArray(), ContentType.Application.Json, HttpStatusCode.InternalServerError) }
         } finally {
+            // An upload the endpoint didn't take (error, replay, crash) is deleted now.
+            (if (req != null) req?.leftoverRawFile() else rawFile)?.delete()
             val r = req
             r?.params?.keys()?.forEach { logParams.put(it, r.params.get(it)) }
             if (spec.path == "/pair") logParams.remove("code")
@@ -263,6 +295,8 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
 
     /** Every registered handler, filled while routing is installed, so MCP can run an endpoint without HTTP. */
     private val handlers = java.util.concurrent.ConcurrentHashMap<String, suspend Req.() -> Reply>()
+    /** Admission checks (switch, rate, queue) of large-body endpoints; MCP runs them too, it has no upload stage. */
+    private val admits = java.util.concurrent.ConcurrentHashMap<String, suspend (Map<String, String>, Agent?) -> Unit>()
     private fun handlerKey(spec: EndpointSpec) = "${spec.method} ${spec.path}"
 
     /** The MCP endpoint's JSON-RPC side; StatusModule routes POST /v1/mcp to it. */
@@ -326,6 +360,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                     IdempotencyCache.Claim.New -> {}
                 }
             }
+            admits[handlerKey(spec)]?.invoke(queries, agent)
             chargeCapture(spec, agent, source)
             val (status, ctype, bytes, headers) = render(r.block(), rid)
             http = status
@@ -364,8 +399,13 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
     /** A wrong pairing code counts as a failed sign-in (SEC-06). */
     fun recordAuthFailure(source: String) = limiter.record("auth:$source")
 
-    /** Frees expired idempotency results; called from the service's periodic check. */
-    fun maintenance() = idempotency.prune()
+    /** Frees expired idempotency results and abandoned uploads; called from the service's periodic check. */
+    fun maintenance() {
+        idempotency.prune()
+        val now = System.currentTimeMillis()
+        uploads.listFiles()?.filter { now - it.lastModified() > 30 * 60_000L }?.forEach { it.delete() }
+        runCatching { app.speaker.sweep() }
+    }
 
     private data class Rendered(val status: Int, val contentType: String, val bytes: ByteArray, val headers: Map<String, String>)
 
@@ -390,6 +430,39 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
         return bytes
     }
 
+    /**
+     * API-11 for raw uploads: streams the body into a temp file, at most [max] bytes and [MAX_CONCURRENT_UPLOADS]
+     * at a time; never holds the whole body in memory. The file is deleted on any failure.
+     */
+    private suspend fun readBodyToFile(call: ApplicationCall, max: Int): java.io.File {
+        val limit = "Request bodies are limited to ${max / 1024 / 1024} MB."
+        val declared = call.request.headers["Content-Length"]?.toLongOrNull()
+        if (declared != null && declared > max) throw ErrorCatalog.error("payload_too_large", limit)
+        kotlinx.coroutines.withTimeoutOrNull(10_000) { uploadSlots.acquire() }
+            ?: throw ErrorCatalog.error("rate_limited", "Too many uploads at once. Retry in a few seconds.", mapOf("retry_after_s" to 5))
+        val f = java.io.File(uploads, "${UUID.randomUUID()}.part")
+        var ok = false
+        try {
+            val ch = call.receiveChannel()
+            val buf = ByteArray(64 * 1024)
+            var total = 0L
+            f.outputStream().use { out ->
+                while (true) {
+                    val n = ch.readAvailable(buf, 0, buf.size)
+                    if (n < 0) break
+                    total += n
+                    if (total > max) throw ErrorCatalog.error("payload_too_large", limit)
+                    out.write(buf, 0, n)
+                }
+            }
+            ok = true
+            return f
+        } finally {
+            uploadSlots.release()
+            if (!ok) f.delete()
+        }
+    }
+
     private fun parseBody(bytes: ByteArray): JSONObject {
         val t = String(bytes).trim()
         if (t.isEmpty()) return JSONObject()
@@ -404,5 +477,6 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
         const val MAX_BODY = 2 * 1024 * 1024
         const val MAX_PAYLOAD = 12 * 1024 * 1024
         const val MAX_RAW = 40 * 1024 * 1024
+        const val MAX_CONCURRENT_UPLOADS = 2
     }
 }

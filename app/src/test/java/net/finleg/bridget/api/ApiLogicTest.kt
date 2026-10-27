@@ -53,7 +53,10 @@ class ApiLogicTest {
         assertEquals(IdempotencyCache.Claim.New, c.claim("a1", "k1"))
         assertEquals(IdempotencyCache.Claim.Running, c.claim("a1", "k1"))
         assertEquals("other agent, same key", IdempotencyCache.Claim.New, c.claim("a2", "k1"))
+        // hasResult (used to skip pre-body admission for replays): only once finished, only for that agent.
+        assertFalse("running isn't a result", c.hasResult("a1", "k1"))
         c.finish("a1", "k1", 200, "application/json", "{\"x\":1}".toByteArray(), emptyMap(), isMedia = false)
+        assertTrue(c.hasResult("a1", "k1")); assertFalse(c.hasResult("a2", "k1"))
         val d = c.claim("a1", "k1") as IdempotencyCache.Claim.Done
         assertEquals("{\"x\":1}", String(d.stored.body!!))
         now += 23 * 3600_000L

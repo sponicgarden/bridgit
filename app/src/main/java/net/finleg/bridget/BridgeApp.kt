@@ -61,7 +61,10 @@ class BridgeApp : Application() {
         interactions = net.finleg.bridget.interact.InteractionStore(this)
         speaker = net.finleg.bridget.capability.SpeakerQueue(this)
         tours = net.finleg.bridget.tour.TourManager(this)
-        net.finleg.bridget.ui.interactions.SpeakHook.speak = { c, agent, title, text -> net.finleg.bridget.interact.Speaker.speak(c, agent, title, text) }
+        // Play aloud (UI-16): Rahul's own tap, so silent/DND don't block it; a call still does. Same queue as everything else.
+        net.finleg.bridget.ui.interactions.SpeakHook.speak = { _, agent, title, text ->
+            if (!speaker.inCall()) speaker.speakText("owner", agent, net.finleg.bridget.interact.NotifRules.utterance(agent, title, text), allowInQuiet = true)
+        }
         feedback.onStatusChange { FeedbackNotifier.statusChanged(this, it) }
         interactions.addListener { i, what -> net.finleg.bridget.interact.InteractionNotifier.onChange(this, i, what) }
         // UI-23: keep the Quick Settings tile in step when Home, the notification or the tile pauses or resumes.

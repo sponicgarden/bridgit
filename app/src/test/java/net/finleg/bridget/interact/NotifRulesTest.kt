@@ -50,11 +50,16 @@ class NotifRulesTest {
     }
 
     @Test fun speakGate() {
-        assertFalse(NotifRules.shouldSpeak(false, false, true, true))
-        assertTrue(NotifRules.shouldSpeak(true, false, false, false))
-        assertFalse(NotifRules.shouldSpeak(true, true, false, true))
-        assertFalse(NotifRules.shouldSpeak(true, true, true, false))
-        assertTrue(NotifRules.shouldSpeak(true, true, true, true))
+        // (speak, inCall, quiet, urgent, urgentInQuietAllowed)
+        assertFalse(NotifRules.shouldSpeak(false, false, false, true, true))
+        assertTrue(NotifRules.shouldSpeak(true, false, false, false, false))
+        assertFalse(NotifRules.shouldSpeak(true, false, true, false, true))
+        assertFalse(NotifRules.shouldSpeak(true, false, true, true, false))
+        assertTrue(NotifRules.shouldSpeak(true, false, true, true, true))
+        // SPK-03: a call always blocks speech, even urgent speech Rahul allowed through DND.
+        assertFalse(NotifRules.shouldSpeak(true, true, false, false, false))
+        assertFalse(NotifRules.shouldSpeak(true, true, true, true, true))
+        assertFalse(NotifRules.shouldSpeak(true, true, false, true, true))
     }
 
     @Test fun linkOpen() {

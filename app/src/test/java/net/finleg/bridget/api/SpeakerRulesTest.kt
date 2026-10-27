@@ -1,6 +1,7 @@
 package net.finleg.bridget.api
 
 import net.finleg.bridget.capability.SpeakerRules
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -26,5 +27,44 @@ class SpeakerRulesTest {
         for (no in listOf("127.0.0.1", "10.0.0.5", "192.168.1.32", "172.16.0.1", "169.254.1.1", "100.94.27.79", "100.64.0.1",
             "0.0.0.0", "::1", "fd7a:115c:a1e0::1", "fe80::1", "224.0.0.1"))
             assertFalse(no, SpeakerRules.publicAddress(ip(no)))
+    }
+
+    /** GET /v1/speaker must not show another agent's caption or play id (it may be private narration). */
+    @Test fun statusShowsOnlyYourOwnSound() {
+        val a = SpeakerRules.Entry("p1", "agentA", "Grok", "Secret narration for Rahul")
+        val queued = listOf(SpeakerRules.Entry("p2", "agentA", "Grok", "next"), SpeakerRules.Entry("p3", "agentB", "Claude", "mine"))
+        val forB = SpeakerRules.status("agentB", a, queued, quiet = false, paused = false)
+        assertTrue(forB.isNull("playing"))
+        assertTrue(forB.getBoolean("busy"))
+        assertFalse(forB.toString().contains("Secret"))
+        assertFalse(forB.toString().contains("p1"))
+        assertEquals(1, forB.getJSONArray("queued").length())
+        assertEquals("p3", forB.getJSONArray("queued").getJSONObject(0).getString("play_id"))
+
+        val forA = SpeakerRules.status("agentA", a, queued, quiet = true, paused = true)
+        assertEquals("p1", forA.getJSONObject("playing").getString("play_id"))
+        assertEquals("Secret narration for Rahul", forA.getJSONObject("playing").getString("text"))
+        assertFalse(forA.getBoolean("busy")); assertTrue(forA.getBoolean("paused")); assertTrue(forA.getBoolean("quiet"))
+        assertEquals(1, forA.getJSONArray("queued").length())
+
+        val idle = SpeakerRules.status("agentA", null, emptyList(), quiet = false, paused = false)
+        assertTrue(idle.isNull("playing")); assertFalse(idle.getBoolean("busy")); assertFalse(idle.getBoolean("paused"))
+    }
+
+    /** Failed downloads/synthesis must not pile up; queued or playing files must never be swept. */
+    @Test fun cacheSweep() {
+        val now = 10_000_000L
+        val min = 60_000L
+        val files = listOf(
+            SpeakerRules.CacheFile("old-orphan", now - 20 * min, 10),
+            SpeakerRules.CacheFile("old-queued", now - 20 * min, 10),
+            SpeakerRules.CacheFile("new-orphan", now - 1 * min, 10),
+            SpeakerRules.CacheFile("big-orphan", now - 2 * min, 1000),
+            SpeakerRules.CacheFile("playing", now - 3 * min, 5000))
+        val owned = setOf("old-queued", "playing")
+        assertEquals(setOf("old-orphan"), SpeakerRules.sweep(files, owned, now, maxAgeMs = 15 * min, maxBytes = 1_000_000))
+        // Over the size cap: oldest unowned go first, owned never.
+        assertEquals(setOf("old-orphan", "big-orphan"), SpeakerRules.sweep(files, owned, now, maxAgeMs = 15 * min, maxBytes = 5100))
+        assertEquals(setOf("old-orphan", "big-orphan", "new-orphan"), SpeakerRules.sweep(files, owned, now, maxAgeMs = 15 * min, maxBytes = 100))
     }
 }

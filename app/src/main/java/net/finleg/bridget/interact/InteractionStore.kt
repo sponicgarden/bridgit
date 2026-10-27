@@ -154,23 +154,57 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
             val old = db.query("interactions", arrayOf("id", "image"), "status NOT IN ('pending','seen') AND closed_at < ?",
                 arrayOf((now - 30L * 86_400_000).toString()), null, null, null).use { c -> buildList { while (c.moveToNext()) add(c.getLong(0) to c.getString(1)) } }
             old.forEach { (id, img) -> img?.let { File(dir, it).delete() }; db.delete("interactions", "id = ?", arrayOf(id.toString())) }
-            db.delete("events", "at < ?", arrayOf((now - 7L * 86_400_000).toString()))
-            db.execSQL("DELETE FROM events WHERE id IN (SELECT id FROM events e WHERE (SELECT COUNT(*) FROM events f WHERE f.agent_id = e.agent_id AND f.id > e.id) >= 1000)")
+            // Events are also pruned on every insert (count and age); this catches age when nothing new arrives.
+            db.delete("events", "at < ?", arrayOf((now - EVENT_KEEP_MS).toString()))
         }
     }
     private var lastPrune = 0L
+    private var lastEventAgePrune = 0L
 
     // ---- events (section 9) -----------------------------------------------------------------------
 
-    /** Adds an event for one agent ([agentId]) or, with null, for every agent in [allAgents]. */
+    /**
+     * Adds an event for [agentId]. Retention (7 days, the newest [EVENTS_PER_AGENT] per agent) is enforced
+     * here on every insert, so a tour- or events-only workload can't grow the table without bound.
+     */
+    @Synchronized
     fun event(agentId: String, type: String, data: JSONObject) {
-        db.insert("events", null, ContentValues().apply { put("agent_id", agentId); put("type", type); put("at", clock()); put("data", data.toString()) })
+        val now = clock()
+        db.insert("events", null, ContentValues().apply { put("agent_id", agentId); put("type", type); put("at", now); put("data", data.toString()) })
+        // Count cap for this agent: everything older than its 1,000th newest event goes (uses the (agent_id, id) index).
+        db.execSQL("DELETE FROM events WHERE agent_id = ? AND id <= (SELECT id FROM events WHERE agent_id = ? ORDER BY id DESC LIMIT 1 OFFSET $EVENTS_PER_AGENT)",
+            arrayOf(agentId, agentId))
+        // Age limit for everyone, at most once a minute.
+        if (now - lastEventAgePrune > 60_000L) {
+            lastEventAgePrune = now
+            db.delete("events", "at < ?", arrayOf((now - EVENT_KEEP_MS).toString()))
+        }
         bump()
+    }
+
+    /**
+     * TOUR-02: once tour [tourId] ends, its stored tick and question events lose location, compass and photo
+     * links ([TourPrivacy.scrub]); the shells (type, tour_id, time) stay so cursors and history still work.
+     */
+    @Synchronized
+    fun scrubTourEvents(agentId: String, tourId: String) {
+        val types = net.finleg.bridget.tour.TourPrivacy.EVENT_TYPES.toList()
+        val rows = db.query("events", arrayOf("id", "data"),
+            "agent_id = ? AND type IN (${types.joinToString(",") { "?" }}) AND data LIKE ?",
+            (listOf(agentId) + types + "%$tourId%").toTypedArray(), null, null, null)
+            .use { c -> buildList { while (c.moveToNext()) add(c.getLong(0) to c.getString(1)) } }
+        for ((id, json) in rows) {
+            val data = runCatching { JSONObject(json) }.getOrNull() ?: continue
+            if (data.optString("tour_id") != tourId) continue
+            val clean = net.finleg.bridget.tour.TourPrivacy.scrub(data) ?: continue
+            db.update("events", ContentValues().apply { put("data", clean.toString()) }, "id = ?", arrayOf(id.toString()))
+        }
     }
 
     /** The agent's events after [sinceId] (oldest first), or its last 50 when [sinceId] is null. */
     fun eventsFor(agentId: String, sinceId: Long?, types: Set<String>, limit: Int = 100): List<Event> {
-        val where = StringBuilder("agent_id = ?"); val args = mutableListOf(agentId)
+        // Never older than the retention window, even before the next prune has run.
+        val where = StringBuilder("agent_id = ? AND at >= ?"); val args = mutableListOf(agentId, (clock() - EVENT_KEEP_MS).toString())
         sinceId?.let { where.append(" AND id > ?"); args += it.toString() }
         if (types.isNotEmpty()) { where.append(" AND type IN (${types.joinToString(",") { "?" }})"); args += types }
         val order = if (sinceId == null) "id DESC" else "id ASC"
@@ -199,6 +233,11 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
             (0 until ctr.length()).map { Control.fromJson(ctr.getJSONObject(it)) }, s("html"), s("priority") ?: "normal", l("speak") == 1L,
             IStatus.of(s("status"))!!, s("answer_json")?.let { JSONObject(it) }, l("created_at")!!, l("expires_at")!!,
             l("seen_at"), l("answered_at"), l("closed_at"), s("stream_text") ?: "", l("stream_done") == 1L)
+    }
+
+    companion object {
+        const val EVENTS_PER_AGENT = 1000
+        const val EVENT_KEEP_MS = 7L * 86_400_000
     }
 
     private class Helper(ctx: Context) : SQLiteOpenHelper(ctx, "interactions.db", null, 1) {
