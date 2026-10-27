@@ -44,7 +44,7 @@ object Endpoints {
     val HEALTH = EndpointSpec("GET", "/health", "status", "Is Bridget up, and which agent you are",
         example = "GET /v1/health", returns = "status, app, app_version, agent, listener_uptime_seconds, battery_level, charging, bind_address, port")
     val CAPABILITIES = EndpointSpec("GET", "/capabilities", "status", "What's switched on and ready, and why not",
-        example = "GET /v1/capabilities", returns = "per capability: enabled, ready, blocked_reason, details")
+        example = "GET /v1/capabilities", returns = "per capability: enabled, ready, blocked_reason, details; callback {set, host}")
     val GUIDE = EndpointSpec("GET", "/guide", "status", "This guide, generated live (Markdown)",
         example = "GET /v1/guide", returns = "text/markdown")
     val OPENAPI = EndpointSpec("GET", "/openapi.json", "status", "OpenAPI 3.1 description of every endpoint",

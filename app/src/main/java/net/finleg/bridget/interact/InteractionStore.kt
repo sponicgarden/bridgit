@@ -168,9 +168,9 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
      * here on every insert, so a tour- or events-only workload can't grow the table without bound.
      */
     @Synchronized
-    fun event(agentId: String, type: String, data: JSONObject) {
+    fun event(agentId: String, type: String, data: JSONObject): Event {
         val now = clock()
-        db.insert("events", null, ContentValues().apply { put("agent_id", agentId); put("type", type); put("at", now); put("data", data.toString()) })
+        val id = db.insert("events", null, ContentValues().apply { put("agent_id", agentId); put("type", type); put("at", now); put("data", data.toString()) })
         // Count cap for this agent: everything older than its 1,000th newest event goes (uses the (agent_id, id) index).
         db.execSQL("DELETE FROM events WHERE agent_id = ? AND id <= (SELECT id FROM events WHERE agent_id = ? ORDER BY id DESC LIMIT 1 OFFSET $EVENTS_PER_AGENT)",
             arrayOf(agentId, agentId))
@@ -180,7 +180,14 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
             db.delete("events", "at < ?", arrayOf((now - EVENT_KEEP_MS).toString()))
         }
         bump()
+        // Callbacks (EVT-06): listeners only enqueue; this runs under the store's lock.
+        return Event(id, agentId, type, now, data).also { e -> synchronized(eventListeners) { eventListeners.toList() }.forEach { runCatching { it(e) } } }
     }
+
+    private val eventListeners = mutableListOf<(Event) -> Unit>()
+
+    /** Called with every new event, on the inserting thread. Must not block. */
+    fun addEventListener(l: (Event) -> Unit) = synchronized(eventListeners) { eventListeners += l }
 
     /**
      * TOUR-02: once tour [tourId] ends, its stored tick and question events lose location, compass and photo

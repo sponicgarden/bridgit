@@ -30,7 +30,7 @@ class InteractionModule(app: BridgeApp) : Capability(app) {
     override val group = "talk"
     override val switchKey = "interactions"
     override val endpoints = listOf(Endpoints.INTERACTION_CREATE, Endpoints.INTERACTION_LIST, Endpoints.INTERACTION_GET,
-        Endpoints.INTERACTION_CANCEL, Endpoints.EVENTS)
+        Endpoints.INTERACTION_CANCEL, Endpoints.EVENTS, Endpoints.CALLBACK_TEST)
     override fun blockedReason(): String? = if (!app.captureNotificationsOn()) "notifications_off" else null
 
     private fun fail(e: InteractionError): Nothing = when (e.code) {
@@ -114,6 +114,9 @@ class InteractionModule(app: BridgeApp) : Capability(app) {
             val limit = query("limit")?.let { it.toIntOrNull()?.takeIf { n -> n in 1..100 } ?: throw ErrorCatalog.error("invalid_parameter", "limit must be 1 to 100.") } ?: 50
             Reply.Json(JSONObject().put("interactions", JSONArray(app.interactions.listFor(a.id, status, limit).map { json(it) })))
         }
+
+        // EVT-06: a signed test event to the caller's callback URL, sent now.
+        endpoint(Endpoints.CALLBACK_TEST) { app.callbackDispatcher.test(this) }
 
         endpoint(Endpoints.EVENTS) {
             val a = agent!!
