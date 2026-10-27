@@ -1,34 +1,46 @@
 package net.finleg.bridget.capability
 
+import android.app.NotificationManager
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
+import android.os.Handler
+import android.os.HandlerThread
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import io.ktor.server.routing.Route
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import net.finleg.bridget.BridgeApp
 import net.finleg.bridget.R
+import net.finleg.bridget.api.ApiError
 import net.finleg.bridget.api.ApiServer
 import net.finleg.bridget.api.Endpoints
 import net.finleg.bridget.api.ErrorCatalog
 import net.finleg.bridget.api.RateLimiter
 import net.finleg.bridget.api.Reply
+import net.finleg.bridget.core.SafeHttp
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.Inet4Address
-import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.URI
 import java.util.UUID
-import javax.net.ssl.HttpsURLConnection
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executor
 
 /** Pure rules for speaker requests (SPK-01, SPK-02), unit-tested. */
 object SpeakerRules {
@@ -38,47 +50,109 @@ object SpeakerRules {
     const val MAX_CLIP_MS = 10 * 60_000L
     const val MAX_SAY_CHARS = 4000
     const val DEFAULT_CEILING = 70
+    /** SPK-02: one deadline for DNS, connect, redirects and the transfer. */
+    const val FETCH_DEADLINE_MS = 60_000L
+    /** Cache files nobody owns are removed after this long; the cache is also capped in size. */
+    const val CACHE_MAX_AGE_MS = 15 * 60_000L
+    const val CACHE_MAX_BYTES = 200L * 1024 * 1024
 
     /** "after_current" (default): replace what's queued for this agent/tour, let the current one finish. "now": stop it too. "queue": add. */
     val REPLACE = setOf("after_current", "now", "queue")
 
-    /** SPK-02: public HTTPS only; no credentials, no odd ports. Address checks happen per connection. */
+    /** SPK-02: public HTTPS only; no credentials, no odd ports. Address checks happen per connection (SafeHttp). */
     fun urlAllowed(url: String): Boolean {
         val u = runCatching { URI(url) }.getOrNull() ?: return false
         return u.scheme.equals("https", true) && !u.host.isNullOrEmpty() && u.userInfo == null && (u.port == -1 || u.port == 443)
     }
 
     /** A resolved address that is public (not loopback, private, link-local, CGNAT, ULA, multicast). */
-    fun publicAddress(a: InetAddress): Boolean {
-        if (a.isLoopbackAddress || a.isAnyLocalAddress || a.isLinkLocalAddress || a.isSiteLocalAddress || a.isMulticastAddress) return false
-        val b = a.address
-        return when (a) {
-            is Inet4Address -> !((b[0].toInt() and 0xFF) == 100 && (b[1].toInt() and 0xC0) == 64) && (b[0].toInt() and 0xFF) != 0
-            is Inet6Address -> (b[0].toInt() and 0xFE) != 0xFC // fc00::/7
-            else -> false
+    fun publicAddress(a: InetAddress): Boolean = SafeHttp.isPublic(a)
+
+    /** What one queued or playing sound looks like to [status]. */
+    data class Entry(val id: String, val agentId: String, val agent: String, val caption: String?)
+
+    /**
+     * GET /v1/speaker for [agentId]: what's playing only if it is that agent's (another agent's caption is
+     * private), `busy` when someone else's sound is playing, and only that agent's queue.
+     */
+    fun status(agentId: String, current: Entry?, queued: List<Entry>, quiet: Boolean, paused: Boolean): JSONObject {
+        val mine = current?.takeIf { it.agentId == agentId }
+        return JSONObject()
+            .put("playing", mine?.let { JSONObject().put("play_id", it.id).put("agent", it.agent).put("text", it.caption ?: JSONObject.NULL) } ?: JSONObject.NULL)
+            .put("busy", current != null && mine == null)
+            .put("paused", mine != null && paused)
+            .put("queued", JSONArray(queued.filter { it.agentId == agentId }.map { JSONObject().put("play_id", it.id) }))
+            .put("quiet", quiet)
+    }
+
+    /** Which files in the cache [sweep] deletes: unowned ones older than [maxAgeMs], then the oldest unowned until under [maxBytes]. */
+    data class CacheFile(val name: String, val modified: Long, val size: Long)
+    fun sweep(files: List<CacheFile>, owned: Set<String>, now: Long, maxAgeMs: Long = CACHE_MAX_AGE_MS, maxBytes: Long = CACHE_MAX_BYTES): Set<String> {
+        val out = HashSet<String>()
+        files.filter { it.name !in owned && now - it.modified > maxAgeMs }.forEach { out += it.name }
+        var total = files.filter { it.name !in out }.sumOf { it.size }
+        for (f in files.filter { it.name !in owned && it.name !in out }.sortedBy { it.modified }) {
+            if (total <= maxBytes) break
+            out += f.name; total -= f.size
         }
+        return out
     }
 }
 
 /**
- * The phone's speaker (CAP-51, CAP-53, SPK-01..03): one player, a queue with the City-tour
- * replace rule, a volume ceiling, audio focus, Stop that clears everything. Text is spoken by
- * synthesising it to a file with the phone's TextToSpeech and playing that, so speech and audio
- * share one queue and one set of rules.
+ * The phone's speaker (CAP-51, CAP-53, SPK-01..03): one player, a queue with the City-tour replace rule,
+ * a volume ceiling, audio focus, Stop that clears everything. Text is spoken by synthesising it to a file
+ * and playing that, so agent speech, City-tour narration and interaction `speak` share one queue and one
+ * set of rules.
+ *
+ * Threads: queue and [current] change under [lock] (cheap list work only). Everything that touches the
+ * MediaPlayer, audio focus or volume runs on one playback HandlerThread ([sync] reconciles the player
+ * with [current]); preparation is asynchronous, so nothing blocks the main thread or the queue lock.
  */
 class SpeakerQueue(private val app: BridgeApp) {
     data class Item(val id: String, val agentId: String, val agent: String, val file: File, val caption: String?,
-                    val tourId: String?, val urgent: Boolean, val queuedAt: Long = System.currentTimeMillis())
+                    val tourId: String?, val urgent: Boolean, val queuedAt: Long = System.currentTimeMillis(),
+                    /** Interaction speech Rahul allowed through silent/DND (urgent) or tapped himself. Never during a call. */
+                    val allowInQuiet: Boolean = false)
 
+    private val lock = Any()
     private val queue = ArrayDeque<Item>()
-    private var player: MediaPlayer? = null
     @Volatile var current: Item? = null; private set
     private val am = app.getSystemService(AudioManager::class.java)
+    private val nm = app.getSystemService(NotificationManager::class.java)
+    private val dir = File(app.cacheDir, "speaker").apply { mkdirs(); listFiles()?.forEach { it.delete() } }
+    private val listeners = mutableListOf<() -> Unit>()
+    private val limiter = RateLimiter(windowMs = 3_600_000L)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    val tts by lazy { TtsFiles(app) }
+
+    private val thread = HandlerThread("bridget-speaker").apply { start() }
+    private val handler = Handler(thread.looper)
+    private val onHandler = Executor { handler.post(it) }
+
+    // ---- playback-thread state (touched only on [handler]) ----
+    private var player: MediaPlayer? = null
+    private var playerItem: Item? = null
+    private var prepared = false
+    private var pausedByFocus = false
+    private var pausedByCall = false
     private var focus: AudioFocusRequest? = null
     private var restoreVolume: Int? = null
     private var setVolume: Int? = null
-    private val dir = File(app.cacheDir, "speaker").apply { mkdirs(); listFiles()?.forEach { it.delete() } }
-    private val listeners = mutableListOf<() -> Unit>()
+    @Volatile var paused = false; private set
+
+    init {
+        // SPK-01/03: react while a clip plays, not only before it starts.
+        am.addOnModeChangedListener(onHandler) { checkConditions() }
+        val f = IntentFilter().apply {
+            addAction(AudioManager.RINGER_MODE_CHANGED_ACTION)
+            addAction(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED)
+        }
+        app.registerReceiver(object : BroadcastReceiver() {
+            override fun onReceive(c: Context?, i: Intent?) = checkConditions()
+        }, f, null, handler, Context.RECEIVER_NOT_EXPORTED)
+        handler.postDelayed(object : Runnable { override fun run() { sweep(); handler.postDelayed(this, 10 * 60_000L) } }, 10 * 60_000L)
+    }
 
     fun addListener(l: () -> Unit) = synchronized(listeners) { listeners += l }
     fun removeListener(l: () -> Unit) = synchronized(listeners) { listeners -= l }
@@ -86,84 +160,212 @@ class SpeakerQueue(private val app: BridgeApp) {
 
     fun newFile(ext: String) = File(dir, "${UUID.randomUUID()}.$ext")
 
-    @Synchronized fun queued(): List<Item> = queue.toList()
+    fun queued(): List<Item> = synchronized(lock) { queue.toList() }
 
-    /** Adds [item]. [replace] is SpeakerRules.REPLACE. Returns the item's position (0 = playing now). */
-    @Synchronized
+    /**
+     * SPK-01 admission, cheap enough to run before a request body is read: 60 plays an hour per agent and,
+     * for replace=queue, at most 5 waiting. Records the play.
+     */
+    fun admit(agentId: String, replace: String?) {
+        if (replace == "queue" && synchronized(lock) { queue.count { it.agentId == agentId } } >= SpeakerRules.MAX_QUEUE_PER_AGENT)
+            throw ErrorCatalog.error("rate_limited", "At most ${SpeakerRules.MAX_QUEUE_PER_AGENT} sounds waiting per agent.")
+        if (!limiter.tryAcquire(agentId, SpeakerRules.PLAYS_PER_HOUR))
+            throw ErrorCatalog.error("rate_limited", "At most ${SpeakerRules.PLAYS_PER_HOUR} plays an hour.", mapOf("retry_after_s" to limiter.retryAfterS(agentId)))
+    }
+
+    /**
+     * Adds [item]; the queue owns its file from here on (it is deleted if this throws).
+     * [replace] is SpeakerRules.REPLACE. Returns the item's position (0 = playing now).
+     */
     fun enqueue(item: Item, replace: String): Int {
-        val mine = queue.count { it.agentId == item.agentId }
-        if (replace == "queue" && mine >= SpeakerRules.MAX_QUEUE_PER_AGENT) {
-            item.file.delete(); throw ErrorCatalog.error("rate_limited", "At most ${SpeakerRules.MAX_QUEUE_PER_AGENT} sounds waiting per agent.")
+        val dropped = ArrayList<Item>()
+        val pos: Int
+        try {
+            synchronized(lock) {
+                val mine = queue.count { it.agentId == item.agentId }
+                if (replace == "queue" && mine >= SpeakerRules.MAX_QUEUE_PER_AGENT)
+                    throw ErrorCatalog.error("rate_limited", "At most ${SpeakerRules.MAX_QUEUE_PER_AGENT} sounds waiting per agent.")
+                if (replace != "queue") {
+                    // City tour (D30): a newer narration replaces anything still waiting from the same agent / tour.
+                    val drop = queue.filter { it.agentId == item.agentId && (item.tourId == null || it.tourId == item.tourId) }
+                    queue.removeAll(drop.toSet()); dropped += drop
+                    val cur = current
+                    if (replace == "now" && cur != null && cur.agentId == item.agentId) { dropped += cur; current = null }
+                }
+                if (item.urgent) queue.addFirst(item) else queue.addLast(item)
+                if (current == null) current = queue.removeFirst()
+                pos = if (current === item) 0 else queue.indexOf(item) + 1
+            }
+        } catch (e: Throwable) {
+            item.file.delete(); throw e
         }
-        if (replace != "queue") {
-            // City tour (D30): a newer narration replaces anything still waiting from the same agent / tour.
-            val drop = queue.filter { it.agentId == item.agentId && (item.tourId == null || it.tourId == item.tourId) }
-            drop.forEach { it.file.delete() }; queue.removeAll(drop.toSet())
-            if (replace == "now" && current?.agentId == item.agentId) stopCurrent()
-        }
-        if (item.urgent) queue.addFirst(item) else queue.addLast(item)
-        if (current == null) playNext()
+        dropped.forEach { it.file.delete() }
+        handler.post { sync() }
         changed()
-        return if (current === item) 0 else queue.indexOf(item) + 1
+        return pos
     }
 
     /** Stop (SPK-01): stops playback and clears every queue, or only [agentId]'s. */
-    @Synchronized
     fun stop(agentId: String? = null) {
-        val drop = queue.filter { agentId == null || it.agentId == agentId }
-        drop.forEach { it.file.delete() }; queue.removeAll(drop.toSet())
-        if (agentId == null || current?.agentId == agentId) { stopCurrent(); playNext() }
+        val dropped = ArrayList<Item>()
+        synchronized(lock) {
+            val drop = queue.filter { agentId == null || it.agentId == agentId }
+            queue.removeAll(drop.toSet()); dropped += drop
+            val cur = current
+            if (cur != null && (agentId == null || cur.agentId == agentId)) { dropped += cur; current = queue.removeFirstOrNull() }
+        }
+        dropped.forEach { it.file.delete() }
+        handler.post { sync() }
         changed()
     }
 
-    @Synchronized
-    fun skip() { stopCurrent(); playNext(); changed() }
-
-    private fun stopCurrent() {
-        player?.let { runCatching { it.stop() }; it.release() }
-        player = null
-        current?.file?.delete()
-        current = null
+    fun skip() {
+        val cur: Item
+        synchronized(lock) { cur = current ?: return; current = queue.removeFirstOrNull() }
+        cur.file.delete()
+        handler.post { sync() }
+        changed()
     }
 
-    private fun playNext() {
-        val next = queue.removeFirstOrNull()
-        if (next == null) { release(); return }
-        if (quiet()) { next.file.delete(); playNext(); return }
-        if (!requestFocus()) { next.file.delete(); release(); return }
-        applyCeiling()
-        current = next
-        app.log.system("audit", "interaction", "${next.agent} played audio" + (next.tourId?.let { " (tour)" } ?: ""))
-        val mp = MediaPlayer()
-        player = mp
-        try {
-            mp.setAudioAttributes(attrs)
-            mp.setDataSource(next.file.absolutePath)
-            mp.setOnCompletionListener { synchronized(this) { if (player === mp) { stopCurrent(); playNext(); changed() } } }
-            mp.setOnErrorListener { _, _, _ -> synchronized(this) { if (player === mp) { stopCurrent(); playNext(); changed() } }; true }
-            mp.prepare()
-            if (mp.duration > SpeakerRules.MAX_CLIP_MS) throw IllegalStateException("longer than 10 minutes")
-            mp.start()
-        } catch (e: Exception) {
-            app.log.system("diagnostic", "service", "Couldn't play ${next.agent}'s audio: ${e.javaClass.simpleName}", level = "warn")
-            stopCurrent(); playNext()
+    /**
+     * Synthesises [text] and queues it for [agentId] (CAP-31 `speak`, Play aloud). Same queue, ceiling,
+     * 5-item limit and Stop as agent speech. Fire and forget; failures are logged.
+     */
+    fun speakText(agentId: String, agent: String, text: String, allowInQuiet: Boolean) {
+        scope.launch {
+            val f = newFile("wav")
+            var owned = false
+            try {
+                if (!tts.synth(text, f, null, 1f, 1f)) {
+                    app.log.system("diagnostic", "service", "Couldn't read $agent's interaction aloud (text-to-speech failed)", level = "warn")
+                    return@launch
+                }
+                enqueue(Item(UUID.randomUUID().toString().take(12), agentId, agent, f, text.take(500), null, urgent = false,
+                    allowInQuiet = allowInQuiet), "queue")
+                owned = true
+            } catch (e: ApiError) {
+                app.log.system("diagnostic", "service", "Didn't read $agent's interaction aloud: ${e.message}", level = "warn")
+            } finally {
+                if (!owned) f.delete()
+            }
         }
     }
 
+    /** A phone call (or VoIP call) is active: nothing plays (SPK-03). */
+    fun inCall(): Boolean = am.mode == AudioManager.MODE_IN_CALL || am.mode == AudioManager.MODE_IN_COMMUNICATION ||
+        am.mode == AudioManager.MODE_RINGTONE || am.mode == AudioManager.MODE_CALL_SCREENING
+
+    /** Silent, vibrate or Do Not Disturb (SPK-01: media playback isn't silenced by Android on its own). */
+    fun silenced(): Boolean = am.ringerMode != AudioManager.RINGER_MODE_NORMAL ||
+        nm.currentInterruptionFilter > NotificationManager.INTERRUPTION_FILTER_ALL
+
     /** Silent / vibrate / DND / a call: don't play (SPK-01, SPK-03). */
-    fun quiet(): Boolean {
-        if (am.ringerMode != AudioManager.RINGER_MODE_NORMAL) return true
-        if (am.mode == AudioManager.MODE_IN_CALL || am.mode == AudioManager.MODE_IN_COMMUNICATION) return true
-        val nm = app.getSystemService(android.app.NotificationManager::class.java)
-        return nm.currentInterruptionFilter > android.app.NotificationManager.INTERRUPTION_FILTER_ALL
+    fun quiet(): Boolean = inCall() || silenced()
+
+    private fun blocked(i: Item) = inCall() || (silenced() && !i.allowInQuiet)
+
+    // ---- playback thread ---------------------------------------------------------------------------
+
+    /** Makes the player match [current]: tears down a stale one, starts the wanted one. Playback thread only. */
+    private fun sync() {
+        while (true) {
+            val want = current
+            if (playerItem != null && playerItem === want) return
+            teardown()
+            if (want == null) { releaseAudio(); paused = false; changed(); return }
+            if (blocked(want)) { advance(want); continue }
+            if (!requestFocus()) {
+                app.log.system("diagnostic", "service", "Audio focus refused; ${want.agent}'s audio was dropped", level = "warn")
+                advance(want); continue
+            }
+            applyCeiling()
+            app.log.system("audit", "interaction", "${want.agent} played audio" + (want.tourId?.let { " (tour)" } ?: ""))
+            val mp = MediaPlayer()
+            player = mp; playerItem = want; prepared = false
+            try {
+                mp.setAudioAttributes(attrs)
+                mp.setDataSource(want.file.absolutePath)
+                mp.setOnPreparedListener { onPrepared(mp, want) }
+                mp.setOnCompletionListener { if (player === mp) finished(want) }
+                mp.setOnErrorListener { _, _, _ -> if (player === mp) finished(want); true }
+                mp.prepareAsync()
+                changed()
+                return
+            } catch (e: Exception) {
+                app.log.system("diagnostic", "service", "Couldn't play ${want.agent}'s audio: ${e.javaClass.simpleName}", level = "warn")
+                teardown(); advance(want)
+            }
+        }
+    }
+
+    private fun onPrepared(mp: MediaPlayer, item: Item) {
+        if (player !== mp) return
+        prepared = true
+        if (mp.duration > SpeakerRules.MAX_CLIP_MS) {
+            app.log.system("diagnostic", "service", "${item.agent}'s audio is longer than 10 minutes; not played", level = "warn")
+            finished(item); return
+        }
+        if (pausedByFocus || pausedByCall || inCall()) { pausedByCall = pausedByCall || inCall(); paused = true; changed(); return }
+        mp.start(); paused = false
+    }
+
+    /** The item finished (or failed): move on. */
+    private fun finished(item: Item) {
+        teardown()
+        advance(item)
+        sync()
+        changed()
+    }
+
+    /** Removes [item] from [current] (if it still is) and deletes its file. */
+    private fun advance(item: Item) {
+        synchronized(lock) { if (current === item) current = queue.removeFirstOrNull() }
+        item.file.delete()
+    }
+
+    private fun teardown() {
+        player?.let { runCatching { it.stop() }; runCatching { it.release() } }
+        player = null; playerItem = null; prepared = false
+    }
+
+    private fun resumeIfPossible() {
+        val mp = player ?: return
+        if (!prepared || pausedByFocus || pausedByCall || inCall()) return
+        if (!mp.isPlaying) { mp.start(); paused = false; changed() }
+    }
+
+    private fun pausePlayer() {
+        player?.let { if (prepared && it.isPlaying) it.pause() }
+        if (player != null) { paused = true; changed() }
+    }
+
+    /** A call started or ended, or silent/DND changed, while something plays. */
+    private fun checkConditions() {
+        val item = playerItem ?: return
+        if (inCall()) { pausedByCall = true; pausePlayer(); return }
+        if (silenced() && !item.allowInQuiet) {
+            app.log.system("diagnostic", "service", "Phone went silent or Do Not Disturb; speaker stopped")
+            stop(); return
+        }
+        if (pausedByCall) { pausedByCall = false; resumeIfPossible() }
     }
 
     private val attrs = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SPEECH).build()
 
+    private val focusListener = AudioManager.OnAudioFocusChangeListener { change ->
+        when (change) {
+            AudioManager.AUDIOFOCUS_LOSS -> { pausedByFocus = false; stop() }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> { pausedByFocus = true; pausePlayer() }
+            AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> player?.setVolume(0.2f, 0.2f)
+            AudioManager.AUDIOFOCUS_GAIN -> { player?.setVolume(1f, 1f); pausedByFocus = false; resumeIfPossible() }
+        }
+    }
+
     private fun requestFocus(): Boolean {
         if (focus != null) return true
         val req = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).setAudioAttributes(attrs)
-            .setOnAudioFocusChangeListener { change -> if (change == AudioManager.AUDIOFOCUS_LOSS) stop() }.build()
+            .setWillPauseWhenDucked(false)
+            .setOnAudioFocusChangeListener(focusListener, handler).build()
         return if (am.requestAudioFocus(req) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) { focus = req; true } else false
     }
 
@@ -178,48 +380,77 @@ class SpeakerQueue(private val app: BridgeApp) {
         }
     }
 
-    private fun release() {
+    private fun releaseAudio() {
         focus?.let { am.abandonAudioFocusRequest(it) }; focus = null
+        pausedByFocus = false; pausedByCall = false
         val r = restoreVolume
         if (r != null && am.getStreamVolume(AudioManager.STREAM_MUSIC) == setVolume) am.setStreamVolume(AudioManager.STREAM_MUSIC, r, 0)
         restoreVolume = null; setVolume = null
     }
+
+    /** Deletes cache files nobody owns (failed downloads or synthesis, abandoned uploads) and caps the cache size. */
+    fun sweep() {
+        val owned = synchronized(lock) { (queue.map { it.file.name } + listOfNotNull(current?.file?.name)).toSet() }
+        val files = dir.listFiles()?.map { SpeakerRules.CacheFile(it.name, it.lastModified(), it.length()) } ?: return
+        SpeakerRules.sweep(files, owned, System.currentTimeMillis()).forEach { File(dir, it).delete() }
+    }
 }
 
-/** Text to an audio file with the phone's TTS (CAP-53). Offline voices only where the engine says so. */
+/**
+ * Text to an audio file with the phone's TTS (CAP-53). Offline voices only where the engine says so.
+ * One engine, one permanent progress listener that completes requests by utterance id, and requests
+ * serialised (language, rate, pitch and voice are engine-wide settings).
+ */
 class TtsFiles(private val ctx: Context) {
     private var tts: TextToSpeech? = null
     private val ready = CompletableDeferred<Boolean>()
+    private val pending = ConcurrentHashMap<String, CompletableDeferred<Boolean>>()
+    private val mutex = Mutex()
 
-    private fun ensure() {
-        if (tts == null) tts = TextToSpeech(ctx) { status -> ready.complete(status == TextToSpeech.SUCCESS) }
+    private val listener = object : UtteranceProgressListener() {
+        override fun onStart(u: String?) {}
+        override fun onDone(u: String?) { u?.let { pending[it]?.complete(true) } }
+        @Deprecated("old API") override fun onError(u: String?) { u?.let { pending[it]?.complete(false) } }
+        override fun onError(u: String?, code: Int) { u?.let { pending[it]?.complete(false) } }
+        override fun onStop(u: String?, interrupted: Boolean) { u?.let { pending[it]?.complete(false) } }
     }
 
-    suspend fun synth(text: String, out: File, language: String?, rate: Float, pitch: Float): Boolean = withContext(Dispatchers.Main) {
-        ensure()
-        if (withTimeoutOrNull(5000) { ready.await() } != true) return@withContext false
+    private fun ensure() {
+        if (tts == null) tts = TextToSpeech(ctx) { status -> ready.complete(status == TextToSpeech.SUCCESS) }.also {
+            it.setOnUtteranceProgressListener(listener)
+        }
+    }
+
+    /** Writes [text] to [out]. False on failure; the caller deletes [out]. */
+    suspend fun synth(text: String, out: File, language: String?, rate: Float, pitch: Float): Boolean = mutex.withLock {
+        withContext(Dispatchers.Main) { ensure() }
+        if (withTimeoutOrNull(5000) { ready.await() } != true) return false
         val t = tts!!
-        language?.let { t.language = java.util.Locale.forLanguageTag(it) }
-        t.setSpeechRate(rate); t.setPitch(pitch)
-        // Prefer a voice that doesn't need the network (Codex review: TTS may use network voices).
-        t.voices?.filter { !it.isNetworkConnectionRequired && it.locale == t.voice?.locale }?.minByOrNull { it.latency }?.let { t.voice = it }
         val id = UUID.randomUUID().toString()
         val done = CompletableDeferred<Boolean>()
-        t.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(u: String?) {}
-            override fun onDone(u: String?) { if (u == id) done.complete(true) }
-            @Deprecated("old API") override fun onError(u: String?) { if (u == id) done.complete(false) }
-            override fun onError(u: String?, code: Int) { if (u == id) done.complete(false) }
-        })
-        if (t.synthesizeToFile(text, null, out, id) != TextToSpeech.SUCCESS) return@withContext false
-        withTimeoutOrNull(30_000) { done.await() } == true && out.length() > 0
+        pending[id] = done
+        try {
+            val started = withContext(Dispatchers.Main) {
+                t.language = language?.let { java.util.Locale.forLanguageTag(it) } ?: java.util.Locale.getDefault()
+                t.setSpeechRate(rate); t.setPitch(pitch)
+                // Prefer a voice that doesn't need the network (Codex review: TTS may use network voices).
+                t.voices?.filter { !it.isNetworkConnectionRequired && it.locale == t.voice?.locale }?.minByOrNull { it.latency }?.let { t.voice = it }
+                t.synthesizeToFile(text, null, out, id) == TextToSpeech.SUCCESS
+            }
+            if (!started) return false
+            val ok = withTimeoutOrNull(30_000) { done.await() } == true && out.length() > 0
+            if (!ok) runCatching { t.stop() }
+            ok
+        } catch (e: CancellationException) {
+            runCatching { t.stop() }; throw e
+        } finally {
+            pending.remove(id)
+        }
     }
 }
 
 /** CAP-51 / CAP-53 (minimal, for City tour): play audio and speak text. Switch "Speaker". */
 class SpeakerModule(app: BridgeApp) : Capability(app) {
-    private val limiter = RateLimiter(windowMs = 3_600_000L)
-    private val tts by lazy { TtsFiles(app) }
     override val id = "speaker"
     override val titleRes = R.string.cap_speaker
     override val descriptionRes = R.string.cap_speaker_desc
@@ -230,15 +461,15 @@ class SpeakerModule(app: BridgeApp) : Capability(app) {
     override fun details() = JSONObject().put("volume_ceiling_percent", app.settings.speakerCeiling)
         .put("queue_per_agent", SpeakerRules.MAX_QUEUE_PER_AGENT).put("plays_per_hour", SpeakerRules.PLAYS_PER_HOUR)
 
-    private fun net.finleg.bridget.api.Req.common(): Triple<String, String?, Boolean> {
+    /** replace, tour_id, urgent. With [charge], also counts the play (SPEAKER_PLAY is admitted before its body is read). */
+    private fun net.finleg.bridget.api.Req.common(charge: Boolean): Triple<String, String?, Boolean> {
         val replace = (arg("replace") as? String) ?: "after_current"
         if (replace !in SpeakerRules.REPLACE) throw ErrorCatalog.error("invalid_parameter", "replace must be after_current, now or queue.")
         val tourId = (arg("tour_id") as? String)?.takeIf { it.isNotBlank() }
         if (tourId != null && app.tours.current()?.let { it.id == tourId && it.agentId == agent!!.id } != true)
             throw ErrorCatalog.error("not_found", "No running tour $tourId of yours.")
         val urgent = (arg("urgent") as? Boolean) ?: (arg("urgent") == "true")
-        if (!limiter.tryAcquire(agent!!.id, SpeakerRules.PLAYS_PER_HOUR))
-            throw ErrorCatalog.error("rate_limited", "At most ${SpeakerRules.PLAYS_PER_HOUR} plays an hour.", mapOf("retry_after_s" to limiter.retryAfterS(agent!!.id)))
+        if (charge) app.speaker.admit(agent!!.id, replace)
         return Triple(replace, tourId, urgent)
     }
 
@@ -246,53 +477,70 @@ class SpeakerModule(app: BridgeApp) : Capability(app) {
         .put("position", pos).put("status", if (pos == 0) "playing" else "queued"))
 
     override fun Route.install(api: ApiServer) = with(api) {
-        endpoint(Endpoints.SPEAKER_PLAY) {
+        // Up to 25 MB: switch, rate and queue are checked before the body is read (finding: concurrent big uploads).
+        endpoint(Endpoints.SPEAKER_PLAY, admit = { call, agent ->
             requireUsable()
-            val (replace, tourId, urgent) = common()
+            val replace = call.request.queryParameters["replace"]
+            app.speaker.admit(agent!!.id, replace)
+        }) {
+            requireUsable()
+            val (replace, tourId, urgent) = common(charge = false)
             val a = agent!!
-            val ctype = call.request.headers["Content-Type"] ?: ""
-            val file: java.io.File
-            if (ctype.startsWith("audio/")) {
-                val ext = ctype.substringAfter('/').substringBefore(';').take(8).ifEmpty { "bin" }
-                file = app.speaker.newFile(ext)
-                val bytes = rawBody ?: throw ErrorCatalog.error("invalid_parameter", "Send the audio as the body.")
-                file.writeBytes(bytes)
-            } else {
-                val url = body.optString("url", "")
-                if (!SpeakerRules.urlAllowed(url)) throw ErrorCatalog.error("invalid_parameter", "url must be a public https:// address (or send audio/* bytes as the body).")
-                file = app.speaker.newFile("audio")
-                fetchPublic(url, file)
-                params.put("url", URI(url).host)
+            var file: File? = null
+            var owned = false
+            try {
+                val upload = takeRawFile()
+                if (upload != null) {
+                    val ctype = call.request.headers["Content-Type"] ?: ""
+                    if (!ctype.startsWith("audio/")) throw ErrorCatalog.error("invalid_parameter", "Send audio/* bytes as the body, or a JSON {\"url\"}.")
+                    val ext = ctype.substringAfter('/').substringBefore(';').filter { it.isLetterOrDigit() }.take(8).ifEmpty { "bin" }
+                    file = app.speaker.newFile(ext)
+                    if (!upload.renameTo(file)) { upload.copyTo(file, overwrite = true); upload.delete() }
+                } else {
+                    val url = body.optString("url", "")
+                    if (!SpeakerRules.urlAllowed(url)) throw ErrorCatalog.error("invalid_parameter", "url must be a public https:// address (or send audio/* bytes as the body).")
+                    params.put("url", URI(url).host)
+                    file = app.speaker.newFile("audio")
+                    fetchPublic(url, file)
+                }
+                val item = SpeakerQueue.Item(UUID.randomUUID().toString().take(12), a.id, a.name, file,
+                    (arg("text") as? String)?.take(500), tourId, urgent)
+                val pos = app.speaker.enqueue(item, replace)
+                owned = true
+                tourId?.let { app.tours.narrated(it, item.caption) }
+                message = "${a.name} sent audio to play"
+                reply(item, pos)
+            } finally {
+                if (!owned) file?.delete()
             }
-            val item = SpeakerQueue.Item(UUID.randomUUID().toString().take(12), a.id, a.name, file,
-                (arg("text") as? String)?.take(500), tourId, urgent)
-            val pos = app.speaker.enqueue(item, replace)
-            tourId?.let { app.tours.narrated(it, item.caption) }
-            message = "${a.name} sent audio to play"
-            reply(item, pos)
         }
         endpoint(Endpoints.SPEAKER_SAY) {
             requireUsable()
-            val (replace, tourId, urgent) = common()
+            val (replace, tourId, urgent) = common(charge = true)
             val a = agent!!
             val text = body.optString("text", "").trim()
             if (text.isEmpty() || text.length > SpeakerRules.MAX_SAY_CHARS) throw ErrorCatalog.error("invalid_parameter", "text must be 1 to ${SpeakerRules.MAX_SAY_CHARS} characters.")
             val rate = body.optDouble("rate", 1.0).toFloat().takeIf { it in 0.5f..2f } ?: throw ErrorCatalog.error("invalid_parameter", "rate must be 0.5 to 2.")
             val pitch = body.optDouble("pitch", 1.0).toFloat().takeIf { it in 0.5f..2f } ?: throw ErrorCatalog.error("invalid_parameter", "pitch must be 0.5 to 2.")
             val file = app.speaker.newFile("wav")
-            if (!tts.synth(text, file, body.optString("language", "").ifEmpty { null }, rate, pitch))
-                throw ErrorCatalog.error("internal_error", "The phone's text-to-speech didn't produce audio.")
-            val item = SpeakerQueue.Item(UUID.randomUUID().toString().take(12), a.id, a.name, file, text.take(500), tourId, urgent)
-            val pos = app.speaker.enqueue(item, replace)
-            tourId?.let { app.tours.narrated(it, text) }
-            message = "${a.name} sent speech to read aloud"
-            reply(item, pos)
+            var owned = false
+            try {
+                if (!app.speaker.tts.synth(text, file, body.optString("language", "").ifEmpty { null }, rate, pitch))
+                    throw ErrorCatalog.error("internal_error", "The phone's text-to-speech didn't produce audio.")
+                val item = SpeakerQueue.Item(UUID.randomUUID().toString().take(12), a.id, a.name, file, text.take(500), tourId, urgent)
+                val pos = app.speaker.enqueue(item, replace)
+                owned = true
+                tourId?.let { app.tours.narrated(it, text) }
+                message = "${a.name} sent speech to read aloud"
+                reply(item, pos)
+            } finally {
+                if (!owned) file.delete()
+            }
         }
         endpoint(Endpoints.SPEAKER_STATUS) {
-            val cur = app.speaker.current
-            Reply.Json(JSONObject().put("playing", cur?.let { JSONObject().put("play_id", it.id).put("agent", it.agent).put("text", it.caption ?: JSONObject.NULL) } ?: JSONObject.NULL)
-                .put("queued", JSONArray(app.speaker.queued().filter { it.agentId == agent!!.id }.map { JSONObject().put("play_id", it.id) }))
-                .put("quiet", app.speaker.quiet()))
+            fun e(i: SpeakerQueue.Item) = SpeakerRules.Entry(i.id, i.agentId, i.agent, i.caption)
+            Reply.Json(SpeakerRules.status(agent!!.id, app.speaker.current?.let(::e), app.speaker.queued().map(::e),
+                app.speaker.quiet(), app.speaker.paused))
         }
         endpoint(Endpoints.SPEAKER_STOP) {
             app.speaker.stop(agent!!.id)
@@ -300,35 +548,19 @@ class SpeakerModule(app: BridgeApp) : Capability(app) {
         }
     }
 
-    /** SPK-02: HTTPS to a public address only, every redirect re-checked (max 3), 25 MB, timeouts. */
-    private suspend fun fetchPublic(start: String, out: File) = withContext(Dispatchers.IO) {
-        var url = start
-        repeat(4) { hop ->
-            val u = URI(url)
-            if (!SpeakerRules.urlAllowed(url)) throw ErrorCatalog.error("invalid_parameter", "Redirected to a non-https address.")
-            val addrs = runCatching { InetAddress.getAllByName(u.host).toList() }.getOrElse { throw ErrorCatalog.error("invalid_parameter", "Can't resolve ${u.host}.") }
-            if (addrs.isEmpty() || addrs.any { !SpeakerRules.publicAddress(it) }) throw ErrorCatalog.error("invalid_parameter", "${u.host} isn't a public address.")
-            val c = (u.toURL().openConnection() as HttpsURLConnection).apply {
-                instanceFollowRedirects = false; connectTimeout = 15_000; readTimeout = 60_000
-                setRequestProperty("User-Agent", "Bridget/${app.appVersion()} (Android)")
+    /** SPK-02 through SafeHttp: public addresses only (pinned), every redirect re-checked (max 3), 25 MB, 60 s in total. */
+    private suspend fun fetchPublic(url: String, out: File) = withContext(Dispatchers.IO) {
+        val r = try {
+            SafeHttp.get(url, SafeHttp.Policy.PUBLIC, SpeakerRules.FETCH_DEADLINE_MS, SpeakerRules.MAX_BYTES,
+                headers = mapOf("User-Agent" to "Bridget/${app.appVersion()} (Android)"), maxRedirects = SafeHttp.MAX_REDIRECTS, out = out)
+        } catch (e: SafeHttp.Failure) {
+            out.delete()
+            throw when (e.reason) {
+                SafeHttp.Reason.TOO_LARGE -> ErrorCatalog.error("payload_too_large", "Audio is limited to 25 MB.")
+                SafeHttp.Reason.TIMEOUT -> ErrorCatalog.error("invalid_parameter", "The audio URL took longer than 60 seconds.")
+                else -> ErrorCatalog.error("invalid_parameter", "Can't fetch the audio URL: ${e.message}")
             }
-            try {
-                val code = c.responseCode
-                if (code in 300..399) {
-                    if (hop == 3) throw ErrorCatalog.error("invalid_parameter", "Too many redirects.")
-                    url = u.resolve(c.getHeaderField("Location") ?: throw ErrorCatalog.error("invalid_parameter", "Redirect without a Location.")).toString()
-                    return@repeat
-                }
-                if (code != HttpURLConnection.HTTP_OK) throw ErrorCatalog.error("invalid_parameter", "The audio URL answered HTTP $code.")
-                if (c.contentLengthLong > SpeakerRules.MAX_BYTES) throw ErrorCatalog.error("payload_too_large", "Audio is limited to 25 MB.")
-                c.inputStream.use { inp -> out.outputStream().use { o ->
-                    val buf = ByteArray(64 * 1024); var total = 0L
-                    while (true) { val n = inp.read(buf); if (n < 0) break; total += n
-                        if (total > SpeakerRules.MAX_BYTES) { out.delete(); throw ErrorCatalog.error("payload_too_large", "Audio is limited to 25 MB.") }
-                        o.write(buf, 0, n) }
-                } }
-                return@withContext
-            } finally { c.disconnect() }
         }
+        if (r.status != 200) { out.delete(); throw ErrorCatalog.error("invalid_parameter", "The audio URL answered HTTP ${r.status}.") }
     }
 }

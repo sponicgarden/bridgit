@@ -154,6 +154,8 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
             val old = db.query("interactions", arrayOf("id", "image"), "status NOT IN ('pending','seen') AND closed_at < ?",
                 arrayOf((now - 30L * 86_400_000).toString()), null, null, null).use { c -> buildList { while (c.moveToNext()) add(c.getLong(0) to c.getString(1)) } }
             old.forEach { (id, img) -> img?.let { File(dir, it).delete() }; db.delete("interactions", "id = ?", arrayOf(id.toString())) }
+            // Events are also pruned on every insert (count and age); this catches age when nothing new arrives.
+            db.delete("events", "at < ?", arrayOf((now - EVENT_KEEP_MS).toString()))
         }
     }
     private var lastPrune = 0L
@@ -201,7 +203,8 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
 
     /** The agent's events after [sinceId] (oldest first), or its last 50 when [sinceId] is null. */
     fun eventsFor(agentId: String, sinceId: Long?, types: Set<String>, limit: Int = 100): List<Event> {
-        val where = StringBuilder("agent_id = ?"); val args = mutableListOf(agentId)
+        // Never older than the retention window, even before the next prune has run.
+        val where = StringBuilder("agent_id = ? AND at >= ?"); val args = mutableListOf(agentId, (clock() - EVENT_KEEP_MS).toString())
         sinceId?.let { where.append(" AND id > ?"); args += it.toString() }
         if (types.isNotEmpty()) { where.append(" AND type IN (${types.joinToString(",") { "?" }})"); args += types }
         val order = if (sinceId == null) "id DESC" else "id ASC"
