@@ -73,8 +73,9 @@ class AddAgentViewModel(application: Application) : AndroidViewModel(application
     fun init(argAgentId: String?, fromRotate: Boolean) {
         if (initialised) return
         initialised = true
-        if (argAgentId == null) return
-        val agent = app.agents.get(argAgentId) ?: return
+        // Restored after the process was killed mid-add: the arguments carry no agentId, but the vault does (AGT-05a).
+        val id = argAgentId ?: app.vault.get()?.agentId?.takeIf { app.agents.get(it) != null } ?: return
+        val agent = app.agents.get(id) ?: return
         agentId = agent.id
         name = agent.name
         connection = agent.connection

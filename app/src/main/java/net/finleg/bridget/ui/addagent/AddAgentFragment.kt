@@ -106,7 +106,7 @@ class AddAgentFragment : Fragment() {
         b.toolbar.inflateMenu(R.menu.addagent_menu)
         b.toolbar.setOnMenuItemClickListener {
             when (it.itemId) {
-                R.id.addagent_copy_key -> { copy(vm.key ?: return@setOnMenuItemClickListener true, true); true }
+                R.id.addagent_copy_key -> { copy(vm.key ?: return@setOnMenuItemClickListener true); true }
                 R.id.addagent_pair -> { openPairing(); true }
                 else -> false
             }
@@ -398,9 +398,9 @@ class AddAgentFragment : Fragment() {
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.addagent_leave_title)
                 .setMessage(R.string.addagent_leave_body)
-                .setPositiveButton(R.string.addagent_leave_copy) { _, _ -> copy(vm.prompt ?: "", false, quiet = true); leave() }
-                .setNeutralButton(R.string.addagent_leave_stay, null)
-                .setNegativeButton(R.string.addagent_leave) { _, _ -> leave() }
+                .setPositiveButton(R.string.addagent_leave_copy) { _, _ -> copy(vm.prompt ?: "", quiet = true); leave() }
+                .setNegativeButton(R.string.addagent_leave_stay, null)
+                .setNeutralButton(R.string.addagent_leave) { _, _ -> leave() }
                 .show()
         } else leave()
     }
@@ -422,7 +422,7 @@ class AddAgentFragment : Fragment() {
         b.promptScroll.layoutParams = b.promptScroll.layoutParams.apply {
             height = (resources.displayMetrics.heightPixels * 0.45f).toInt()
         }
-        b.copyPrompt.setOnClickListener { vm.prompt?.let { copy(it, false) } }
+        b.copyPrompt.setOnClickListener { vm.prompt?.let { copy(it) } }
         b.share.setOnClickListener { share() }
         b.qr.setOnClickListener { showQr() }
         b.troubleshoot.setOnClickListener { showTroubleshooting() }
@@ -538,7 +538,7 @@ class AddAgentFragment : Fragment() {
 
     private fun stopPulse() { pulse?.cancel(); pulse = null }
 
-    private fun copy(text: String, keyOnly: Boolean, quiet: Boolean = false) {
+    private fun copy(text: String, quiet: Boolean = false) {
         if (text.isEmpty()) return
         val cm = requireContext().getSystemService(ClipboardManager::class.java) ?: return
         val clip = ClipData.newPlainText(MainActivity.CLIP_LABEL, text)

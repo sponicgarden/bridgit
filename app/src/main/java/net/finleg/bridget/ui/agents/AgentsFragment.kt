@@ -40,7 +40,9 @@ class AgentsFragment : Fragment() {
     private lateinit var adapter: Adapter
     private var rows: List<Row> = emptyList()
 
-    private val agentsChanged: () -> Unit = { view?.post { if (_b != null) refresh() } }
+    /** Registry changes arrive per request (recordUse); coalesce them so a busy agent doesn't flood the log. */
+    private val refreshSoon = Runnable { if (_b != null) refresh() }
+    private val agentsChanged: () -> Unit = { view?.let { v -> v.removeCallbacks(refreshSoon); v.postDelayed(refreshSoon, 500) } }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         _b = FragmentAgentsBinding.inflate(inflater, container, false)
@@ -106,6 +108,7 @@ class AgentsFragment : Fragment() {
 
     override fun onDestroyView() {
         app.agents.removeListener(agentsChanged)
+        view?.removeCallbacks(refreshSoon)
         super.onDestroyView()
         _b = null
     }
