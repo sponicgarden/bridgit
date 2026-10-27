@@ -182,7 +182,7 @@ object Endpoints {
         ),
         example = "POST /v1/interactions {\"kind\":\"question\",\"title\":\"Pay this invoice?\",\"controls\":[{\"type\":\"button\",\"id\":\"yes\",\"label\":\"Pay\",\"style\":\"primary\"},{\"type\":\"button\",\"id\":\"no\",\"label\":\"Not now\"}]}",
         returns = "interaction_id, status, expires_at",
-        errors = listOf("capability_disabled", "notifications_required", "invalid_parameter", "too_many_open", "photo_not_found"))
+        errors = listOf("capability_disabled", "notifications_required", "invalid_parameter", "payload_too_large", "too_many_open", "photo_not_found"))
     val TEXT_STREAM = EndpointSpec("POST", "/text/stream", "interactions", "Add text to your live text panel (an interaction of kind text); it scrolls on the phone as it arrives",
         privateFields = setOf("append"),
         body = listOf(Param("interaction_id", "string", "The panel's interaction_id", required = true),

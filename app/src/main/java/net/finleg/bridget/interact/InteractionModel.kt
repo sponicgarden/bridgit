@@ -85,8 +85,10 @@ object InteractionRules {
 
     /** Parses and checks a POST /v1/interactions body (CAP-31). */
     fun parse(b: JSONObject): Draft {
-        val kind = IKind.of(b.optString("kind")) ?: bad("kind must be notice or question.")
-        if (kind == IKind.HTML || kind == IKind.TEXT) bad("kind ${kind.id} arrives in Bridget 1.5.1.")
+        val kind = IKind.of(b.optString("kind")) ?: bad("kind must be notice, question, html or text.")
+        // CAP-34: the raw HTML size is checked before anything else is looked at.
+        val html = if (kind == IKind.HTML) CardRules.checkHtml(b.opt("html")) else null
+        if (kind != IKind.HTML && b.has("html") && !b.isNull("html")) bad("html is only for kind html.")
         val title = b.optString("title", "").trim()
         if (title.isEmpty()) bad("title is required.")
         if (title.length > TITLE_MAX) bad("title is limited to $TITLE_MAX characters.")
@@ -121,7 +123,8 @@ object InteractionRules {
                 if (controls.none { it is Control.Button || it is Control.Text || it is Control.Choice })
                     bad("A question needs at least one button, text or choice control.")
             }
-            else -> {}
+            IKind.HTML -> if (controls.isNotEmpty()) bad("An html card draws its own controls; leave controls out and call Bridget.respond(json).")
+            IKind.TEXT -> if (controls.isNotEmpty()) bad("A text panel has no controls; stream text with POST /v1/text/stream.")
         }
         val priority = b.optString("priority", "normal")
         if (priority != "normal" && priority != "urgent") bad("priority must be normal or urgent.")
@@ -133,8 +136,9 @@ object InteractionRules {
         val b64 = img?.takeIf { it.has("data_base64") }?.optString("data_base64")
         if (b64 != null && b64.length > IMAGE_MAX_BYTES * 4 / 3 + 4) bad("image is limited to 2 MB.")
         if (img != null && galleryId == null && b64 == null) bad("image needs gallery_id or data_base64.")
+        if (img != null && (kind == IKind.HTML || kind == IKind.TEXT)) bad("image is for notices and questions; put pictures in the card as data:image/* instead.")
         val speak = b.optBoolean("speak", false)
-        return Draft(kind, title, text, controls, priority, speak, exp, galleryId, b64, null)
+        return Draft(kind, title, text, controls, priority, speak, exp, galleryId, b64, html)
     }
 
     /** CAP-31 link allowlist: https, geo, tel (dial only), mailto, or an app package. Everything else is refused. */
@@ -180,3 +184,35 @@ object InteractionRules {
         return JSONObject().put("button", button ?: JSONObject.NULL).put("values", out)
     }
 }
+
+/** D26 live text panel: limits and trimming. Pure, unit-tested. */
+object TextPanelRules {
+    /** Most text one POST /v1/text/stream may add, in UTF-8 bytes. */
+    const val APPEND_MAX_BYTES = 16 * 1024
+    /** The panel keeps the last this many characters. */
+    const val KEEP_CHARS = 200 * 1024
+    /** POST /v1/text/stream calls per agent per second. */
+    const val CALLS_PER_SECOND = 20
+    /** How far [keepTail] looks for a line break before it cuts mid-line instead. */
+    const val LINE_SEARCH = 4096
+
+    /**
+     * The last [max] characters of [text], dropped from the front. The cut moves forward to just after the next
+     * line break when there is one within [LINE_SEARCH] characters, so the panel rarely starts mid-line; it never splits a
+     * surrogate pair.
+     */
+    fun keepTail(text: String, max: Int = KEEP_CHARS): String {
+        if (text.length <= max) return text
+        var cut = text.length - max
+        if (text[cut - 1] == '\n') return text.substring(cut) // already at the start of a line
+        val nl = text.indexOf('\n', cut)
+        if (nl >= 0 && nl < text.length - 1 && nl - cut <= LINE_SEARCH) cut = nl + 1
+        else if (Character.isLowSurrogate(text[cut])) cut++
+        return text.substring(cut)
+    }
+
+    /** Checks one append; returns an error message or null. */
+    fun checkAppend(append: String): String? =
+        if (append.toByteArray(Charsets.UTF_8).size > APPEND_MAX_BYTES) "append is limited to 16 KB per call." else null
+}
+
