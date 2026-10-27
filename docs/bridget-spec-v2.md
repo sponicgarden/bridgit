@@ -2070,6 +2070,7 @@ Call /v1/health, then tell Rahul you're connected and which features are on.
 | 403 | `notifications_required` | Bridget's notifications are off, so captures are refused (PRD-05) | Tell Rahul to turn notifications on |
 | 403 | `forbidden` | Not allowed for this agent (`reason`, for example `developer_only`) | Don't retry |
 | 409 | `in_progress` | Same `Idempotency-Key` still running | Wait, then retry with the same key |
+| 409 | `idempotency_expired` | Same `Idempotency-Key` already done, but its photo or clip is no longer kept (SEC-13, API-13) | Don't repeat; use a new key only if you really want a new capture |
 | 429 | `quota_exceeded` | Daily data, file storage or relay job quota used up (`limit`) | Wait until tomorrow |
 | 429 | `too_many_waits` | Too many open `wait` requests (SEC-08a) | Close some waits |
 | 500 | `internal_error` | Bridget bug | Report via `POST /v1/feedback` |

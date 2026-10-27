@@ -28,7 +28,7 @@ class RateLimiter(private val clock: () -> Long = System::currentTimeMillis, pri
     fun retryAfterS(key: String): Int {
         val q = prune(key)
         if (q.isEmpty()) return 0
-        return (((q.first() + windowMs) - clock()) / 1000 + 1).toInt().coerceAtLeast(1)
+        return (((q.first() + windowMs) - clock() + 999) / 1000).toInt().coerceAtLeast(1)
     }
 
     private fun prune(key: String): ArrayDeque<Long> {
