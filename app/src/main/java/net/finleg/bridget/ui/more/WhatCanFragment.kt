@@ -1,7 +1,11 @@
 package net.finleg.bridget.ui.more
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.text.SpannableStringBuilder
+import android.text.Spanned
+import android.text.style.BulletSpan
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -32,7 +36,8 @@ class WhatCanFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        ViewCompat.setOnApplyWindowInsetsListener(b.toolbar) { v, insets ->
+        // Inset on the root, not the toolbar: padding the toolbar squeezed its subtitle into the list.
+        ViewCompat.setOnApplyWindowInsetsListener(b.root) { v, insets ->
             v.updatePadding(top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top); insets
         }
         ViewCompat.setOnApplyWindowInsetsListener(b.list) { v, insets ->
@@ -94,9 +99,11 @@ class WhatCanFragment : Fragment() {
             b.what.text = f.what
             b.useCase.text = f.useCase
             val opts = WhatCanData.options[f.title].orEmpty()
-            b.optionsLabel.isVisible = opts.isNotEmpty()
-            b.options.isVisible = opts.isNotEmpty()
-            b.options.text = opts.joinToString("\n") { "•  $it" }
+            b.optionsPanel.isVisible = opts.isNotEmpty()
+            b.options.text = bullets(opts, ctx.themeColor(M.attr.colorPrimary), ctx.resources.displayMetrics.density)
+            val pic = pictureOf(ctx, f.title)
+            b.picture.isVisible = pic != 0
+            if (pic != 0) b.picture.setImageResource(pic)
             b.stage.text = f.stage.label
             b.ref.text = ctx.getString(R.string.whatcan_ref, f.ref)
             // Spec references are for the technical part only; the use cases stay plain.
@@ -119,6 +126,31 @@ class WhatCanFragment : Fragment() {
             }
             b.root.contentDescription = "${f.title}. ${f.stage.label}. ${f.what}" +
                 (if (opts.isNotEmpty()) " Options: " + opts.joinToString("; ") + "." else "") + " For example: ${f.useCase}"
+        }
+    }
+
+    private companion object {
+        /** One paragraph per option with a round blue bullet; wrapped lines line up with the text, not the bullet. */
+        fun bullets(items: List<String>, color: Int, density: Float): CharSequence {
+            val sb = SpannableStringBuilder()
+            items.forEachIndexed { i, item ->
+                val start = sb.length
+                sb.append(item)
+                if (i < items.lastIndex) sb.append('\n')
+                sb.setSpan(BulletSpan((10 * density).toInt(), color, (2.5f * density).toInt()), start, sb.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+            return sb
+        }
+
+        /**
+         * The card's picture, drawable-nodpi/whatcan_<slug>: the title in lower case, every run of other characters
+         * one underscore (the prompt file's hyphenated names with underscores). 0 when there is none.
+         * Looked up by name, so turning on resource shrinking would need these kept in a keep.xml.
+         */
+        fun pictureOf(ctx: Context, title: String): Int {
+            val slug = title.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
+            @Suppress("DiscouragedApi")
+            return ctx.resources.getIdentifier("whatcan_$slug", "drawable", ctx.packageName)
         }
     }
 

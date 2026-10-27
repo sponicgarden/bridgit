@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Group within a part (Available now, Coming next, ...), styled like Home's "Agents" heading. -->
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
-    style="@style/Widget.Bridget.SectionHeader"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content" />
+    android:layout_height="wrap_content"
+    android:accessibilityHeading="true"
+    android:paddingTop="20dp"
+    android:paddingBottom="10dp"
+    android:textAppearance="?attr/textAppearanceTitleMedium"
+    android:textColor="?attr/colorOnSurface" />
