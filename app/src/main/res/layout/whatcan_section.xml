@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Top-level part of "What can Bridget do?": what agents can do / how Bridget works. -->
+<!-- Top-level part of "What can Bridget do?": what agents can do / how Bridget works. A blue banner like Home's status card. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:layout_marginTop="16dp"
+    android:layout_marginBottom="4dp"
+    android:background="@drawable/bg_whatcan_section"
     android:orientation="vertical"
-    android:paddingTop="20dp"
-    android:paddingBottom="4dp">
+    android:padding="20dp">
 
     <TextView
         android:id="@+id/title"
@@ -13,13 +15,15 @@
         android:layout_height="wrap_content"
         android:accessibilityHeading="true"
         android:textAppearance="?attr/textAppearanceHeadlineSmall"
-        android:textColor="?attr/colorOnSurface" />
+        android:textColor="?attr/colorOnPrimaryContainer"
+        android:textStyle="bold" />
 
     <TextView
         android:id="@+id/intro"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
+        android:layout_marginTop="6dp"
+        android:lineSpacingExtra="2dp"
         android:textAppearance="?attr/textAppearanceBodyMedium"
-        android:textColor="?attr/colorOnSurfaceVariant" />
+        android:textColor="?attr/colorOnPrimaryContainer" />
 </LinearLayout>

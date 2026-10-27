@@ -81,6 +81,15 @@
         <item name="contentPadding">16dp</item>
     </style>
 
+    <!-- Rounds only the top corners, for a picture at the top of a Widget.Bridget.Card. -->
+    <style name="ShapeAppearance.Bridget.CardTop" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopLeft">12dp</item>
+        <item name="cornerSizeTopRight">12dp</item>
+        <item name="cornerSizeBottomLeft">0dp</item>
+        <item name="cornerSizeBottomRight">0dp</item>
+    </style>
+
     <style name="Widget.Bridget.SectionHeader" parent="">
         <item name="android:textAppearance">?attr/textAppearanceLabelLarge</item>
         <item name="android:textColor">?attr/colorPrimary</item>
