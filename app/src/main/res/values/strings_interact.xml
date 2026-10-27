@@ -11,6 +11,10 @@
     <string name="interact_notif_notice">%1$s:</string>
     <string name="interact_public_question">%1$s has a question</string>
     <string name="interact_public_notice">%1$s sent a notice</string>
+    <string name="interact_notif_card">%1$s sent a card:</string>
+    <string name="interact_notif_streaming">%1$s is streaming:</string>
+    <string name="interact_public_card">%1$s sent a card</string>
+    <string name="interact_public_streaming">%1$s is streaming text</string>
     <string name="interact_reply">Reply</string>
     <string name="interact_open_link">Open %1$s</string>
 

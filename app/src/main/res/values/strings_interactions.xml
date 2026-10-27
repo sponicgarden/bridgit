@@ -59,4 +59,30 @@
     <string name="interactions_not_installed">%1$s isn\'t installed</string>
     <string name="interactions_back">Back</string>
     <string name="interactions_ok">OK</string>
+
+    <!-- HTML cards (CAP-34). Bridget draws this header and toolbar; the agent's page can't cover them. -->
+    <string name="interactions_card_headline">%1$s sent a card: %2$s</string>
+    <string name="interactions_card_from">From %1$s · custom card</string>
+    <string name="interactions_card_desc">Card from %1$s. Its content is made by the agent.</string>
+    <string name="interactions_card_dismiss">Dismiss</string>
+    <string name="interactions_card_open">Open card</string>
+    <string name="interactions_card_sent">Sent: %1$s</string>
+    <string name="interactions_card_closed_note">This card is closed. Its answer can\'t be sent any more.</string>
+    <string name="interactions_card_crashed">This card stopped working. Dismiss it, or ask %1$s to send it again.</string>
+    <string name="interactions_card_dismiss_desc">Dismiss the card from %1$s</string>
+
+    <!-- Live text panel (D26). -->
+    <string name="interactions_text_headline">%1$s is streaming: %2$s</string>
+    <string name="interactions_text_open">Show panel</string>
+    <string name="text_panel_live">Live · from %1$s</string>
+    <string name="text_panel_finished">Finished · from %1$s</string>
+    <string name="text_panel_closed">Closed · from %1$s</string>
+    <string name="text_panel_pause">Pause scrolling</string>
+    <string name="text_panel_resume">Resume</string>
+    <string name="text_panel_pause_desc">Pause scrolling the live text</string>
+    <string name="text_panel_resume_desc">Resume scrolling to the newest text</string>
+    <string name="text_panel_close_desc">Close the live text panel from %1$s. %1$s is told.</string>
+    <string name="text_panel_hide_desc">Hide the text panel</string>
+    <string name="text_panel_empty">Waiting for text…</string>
+    <string name="text_panel_text_desc">Live text from %1$s</string>
 </resources>
