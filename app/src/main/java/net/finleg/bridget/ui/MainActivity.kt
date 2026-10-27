@@ -86,6 +86,7 @@ class MainActivity : AppCompatActivity() {
             val s = app.listener.value
             if (!s.running || s.startedInBackground) runCatching { BridgeService.start(this) }
         }
+        UpdateDialog.resumeAfterPermission(this) // back from "Install unknown apps"
         UpdateDialog.autoCheckIfDue(this) // UPD-02: at most once a day, only when the app is opened.
     }
 

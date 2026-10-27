@@ -33,6 +33,7 @@ import net.finleg.bridget.update.UpdateLogic.Problem
 object UpdateDialog {
     private const val PREFS = "update"
     private const val KEY_LAST_CHECK = "last_check"
+    private const val KEY_RESUME_AT = "resume_after_permission_at"
 
     private var active: Flow? = null
 
@@ -57,6 +58,21 @@ object UpdateDialog {
         val last = prefs(activity).getLong(KEY_LAST_CHECK, 0L)
         if (!UpdateLogic.isAutoCheckDue(System.currentTimeMillis(), last)) return
         checkForUpdates(activity, manual = false)
+    }
+
+    /**
+     * Turning on "Install unknown apps" can restart Bridget, which loses the Ready dialog.
+     * If Rahul went to that page from the dialog in the last 30 minutes and installs are now
+     * allowed, run the check again (the download is verified again before Install).
+     */
+    fun resumeAfterPermission(activity: FragmentActivity) {
+        if (isDebugBuild || active != null) return
+        val at = prefs(activity).getLong(KEY_RESUME_AT, 0L)
+        if (at == 0L) return
+        if (System.currentTimeMillis() - at > 30 * 60_000L) { prefs(activity).edit().remove(KEY_RESUME_AT).apply(); return }
+        if (!UpdateInstaller.canRequestInstalls(activity)) return
+        prefs(activity).edit().remove(KEY_RESUME_AT).apply()
+        checkForUpdates(activity, manual = true)
     }
 
     private fun prefs(ctx: Context) = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -202,6 +218,7 @@ object UpdateDialog {
                 UpdateInstaller.logInstallBlocked(app)
                 MaterialAlertDialogBuilder(activity).setTitle(R.string.update_allow_title).setMessage(R.string.update_allow)
                     .setPositiveButton(R.string.update_open_settings) { _, _ ->
+                        prefs(activity).edit().putLong(KEY_RESUME_AT, System.currentTimeMillis()).apply()
                         runCatching { activity.startActivity(UpdateInstaller.unknownSourcesIntent(activity)) }
                     }
                     .setNegativeButton(R.string.update_not_now, null)

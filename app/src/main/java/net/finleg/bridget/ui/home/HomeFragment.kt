@@ -1,5 +1,6 @@
 package net.finleg.bridget.ui.home
 
+import net.finleg.bridget.ui.common.brandTitle
 import android.Manifest
 import android.os.BatteryManager
 import android.os.Bundle
@@ -83,6 +84,7 @@ class HomeFragment : Fragment() {
         ViewCompat.setOnApplyWindowInsetsListener(b.toolbar) { v, insets ->
             v.updatePadding(top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top); insets
         }
+        b.brandTitle.text = brandTitle(requireContext())
         b.toolbar.menu.add(0, MENU_SETTINGS, 0, R.string.home_menu_settings)
             .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
         b.toolbar.inflateMenu(R.menu.feedback_overflow) // Report a bug / Request a feature (FBK-01)

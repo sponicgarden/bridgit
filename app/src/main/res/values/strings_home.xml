@@ -64,6 +64,7 @@
 
     <!-- First run (UI-08) -->
     <string name="firstrun_p1_title">Meet Bridget.</string>
+    <string name="firstrun_p1_tagline">Bridget: Agentic Android Device Bridge</string>
     <string name="firstrun_p1_body">Let your AI agents use this phone\'s camera, mic, photos and more, only when they ask, always visibly.</string>
     <string name="firstrun_p2_title">Private by design.</string>
     <string name="firstrun_p2_body">Bridget only answers over your Tailscale network. Each agent gets its own key. Everything is logged here.</string>
@@ -91,7 +92,7 @@
     <string name="more_request_feature">Request a feature</string>
     <string name="more_my_reports">My reports</string>
     <string name="more_check_updates">Check for updates</string>
-    <string name="more_about_title">About Bridget</string>
+    <string name="more_about_title">Bridget: Agentic Android Device Bridge</string>
     <string name="more_about_body">Version %1$s (%2$s)\nCommit %3$s\n\nSpec: docs/bridget-spec-v2.md in sponicgarden/bridget</string>
     <string name="more_dirty">%1$s (dirty)</string>
 

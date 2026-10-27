@@ -175,6 +175,7 @@ class FirstRunFragment : Fragment() {
         override fun onBindViewHolder(h: Holder, position: Int) {
             val p = h.p
             p.title.setText(TITLES[position])
+            p.tagline.visibility = if (position == 0) View.VISIBLE else View.GONE
             p.body.setText(BODIES[position])
             p.root.contentDescription = null
             p.tsCard.isVisible = position == 1

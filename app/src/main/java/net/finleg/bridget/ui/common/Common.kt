@@ -24,6 +24,21 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/** "Bridget" with the version in small type after it (Home's top bar, owner request 1.4.1). */
+fun brandTitle(ctx: Context): CharSequence {
+    val version = runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull()
+        ?.substringBefore(' ') ?: ""
+    return android.text.SpannableStringBuilder(ctx.getString(R.string.app_name)).apply {
+        if (version.isNotEmpty()) {
+            append("  ")
+            val start = length
+            append(version)
+            setSpan(android.text.style.RelativeSizeSpan(0.55f), start, length, 0)
+            setSpan(android.text.style.ForegroundColorSpan(ctx.themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant)), start, length, 0)
+        }
+    }
+}
+
 /** Theme colour lookup. */
 fun Context.themeColor(@AttrRes attr: Int): Int {
     val tv = TypedValue()

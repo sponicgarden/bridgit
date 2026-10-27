@@ -2,6 +2,9 @@
 <!-- Shared strings. Each screen keeps its own strings in strings_<screen>.xml. -->
 <resources>
     <string name="app_name">Bridget</string>
+    <!-- Full name (owner, 27 Oct 2026): shown on first run, under the Home title and in About. -->
+    <string name="app_tagline">Agentic Android Device Bridge</string>
+    <string name="app_full_name">Bridget: Agentic Android Device Bridge</string>
 
     <!-- Notification channels (UI-21) -->
     <string name="channel_listener">Listener</string>
