@@ -25,13 +25,15 @@ data class Agent(
     val notes: String = "",
     val developer: Boolean = false,
     val keyCreatedAt: Long = createdAt,
+    /** The API revision this agent last read about (guide or changes); 0 = never (API-14). */
+    val knownApiRevision: Int = 0,
 ) {
     fun toJson(): JSONObject = JSONObject()
         .put("id", id).put("name", name).put("key_hash", keyHash).put("key_salt", keySalt)
         .put("key_prefix", keyPrefix).put("created_at", createdAt).put("last_used_at", lastUsedAt)
         .put("last_source_ip", lastSourceIp ?: JSONObject.NULL).put("request_count", requestCount)
         .put("connection", connection.id).put("notes", notes).put("developer", developer)
-        .put("key_created_at", keyCreatedAt).put("caps", JSONObject.NULL)
+        .put("key_created_at", keyCreatedAt).put("known_api_revision", knownApiRevision).put("caps", JSONObject.NULL)
 
     companion object {
         fun fromJson(o: JSONObject) = Agent(
@@ -42,6 +44,7 @@ data class Agent(
             requestCount = o.optLong("request_count", 0), connection = Connection.of(o.optString("connection")),
             notes = o.optString("notes", ""), developer = o.optBoolean("developer", false),
             keyCreatedAt = o.optLong("key_created_at", o.getLong("created_at")),
+            knownApiRevision = o.optInt("known_api_revision", 0),
         )
     }
 }

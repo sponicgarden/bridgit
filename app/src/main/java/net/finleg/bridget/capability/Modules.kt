@@ -64,7 +64,14 @@ class StatusModule(app: BridgeApp) : Capability(app) {
     override val titleRes = R.string.cap_status
     override val descriptionRes = R.string.cap_status_desc
     override val group = "status"
-    override val endpoints = listOf(Endpoints.HEALTH, Endpoints.CAPABILITIES, Endpoints.GUIDE, Endpoints.OPENAPI, Endpoints.HELPER, Endpoints.PAIR)
+    override val endpoints = listOf(Endpoints.HEALTH, Endpoints.CAPABILITIES, Endpoints.GUIDE, Endpoints.OPENAPI, Endpoints.CHANGES, Endpoints.HELPER, Endpoints.PAIR)
+
+    /** Reading the guide, openapi.json or the changes means the agent now knows the current API (API-14). */
+    private fun markKnown(r: Req) {
+        val a = r.agent ?: return
+        if (a.knownApiRevision < net.finleg.bridget.api.ApiChanges.CURRENT)
+            app.agents.update(a.id) { it.copy(knownApiRevision = net.finleg.bridget.api.ApiChanges.CURRENT) }
+    }
 
     override fun Route.install(api: ApiServer) = with(api) {
         endpoint(Endpoints.HEALTH) {
@@ -77,7 +84,10 @@ class StatusModule(app: BridgeApp) : Capability(app) {
                 .put("battery_level", level ?: JSONObject.NULL)
                 .put("charging", (bat?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0)
                 .put("bind_address", s.boundTo.firstOrNull() ?: JSONObject.NULL).put("port", api.port)
-                .put("base_url", app.address().baseUrl))
+                .put("base_url", app.address().baseUrl)
+                .put("api_revision", net.finleg.bridget.api.ApiChanges.CURRENT)
+                .put("whats_new", net.finleg.bridget.api.ApiChanges.whatsNew(agent?.let { app.agents.get(it.id) }?.knownApiRevision ?: 0))
+                .put("links", net.finleg.bridget.api.ApiChanges.links()))
         }
         endpoint(Endpoints.CAPABILITIES) {
             val out = JSONObject()
@@ -89,11 +99,17 @@ class StatusModule(app: BridgeApp) : Capability(app) {
             Reply.Json(JSONObject().put("capabilities", out).put("notifications", app.captureNotificationsOn())
                 .put("listener", JSONObject().put("camera_ready", app.listener.value.cameraReady).put("mic_ready", app.listener.value.micReady)))
         }
+        endpoint(Endpoints.CHANGES) {
+            val since = query("since")?.let { it.toIntOrNull()?.takeIf { n -> n >= 0 } ?: throw ErrorCatalog.error("invalid_parameter", "since must be an API revision number, e.g. 2.") } ?: 0
+            markKnown(this)
+            Reply.Json(net.finleg.bridget.api.ApiChanges.json(since, app.appVersion()))
+        }
         endpoint(Endpoints.GUIDE) {
+            markKnown(this)
             Reply.Text(Guide.build(agentName, app.appVersion(), app.address(), app.registry.caps(), app.settings.logVisibility,
                 agent?.developer == true), "text/markdown; charset=utf-8")
         }
-        endpoint(Endpoints.OPENAPI) { Reply.Json(OpenApi.build(app.appVersion(), app.address())) }
+        endpoint(Endpoints.OPENAPI) { markKnown(this); Reply.Json(OpenApi.build(app.appVersion(), app.address())) }
         endpoint(Endpoints.HELPER) {
             val src = app.assets.open("bridget-helper.py").use { it.readBytes() }
             Reply.Bytes(src, "text/x-python; charset=utf-8", mapOf("Content-Disposition" to "attachment; filename=\"bridget\""))

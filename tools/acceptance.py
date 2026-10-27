@@ -400,6 +400,19 @@ def main():
         expect(c.call("POST", "/pair", body={"code": code}), 403, "pairing_closed")
         expect(c.call("GET", "/health", T), 200)
 
+    @c.check("V01", "API revisions: every reply has X-Bridget-API-Revision; a new agent sees what's new until it reads /v1/changes")
+    def _():
+        r = c.call("GET", "/health", P); expect(r, 200)
+        rev = int(r.headers.get("x-bridget-api-revision", "0"))
+        assert rev >= 3 and r.json()["api_revision"] == rev, (rev, r.json().get("api_revision"))
+        assert r.headers.get("x-bridget-whats-new", "").startswith("/v1/changes?since="), "no X-Bridget-Whats-New for a new agent"
+        assert r.json()["whats_new"] and r.json()["links"]["changes"] == "/v1/changes", r.json().get("whats_new")
+        ch = c.call("GET", "/changes?since=0", P); expect(ch, 200)
+        assert [x["revision"] for x in ch.json()["changes"]] == list(range(1, rev + 1)), ch.json()["changes"]
+        r2 = c.call("GET", "/health", P)
+        assert r2.json()["whats_new"] is None and "x-bridget-whats-new" not in r2.headers, "still nagging after reading the changes"
+        return f"revision {rev}"
+
     # ---- P1b: feedback (section 11) ----------------------------------------------------------------
     fb = {}
 

@@ -47,6 +47,9 @@ object Endpoints {
         example = "GET /v1/guide", returns = "text/markdown")
     val OPENAPI = EndpointSpec("GET", "/openapi.json", "status", "OpenAPI 3.1 description of every endpoint",
         example = "GET /v1/openapi.json", returns = "application/json")
+    val CHANGES = EndpointSpec("GET", "/changes", "status", "What's new in the API since a revision you know (API-14)",
+        query = listOf(Param("since", "integer", "The API revision you last read about; 0 or absent = everything")),
+        example = "GET /v1/changes?since=2", returns = "api_revision, app_version, changes[revision, app_version, date, items[what, endpoint]], links")
     val HELPER = EndpointSpec("GET", "/tools/bridget", "status", "The `bridget` command-line helper (Python, no secrets inside)",
         auth = false, example = "GET /v1/tools/bridget", returns = "text/x-python")
     val PAIR = EndpointSpec("POST", "/pair", "status", "Fetch your key with a 6-digit code shown on the phone (alternative to the setup prompt)",
@@ -161,6 +164,6 @@ object Endpoints {
         example = "POST /v1/feedback {\"kind\":\"bug\",\"description\":\"image/last returned 500 twice\"}", returns = "id, number, status",
         errors = listOf("forbidden", "invalid_parameter", "rate_limited"))
 
-    val all = listOf(HEALTH, CAPABILITIES, GUIDE, OPENAPI, HELPER, PAIR, SNAPSHOT, MIC, GALLERY_RECENT, GALLERY_PHOTO,
+    val all = listOf(HEALTH, CAPABILITIES, GUIDE, OPENAPI, CHANGES, HELPER, PAIR, SNAPSHOT, MIC, GALLERY_RECENT, GALLERY_PHOTO,
         IMAGE_LAST, LOG, LOG_ENTRY, LOG_STATS, LOG_EXPORT, LOG_NOTE, AUDIT, FEEDBACK_LIST, FEEDBACK_GET, FEEDBACK_STATUS, FEEDBACK_POST)
 }

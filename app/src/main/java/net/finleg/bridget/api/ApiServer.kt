@@ -105,6 +105,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
         val rid = newRequestId()
         val source = sourceOf(call)
         call.response.header("X-Request-Id", rid)
+        call.response.header("X-Bridget-API-Revision", ApiChanges.CURRENT.toString())
         val logParams = JSONObject()
         call.request.queryParameters.entries().forEach { (k, v) -> logParams.put(k, v.firstOrNull()) }
         call.parameters.names().filter { "{$it}" in spec.path }.forEach { logParams.put(it, call.parameters[it]) }
@@ -136,6 +137,8 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                     }
                 }
                 app.agents.recordUse(agent!!.id, source)
+                if (agent!!.knownApiRevision < ApiChanges.CURRENT)
+                    call.response.header("X-Bridget-Whats-New", "/v1/changes?since=${agent!!.knownApiRevision}")
                 if (spec.developerOnly && !agent!!.developer) throw ErrorCatalog.error("forbidden",
                     "Only developer agents can read bug reports. Ask Rahul to turn on Developer for ${agent!!.name}.", mapOf("reason" to "developer_only"))
             }

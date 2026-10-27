@@ -104,6 +104,8 @@ should treat these as settled unless a serious problem is found.
 | D15 | 27 Oct 2026 | Screens use **native Kotlin Android Views with Material 3 components**, with a "techie but friendly" look (section 12). | Decided |
 | D16 | 27 Oct 2026 | Spec **"maximum capabilities"**: describe everything Android allows that's useful to a personal agent, phased (section 16). | Decided |
 | D17 | 27 Oct 2026 | **Screenshots use an Accessibility service**, with no per-screenshot approval (replaces D10's approve-each-time design). Default mode: a private in-memory copy; optional mode: Android's normal screenshot, saved to the gallery. The screen-share grant flow (once / 1 h / 16 h) stays only as the fallback when Accessibility is off. | Decided |
+| D26 | 27 Oct 2026 | **P2 Interactions, owner requirements:** (1) **Interactions is a main tab** in place of Activity; Activity moves to More. (2) The Interactions list shows each one's **title and agent**, and each row **expands or collapses to one line**. (3) Rahul can **close** (dismiss) any interaction himself; the agent is told (`dismissed`). (4) A **live text panel**: an agent streams text into the lower half of the screen and it scrolls as it arrives (for example the transcript of an AI session), with pause-scroll and close. (5) **HTML cards** are part of P2 (D23). | Decided |
+| D25 | 27 Oct 2026 | **API revisions** (owner): agents learn new features after an app update by themselves: revision header on every reply, "what's new" until they read `/v1/changes` (API-14). | Decided |
 | D24 | 27 Oct 2026 | **Maximum control and information** (owner): expose every device option Android allows to agents, and list each option on its "What can Bridget do?" card. First step, 1.4.4: camera **zoom** (CAP-05, 0.5x ultra-wide up to the phone's maximum; tested 0.5-30x on the Pixel). Also: when Tailscale isn't installed, Home and first run say so with **Install Tailscale**, and the setup prompt links agents to tailscale.com/download. | Decided |
 | D23 | 27 Oct 2026 | **Blue, higher-contrast palette** (1.4.2): primary teal → blue, larger steps between surface, card and raised layers in both themes; gold (live) and green (success) unchanged (UI-02). **HTML interaction cards (CAP-34) move to P2** with questions and notices: the owner calls interactions with HTML "the killer feature". **"What can Bridget do?"** in More: one card per feature with a use case, built and planned. | Decided |
 | D22 | 27 Oct 2026 | **Name and icon:** the app is "Bridget", full name **"Bridget: Agentic Android Device Bridge"** (first run, Home's top bar with the icon and the version in small type, About). New icon from the owner's artwork (phone outline, stone bridge, cursor), 1.4.1. | Decided |
@@ -719,6 +721,17 @@ under a minute, with nothing typed except the name.
   (SEC-13), after which a repeat gets 409 `idempotency_expired` instead of a
   second capture; 5xx results aren't kept, so a retry really retries.
   Endpoints in 1.3.0: camera snapshot, mic record, `POST /v1/log`.
+
+- **API-14 [1.4.4, D25] API revisions and "what's new".** The path stays
+  `/v1`; each release that adds to the API bumps an integer **API revision**
+  (1 = 1.3.0, 2 = 1.4.0 feedback, 3 = 1.4.4 zoom and revisions). Every reply
+  carries `X-Bridget-API-Revision`. Bridget remembers, per agent, the revision
+  it last read about (reading `/v1/guide`, `/v1/openapi.json` or
+  `/v1/changes` counts); until it catches up, replies carry
+  `X-Bridget-Whats-New: /v1/changes?since=<n>` and `/v1/health` has a
+  `whats_new` block. `GET /v1/changes?since=<n>` lists what each later
+  revision added. `/v1/health` also returns `links` to the guide, OpenAPI,
+  capabilities and changes. Breaking changes still go to `/v2` (API-01).
 
 ---
 
