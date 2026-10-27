@@ -32,5 +32,6 @@
     <fragment android:id="@+id/reportDetail" android:name="net.finleg.bridget.ui.feedback.ReportDetailFragment">
         <argument android:name="reportId" app:argType="long" />
     </fragment>
+    <fragment android:id="@+id/whatCan" android:name="net.finleg.bridget.ui.more.WhatCanFragment" />
     <fragment android:id="@+id/firstRun" android:name="net.finleg.bridget.ui.firstrun.FirstRunFragment" />
 </navigation>

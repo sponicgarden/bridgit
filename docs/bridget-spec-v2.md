@@ -104,6 +104,7 @@ should treat these as settled unless a serious problem is found.
 | D15 | 27 Oct 2026 | Screens use **native Kotlin Android Views with Material 3 components**, with a "techie but friendly" look (section 12). | Decided |
 | D16 | 27 Oct 2026 | Spec **"maximum capabilities"**: describe everything Android allows that's useful to a personal agent, phased (section 16). | Decided |
 | D17 | 27 Oct 2026 | **Screenshots use an Accessibility service**, with no per-screenshot approval (replaces D10's approve-each-time design). Default mode: a private in-memory copy; optional mode: Android's normal screenshot, saved to the gallery. The screen-share grant flow (once / 1 h / 16 h) stays only as the fallback when Accessibility is off. | Decided |
+| D23 | 27 Oct 2026 | **Blue, higher-contrast palette** (1.4.2): primary teal → blue, larger steps between surface, card and raised layers in both themes; gold (live) and green (success) unchanged (UI-02). **HTML interaction cards (CAP-34) move to P2** with questions and notices: the owner calls interactions with HTML "the killer feature". **"What can Bridget do?"** in More: one card per feature with a use case, built and planned. | Decided |
 | D22 | 27 Oct 2026 | **Name and icon:** the app is "Bridget", full name **"Bridget: Agentic Android Device Bridge"** (first run, Home's top bar with the icon and the version in small type, About). New icon from the owner's artwork (phone outline, stone bridge, cursor), 1.4.1. | Decided |
 | D21 | 27 Oct 2026 | **In-app update check, like Spotka's**: release APKs and a small `latest.json` are published to Sponic's **public R2** bucket; Bridget checks it over HTTPS, verifies the download (SHA-256, package, versionCode, signing certificate) and hands it to Android's installer, which always asks Rahul to confirm. Shipped with P1b as 1.4.0, with a new app icon. Section 12.14. | Decided |
 | D20 | 27 Oct 2026 | No production users before P1a; no migration from 1.2; old 64-hex keys and 1.2 field names are not kept. P1a is installed fresh (uninstall 1.2.0 first) and every agent is paired again with a new `brg_` key. Appendix F (MIG-01..05) is dropped. | Decided |
@@ -1082,7 +1083,7 @@ On**, one tap from the Access screen).
   actions, a text control becomes inline reply, and tapping opens the full
   card. Lock screen shows only "<Agent> has a question" unless Rahul allows
   full text on the lock screen.
-- **CAP-34 [P5] HTML cards** (after the fast template ships in P2).
+- **CAP-34 [P2, moved from P5 by D23] HTML cards**, built with the fast template.
   `"html": "<…>"` instead of text/controls. The WebView is configured in
   code, never by the page, and the page is treated as untrusted:
   - Content Security Policy forced by Bridget:
@@ -1487,7 +1488,11 @@ somewhere is optional (11.6).
   `MaterialAlertDialogBuilder`, `Snackbar`, `Badge`,
   `ExtendedFloatingActionButton`, `RecyclerView`. No Compose, no WebView UI
   (except HTML interaction cards, 8.13).
-- **UI-02 [Proposed] Colour.** Brand colours from the icon. Dynamic colour
+- **UI-02 [Proposed] Colour.** *Changed in 1.4.2 (D23): primary is blue
+  (light `#1F5BD6`, dark `#ADC6FF`; containers `#D6E2FF` / `#1B4AAE`) and the
+  surface steps are wider (light `#F8F9FF` → `#E6EBF5` → `#D7DEEC`; dark
+  `#0B0F17` → `#1A2130` → `#262F42`). The table below is the original.*
+  Brand colours from the icon. Dynamic colour
   (Material You) **off**, so Bridget looks the same everywhere and status
   colours stay meaningful.
 
@@ -1895,10 +1900,10 @@ its debug builds; Bridget's is for its **release** build.
 | **P1a** | 1.3.0 (owner, 27 Oct 2026) | New UI shell (12.1-12.5, 12.7-12.9, 12.11-12.13), setup prompt flow (6) with AGT-05a, `brg_` keys, Developer switch, `/v1/guide`, `/v1/openapi.json`, `/v1/tools/bridget`, log store and API with the visibility setting (10), Access screen, boot receiver, network callbacks, cleartext config, size presets, `raw=1` for snapshots, `image/last?wait`, idempotency and pending schema | TST-03 passes; Rahul adds a new agent from the prompt in under 1 minute |
 | **P1b** | 1.4.0 / 1.4.1 (owner, 27 Oct 2026) | Bug reports and feature requests on the phone, copied in concept from Spotka (11.1-11.5, 12.10); upload (11.6) only after Q6; **app updates** (12.14, D21); new app icon | A report filed on the phone is read and moved to `fixed` by a developer agent; an installed 1.4.0 finds and verifies a published update |
 | Gate | before P3 | Battery measurement (NFR-06) over 3 days with the always-on service; Downloads spike (CAP-13) | Both written up in `docs/reviews/` |
-| **P2** | 2.1 | Interactions (8.13) + Inbox (12.6) + events and callbacks (9), open link (8.20), Quick Settings tile, **Accessibility screenshots** (8.10) | A no-webhook agent gets an answer within 1 s of the tap; an agent gets a screenshot in under 1 s with no prompt |
+| **P2** | 1.5 | Interactions (8.13) **including HTML cards (CAP-34, D23)** + Inbox (12.6) + events and callbacks (9), open link (8.20), Quick Settings tile, **Accessibility screenshots** (8.10) | A no-webhook agent gets an answer within 1 s of the tap; an agent gets a screenshot in under 1 s with no prompt |
 | **P3** | 2.2 | Phone status and context (8.7), sensors (8.21), location (8.8), flashlight and controls (8.9), find my phone (8.14), gallery filters, videos and downloads (8.5) | Each endpoint's acceptance test on the Pixel |
 | **P4** | 2.3 | Files to phone (8.11), share to agent (8.12) | Share-to-Grok round trip |
-| **P5** | 2.4 | Screen-share grant fallback (CAP-26b), video clip (8.3), text recognition (8.15), mic transcription (CAP-08) | Grant once / 1 h / 16 h tests |
+| **P5** | 2.4 | Screen-share grant fallback (CAP-26b), video clip (8.3), text recognition (8.15), mic transcription (CAP-08); HTML cards moved to P2 (D23) | Grant once / 1 h / 16 h tests |
 | **P6** | 2.5 | App usage (8.16), Health Connect (8.17), notification reading (8.18), clipboard (8.19) | Acceptance tests |
 | **P7** | 3.0 | Per-agent permissions (15) | `spec-per-agent-permissions.md` tests |
 | Relay | 2.x, after owner OK | Relay mode (4.4) | A non-tailnet agent takes a photo with Tailscale off |

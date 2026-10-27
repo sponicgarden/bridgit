@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="more_what_can">What can Bridget do?</string>
+    <string name="whatcan_title">What can Bridget do?</string>
+    <string name="whatcan_subtitle">%1$d of %2$d features available now</string>
+    <string name="whatcan_back">Back</string>
+    <string name="whatcan_group_now">Available now</string>
+    <string name="whatcan_group_next">Coming next</string>
+    <string name="whatcan_group_planned">Planned</string>
+    <string name="whatcan_group_ideas">Later, or needs your decision</string>
+    <string name="whatcan_example">For example</string>
+    <string name="whatcan_ref">Spec %1$s</string>
+    <dimen name="whatcan_gap">12dp</dimen>
+</resources>

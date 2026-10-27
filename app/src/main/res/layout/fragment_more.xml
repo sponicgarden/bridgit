@@ -48,6 +48,7 @@
             <!-- UPD-02 -->
             <include android:id="@+id/check_updates" layout="@layout/more_row" />
             <include android:id="@+id/about" layout="@layout/more_row" />
+            <include android:id="@+id/what_can" layout="@layout/more_row" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 </LinearLayout>

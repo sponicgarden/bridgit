@@ -48,6 +48,7 @@ class MoreFragment : Fragment() {
             UpdateDialog.checkForUpdates(requireActivity(), manual = true)
         }
         row(b.about, R.drawable.ic_info, R.string.more_about) { showAbout() }
+        row(b.whatCan, R.drawable.feedback_ic_lightbulb, R.string.more_what_can) { findNavController().navigate(R.id.whatCan) }
     }
 
     private fun row(r: MoreRowBinding, icon: Int, title: Int, onClick: () -> Unit) {
