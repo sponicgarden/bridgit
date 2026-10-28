@@ -229,6 +229,7 @@ class BridgeService : LifecycleService() {
     }
 
     private fun stopEverything() {
+        app.hardware.stop()
         watcher?.cancel(); watcher = null
         netCallback?.let { runCatching { getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(it) } }
         netCallback = null
@@ -240,6 +241,7 @@ class BridgeService : LifecycleService() {
     }
 
     override fun onDestroy() {
+        app.hardware.stop()
         server?.stop(); server = null
         netCallback?.let { runCatching { getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(it) } }
         app.agents.flush()

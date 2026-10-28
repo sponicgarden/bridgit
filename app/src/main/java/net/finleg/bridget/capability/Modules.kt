@@ -107,7 +107,7 @@ class StatusModule(app: BridgeApp) : Capability(app) {
             app.registry.modules.filter { it.switchKey != null }.forEach { m ->
                 val st = m.status()
                 out.put(m.id, JSONObject().put("title", st.title).put("enabled", st.enabled).put("ready", st.ready)
-                    .put("blocked_reason", st.blockedReason ?: JSONObject.NULL).put("details", st.details))
+                    .put("blocked_reason", if (agent?.allows(m.id) == false) "agent_not_allowed" else st.blockedReason ?: JSONObject.NULL).put("agent_allowed", agent?.allows(m.id) ?: false).put("details", st.details))
             }
             // EVT-05: whether the caller has a callback, and its host only (never the URL or secret).
             val cb = agent?.let { app.callbacks.get(it.id) }
@@ -222,7 +222,7 @@ class MicModule(app: BridgeApp, private val registry: Registry) : Capability(app
     override val permissions = listOf(Manifest.permission.RECORD_AUDIO)
     override val endpoints = listOf(Endpoints.MIC)
     override fun blockedReason() = captureBlocked(app, Manifest.permission.RECORD_AUDIO, app.listener.value.micReady)
-    override fun details() = JSONObject().put("max_seconds", 120)
+    override fun details() = JSONObject().put("max_seconds", 120).put("on_device_transcription", net.finleg.bridget.planned.Transcriber.available(app))
 
     override fun Route.install(api: ApiServer) = with(api) {
         endpoint(Endpoints.MIC) {
@@ -230,14 +230,25 @@ class MicModule(app: BridgeApp, private val registry: Registry) : Capability(app
             val secs = (d as? Int) ?: (d as? Long)?.takeIf { it in 1..120 }?.toInt()
             if (secs == null || secs < 1 || secs > 120) throw ErrorCatalog.error("invalid_parameter", "duration_seconds must be a whole number from 1 to 120.")
             requireUsable()
+            val transcribe = net.finleg.bridget.planned.Rules.bool(body, "transcribe", false)
+            val returnAudio = net.finleg.bridget.planned.Rules.bool(body, "return_audio", true)
+            if (!returnAudio && !transcribe) throw ErrorCatalog.error("invalid_parameter", "return_audio=false requires transcribe=true.")
+            if (transcribe && !net.finleg.bridget.planned.Transcriber.available(app)) throw ErrorCatalog.error("not_supported", "No on-device speech recognizer available; nothing was recorded.")
             val started = System.currentTimeMillis()
             val clip = api.withSensor(registry.micLock, app.getString(R.string.notif_recording, agentName, secs)) { api.service.mic.record(secs) }
-            val b64 = Base64.encodeToString(clip.bytes, Base64.NO_WRAP)
+            val transcript = if (transcribe) net.finleg.bridget.planned.transcribeKeepingAudio(returnAudio) {
+                net.finleg.bridget.planned.Transcriber.transcribe(app, clip.bytes, body.optString("language").ifBlank { null })
+            } else null
+            val b64 = if (returnAudio) Base64.encodeToString(clip.bytes, Base64.NO_WRAP) else ""
             if (b64.length > ApiServer.MAX_PAYLOAD) throw ErrorCatalog.error("payload_too_large", "The clip is over 12 MB as base64.")
             bytesOut = clip.bytes.size.toLong()
             data = JSONObject().put("duration_seconds", secs)
             Reply.Json(JSONObject().put("recorded_at", isoAt(started)).put("duration_seconds", clip.durationSeconds)
-                .put("format", "m4a").put("sample_rate_hz", clip.sampleRate).put("size_bytes", clip.bytes.size).put("data_base64", b64))
+                .put("format", "m4a").put("sample_rate_hz", clip.sampleRate).put("size_bytes", clip.bytes.size)
+                .apply { if (returnAudio) put("data_base64", b64); if (transcript != null) {
+                    put("transcript", transcript.text ?: JSONObject.NULL).put("on_device", true)
+                    transcript.error?.let { put("transcript_error", it) }
+                } })
         }
     }
 }
@@ -262,7 +273,12 @@ class GalleryModule(app: BridgeApp) : Capability(app) {
             val m = mode()
             val limit = intArg(this, "limit", 20, 1, 100)
             val arr = JSONArray()
-            gallery.recent(limit).forEach {
+            val type = query("type") ?: "any"
+            if (type !in listOf("any", "photo", "screenshot")) throw ErrorCatalog.error("invalid_parameter", "type must be any, photo or screenshot.")
+            val since = query("since")?.let { net.finleg.bridget.planned.UsageModule.time(it, 0) }
+            val until = query("until")?.let { net.finleg.bridget.planned.UsageModule.time(it, 0) }
+            if (since != null && until != null && since > until) throw ErrorCatalog.error("invalid_parameter", "since must precede until.")
+            gallery.recent(limit, type, query("album"), since, until).forEach {
                 arr.put(JSONObject().put("id", it.id.toString()).put("taken_at", isoAt(it.takenAt))
                     .put("width_px", it.width).put("height_px", it.height)
                     .put("size_bytes", it.size).put("mime", it.mime).put("album", it.album ?: JSONObject.NULL))
@@ -304,12 +320,14 @@ class GalleryModule(app: BridgeApp) : Capability(app) {
                     val until = System.currentTimeMillis() + wait * 1000L
                     while (found == null && System.currentTimeMillis() < until) {
                         delay(1000)
+                        mode()
                         found = gallery.latest(kind)?.takeIf { since!!.isOlderThan(it.first) }
                     }
                 } finally { api.waits.exit(agent!!.id) }
                 if (found == null) return@endpoint Reply.Json(JSONObject().put("new", false).put("type", type)
                     .put("message", "No new $type image in $wait s. Ask again with the same since."))
             }
+            mode() // Consent can change while a long poll is suspended.
             val (item, path) = found ?: throw notFound(m,
                 "No ${if (type == "any") "" else "$type "}images" + (if (since != null) " newer than since" else ""))
             val bytesIn = gallery.read(item.id) ?: throw ErrorCatalog.error("photo_not_found", "That image could not be opened.")

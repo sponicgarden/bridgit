@@ -69,6 +69,12 @@ class InteractionsFragment : Fragment() {
         ViewCompat.setOnApplyWindowInsetsListener(b.toolbar) { v, insets ->
             v.updatePadding(top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top); insets
         }
+        for ((label, kind) in listOf("Files" to "files", "Shared" to "shares")) {
+            b.chips.addView(com.google.android.material.chip.Chip(requireContext()).apply {
+                text = label; isCheckable = false
+                setOnClickListener { startActivity(android.content.Intent(requireContext(), net.finleg.bridget.planned.OwnerToolsActivity::class.java).putExtra("filter", kind)) }
+            })
+        }
         b.toolbar.inflateMenu(R.menu.feedback_overflow) // Report a bug / Request a feature (FBK-01)
         b.toolbar.setOnMenuItemClickListener { handleFeedbackMenu(it, "Interactions") }
 

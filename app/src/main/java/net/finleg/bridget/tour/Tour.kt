@@ -47,8 +47,13 @@ object TourKinds {
     fun brief(kinds: List<String>): String {
         val topics = kinds.joinToString(", ") { labels[it]?.lowercase() ?: it }
         return listOf(
-            "You are Rahul's walking tour guide. Topics: $topics. Every tour.tick has his location, the compass " +
-                "(azimuth_deg = the way the phone points, 0 = north) and how far he moved.",
+            "You are Rahul's walking tour guide. Topics: $topics. He is walking now and listening on his phone's speaker.",
+            "Keep listening until tour.ended: loop GET /v1/events?since=<next_cursor>&wait=55 (60 s timeout). If your " +
+                "harness only acts during a turn, run each wait as a background command so the next event wakes you. " +
+                "Don't stop or end your turn while the tour runs; if you stop, he walks in silence.",
+            "The first tour.tick comes seconds after tour.started: greet him in 1-2 sentences, say where he is and what's " +
+                "around for these topics. Every tour.tick has location {latitude, longitude, accuracy_m}, compass " +
+                "{azimuth_deg = the way the phone points, 0 = north; direction}, moved_m and new_photos (photos he took since the last tick).",
             "Speak with POST /v1/speaker/say {\"text\",\"tour_id\"}: 2-4 short sentences per tick, spoken style, no lists. " +
                 "Don't repeat what you already said; if he hasn't moved and you have nothing new, stay silent.",
             "Say where things are relative to him: work out the bearing from his position to the place, compare it with " +
@@ -57,9 +62,27 @@ object TourKinds {
             "When there is nothing more of interest right here, say so in one sentence, then name the 2-3 nearest " +
                 "interesting places for these topics with their direction relative to him and distance, so he can choose where to walk.",
             "tour.question is him asking; answer it first with \"urgent\": true. tour.photo is a photo he just took for you: " +
-                "fetch it, say what it shows and why it matters for these topics.",
+                "GET its fetch link, say what it shows and why it matters for these topics. Fetch new_photos on a tick the same way.",
             "If location accuracy is worse than 100 m, say places are approximate. Never invent facts; say when you're not sure.",
         ).joinToString("\n")
+    }
+
+    /**
+     * What Rahul pastes into the agent's chat when it isn't listening for events (owner report 27 Oct
+     * 2026: agents never answered because nothing woke them). No key: the agent has it from pairing.
+     */
+    fun startPrompt(agentName: String, baseUrl: String, kinds: List<String>, tourRunning: Boolean): String = buildString {
+        appendLine("Bridget City tour: Rahul ${if (tourRunning) "has started" else "is starting"} a walking tour with you ($agentName) " +
+            "and you are not listening for Bridget events yet, so nothing reaches you.")
+        appendLine("Bridget is at $baseUrl (use your Bridget key from pairing, as before).")
+        appendLine("1. GET /v1/tour now. If a tour runs, its brief is there; follow it.")
+        appendLine("2. GET /v1/events (no since) and keep its next_cursor, then loop GET /v1/events?since=<next_cursor>&wait=55 " +
+            "with a 60 s timeout until tour.ended. If your harness only acts during a turn, run each wait as a background " +
+            "command so each event wakes you, answer, then start the next wait.")
+        appendLine("3. Answer every tour.tick, tour.question and tour.photo by speaking with POST /v1/speaker/say {\"text\",\"tour_id\"}.")
+        appendLine()
+        appendLine("The brief:")
+        append(brief(kinds))
     }
 }
 
@@ -168,6 +191,11 @@ object TourPrivacy {
  * switch is re-checked right before each tick or question is built.
  */
 class TourManager(private val app: BridgeApp) {
+    companion object {
+        /** A long-poll holds 55 s, so an agent that polled within 90 s is still looping. */
+        const val LISTEN_WINDOW_MS = 90_000L
+    }
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private var job: Job? = null
     private val tour = TourState()
@@ -196,8 +224,16 @@ class TourManager(private val app: BridgeApp) {
         return TourBattery.used(cur.batteryStartPct, batteryPct(), cur.charged || chargingNow)
     }
 
+    /** The agent hears its events: it has a callback URL, or called GET /v1/events in the last [LISTEN_WINDOW_MS]. */
+    fun listening(agentId: String): Boolean = app.callbacks.get(agentId) != null ||
+        System.currentTimeMillis() - app.interactions.lastPoll(agentId) < LISTEN_WINDOW_MS
+
+    /** The tour's agent has fetched its events since [t] started (or gets them pushed to a callback URL). */
+    fun pickedUp(t: Tour): Boolean = app.callbacks.get(t.agentId) != null || app.interactions.lastPoll(t.agentId) >= t.startedAt
+
     /** What's missing before a tour can start (TOUR-01); empty = ready. */
     fun missing(): List<String> = buildList {
+        if (!app.settings.isOn("interactions")) add("Interactions switch")
         if (!app.settings.isOn("location")) add("Location switch")
         if (reader.precision() == null) add("Location permission")
         if (!reader.enabled()) add("Android's Location setting")
@@ -207,6 +243,7 @@ class TourManager(private val app: BridgeApp) {
 
     fun start(agentId: String, kinds: List<String>, intervalS: Int): Tour {
         val a = app.agents.get(agentId) ?: throw IllegalArgumentException("No such agent")
+        require(a.allows("tour") && a.allows("interactions") && a.allows("location") && a.allows("speaker")) { "This agent needs Tour, Location, Interactions and Speaker access" }
         require(kinds.isNotEmpty() && kinds.all { it in TourKinds.all }) { "Pick at least one kind of tour" }
         require(intervalS in TourKinds.intervals) { "Bad interval" }
         val t = Tour("t" + UUID.randomUUID().toString().replace("-", "").take(10), a.id, a.name, kinds, intervalS, System.currentTimeMillis(),
@@ -239,10 +276,13 @@ class TourManager(private val app: BridgeApp) {
 
     /** False, and the tour ended, once the Location switch is off (TOUR-02 consent). */
     private fun locationStillOn(id: String): Boolean {
-        if (app.settings.isOn("location")) return true
+        val a = tour.current()?.takeIf { it.id == id }?.let { app.agents.get(it.agentId) }
+        if (app.settings.isOn("location") && a?.allows("tour") == true && a.allows("interactions") && a.allows("location") && a.allows("speaker")) return true
         endTour(id, "location switched off")
         return false
     }
+
+    private fun galleryAllowed(agentId: String) = app.settings.isOn("gallery") && app.agents.get(agentId)?.allows("gallery") == true
 
     private suspend fun tick(id: String) {
         if (!locationStillOn(id)) return
@@ -251,7 +291,7 @@ class TourManager(private val app: BridgeApp) {
         val compass = Compass.read(app)
         val chargingNow = charging()
         val since = if (t.lastTickAt > 0) t.lastTickAt else t.startedAt
-        val photos = if (app.settings.isOn("gallery") && Gallery(app).accessMode() != null)
+        val photos = if (galleryAllowed(t.agentId) && Gallery(app).accessMode() != null)
             Gallery(app).recent(20).filter { it.addedAt > since }.take(10) else emptyList()
         tour.locked {
             // After the suspensions: still this tour, still running, still allowed to send location?
@@ -265,7 +305,7 @@ class TourManager(private val app: BridgeApp) {
                 .put("location", fix?.let { LocationReader.json(it, reader.precision() ?: "none", ::isoAt) } ?: JSONObject.NULL)
                 .put("compass", compass?.let { Compass.json(it) } ?: JSONObject.NULL)
                 .put("moved_m", Math.round(moved))
-                .put("new_photos", JSONArray(photos.map { p -> JSONObject().put("id", p.id.toString()).put("taken_at", isoAt(p.takenAt))
+                .put("new_photos", JSONArray(photos.filter { galleryAllowed(cur.agentId) }.map { p -> JSONObject().put("id", p.id.toString()).put("taken_at", isoAt(p.takenAt))
                     .put("fetch", "/v1/gallery/photo/${p.id}?size=agent") }))
                 .put("playing", app.speaker.current?.takeIf { it.agentId == cur.agentId }?.caption ?: JSONObject.NULL)
             app.interactions.event(cur.agentId, "tour.tick", data)
@@ -289,14 +329,14 @@ class TourManager(private val app: BridgeApp) {
         if (!locationStillOn(t.id)) return
         val fix = reader.lastKnown()
         val compass = Compass.read(app)
-        val latest = if (app.settings.isOn("gallery") && Gallery(app).accessMode() != null) Gallery(app).recent(1).firstOrNull() else null
+        val latest = if (galleryAllowed(t.agentId) && Gallery(app).accessMode() != null) Gallery(app).recent(1).firstOrNull() else null
         val sent = tour.locked {
             val cur = tour.current()?.takeIf { it.id == t.id } ?: return@locked false
             if (!locationStillOn(cur.id)) return@locked false
             app.interactions.event(cur.agentId, "tour.question", JSONObject().put("tour_id", cur.id).put("question", q).put("spoken", spoken)
                 .put("location", fix?.let { LocationReader.json(it, reader.precision() ?: "none", ::isoAt) } ?: JSONObject.NULL)
                 .put("compass", compass?.let { Compass.json(it) } ?: JSONObject.NULL)
-                .put("latest_photo", latest?.let { JSONObject().put("id", it.id.toString()).put("fetch", "/v1/gallery/photo/${it.id}?size=agent") } ?: JSONObject.NULL)
+                .put("latest_photo", latest?.takeIf { galleryAllowed(cur.agentId) }?.let { JSONObject().put("id", it.id.toString()).put("fetch", "/v1/gallery/photo/${it.id}?size=agent") } ?: JSONObject.NULL)
                 .put("how_to_answer", "POST /v1/speaker/say {\"text\",\"tour_id\",\"urgent\":true}"))
             tour.update(cur.id) { c -> c.copy(said = (c.said + Said(System.currentTimeMillis(), "You", q)).takeLast(100)) }
             true

@@ -302,13 +302,14 @@
                 style="@style/Widget.Bridgit.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:alpha="0.6"
-                android:enabled="false">
+                android:id="@+id/capability_permissions"
+                android:clickable="true"
+                android:focusable="true">
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/agents_permissions_later"
+                    android:text="Choose capabilities for this agent. Global feature switches still apply."
                     android:textAppearance="?attr/textAppearanceBodyMedium"
                     android:textColor="?attr/colorOnSurfaceVariant" />
             </com.google.android.material.card.MaterialCardView>

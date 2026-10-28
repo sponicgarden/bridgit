@@ -241,12 +241,42 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
             (listOf(agentId) + types + "%$tourId%").toTypedArray(), null, null, null)
             .use { c -> buildList { while (c.moveToNext()) add(c.getLong(0) to c.getString(1)) } }
         for ((id, json) in rows) {
-            val data = runCatching { JSONObject(json) }.getOrNull() ?: continue
+            val data = runCatching { JSONObject(json) }.getOrNull()
+            if (data == null) { db.delete("events", "id = ?", arrayOf(id.toString())); continue }
             if (data.optString("tour_id") != tourId) continue
             val clean = net.finleg.bridget.tour.TourPrivacy.scrub(data) ?: continue
             db.update("events", ContentValues().apply { put("data", clean.toString()) }, "id = ?", arrayOf(id.toString()))
         }
     }
+
+    /** A process restart ends all in-memory tours. Scrub before the listener can serve history. */
+    @Synchronized
+    fun recoverInterruptedTours() {
+        val rows = db.query("events", arrayOf("agent_id", "type", "data"), "type LIKE 'tour.%'", null, null, null, "id ASC")
+            .use { c -> buildList { while (c.moveToNext()) {
+                val data = runCatching { JSONObject(c.getString(2)) }.getOrNull()
+                if (data != null) add(Triple(c.getString(0), c.getString(1), data))
+            } } }
+        val tours = rows.mapNotNull { (agent, _, data) -> data.optString("tour_id").takeIf { it.isNotBlank() }?.let { agent to it } }.toSet()
+        val ended = rows.filter { it.second == "tour.ended" }.map { it.first to it.third.optString("tour_id") }.toSet()
+        tours.forEach { (agent, id) ->
+            scrubTourEvents(agent, id)
+            if ((agent to id) !in ended) event(agent, "tour.ended", JSONObject().put("tour_id", id).put("reason", "restart"))
+        }
+    }
+
+    @Synchronized
+    fun eventById(id: Long, agentId: String): Event? = db.query("events", null, "id = ? AND agent_id = ?", arrayOf(id.toString(), agentId), null, null, null)
+        .use { c -> if (c.moveToFirst()) Event(c.getLong(0), c.getString(1), c.getString(2), c.getLong(3), JSONObject(c.getString(4))) else null }
+
+    /** When each agent last called GET /v1/events (memory only): City tour checks the agent is listening. */
+    private val polledAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** Called at the start and end of every GET /v1/events, so an agent holding a 55 s wait stays "listening". */
+    fun notePoll(agentId: String) { polledAt[agentId] = clock() }
+
+    /** When [agentId] last called GET /v1/events since the app started; 0 = never. */
+    fun lastPoll(agentId: String): Long = polledAt[agentId] ?: 0L
 
     /** The agent's events after [sinceId] (oldest first), or its last 50 when [sinceId] is null. */
     fun eventsFor(agentId: String, sinceId: Long?, types: Set<String>, limit: Int = 100): List<Event> {

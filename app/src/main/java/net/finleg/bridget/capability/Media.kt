@@ -206,13 +206,20 @@ class Gallery(private val context: Context) {
                val addedAt: Long = 0, val relativePath: String? = null)
 
     @SuppressLint("Range")
-    fun recent(limit: Int): List<Item> {
+    fun recent(limit: Int, type: String = "any", album: String? = null, since: Long? = null, until: Long? = null): List<Item> {
         val args = Bundle().apply {
             // MediaStore ignores QUERY_ARG_SORT_COLUMNS here; the SQL sort string is honoured.
             // Newest-added first: received images (WhatsApp) often have no DATE_TAKEN.
             putString(android.content.ContentResolver.QUERY_ARG_SQL_SORT_ORDER, NEWEST_FIRST)
             putString(android.content.ContentResolver.QUERY_ARG_SQL_LIMIT, limit.toString())
         }
+        val clauses = mutableListOf<String>(); val values = mutableListOf<String>()
+        if (type == "screenshot") { clauses += "LOWER(relative_path) LIKE ?"; values += "%screenshots%" }
+        if (type == "photo") { clauses += "LOWER(relative_path) LIKE ?"; values += "dcim/camera/%" }
+        if (album != null) { clauses += "bucket_display_name = ?"; values += album }
+        if (since != null) { clauses += "date_added >= ?"; values += (since / 1000).toString() }
+        if (until != null) { clauses += "date_added <= ?"; values += (until / 1000).toString() }
+        if (clauses.isNotEmpty()) { args.putString(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION, clauses.joinToString(" AND ")); args.putStringArray(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, values.toTypedArray()) }
         return query(args)
     }
 

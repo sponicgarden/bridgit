@@ -53,6 +53,8 @@ abstract class Capability(protected val app: BridgeApp) {
                 mapOf("permission" to "android.permission." + b.removePrefix("permission:")))
             b == "notifications_off" -> throw ErrorCatalog.error("notifications_required",
                 "Bridgit's notifications are off, so captures are refused. Ask Rahul to turn them on.")
+            b.endsWith("_access_off") || b == "location_off" -> throw ErrorCatalog.error("access_needed",
+                "$title needs Android access. Ask Rahul to enable $b on the Access or Device tools screen.", mapOf("setting" to b))
             b == "open_app_once" -> throw ErrorCatalog.error("service_start_blocked",
                 "Android hasn't given Bridgit's listener the $title yet. Ask Rahul to open Bridgit once.")
             else -> throw ErrorCatalog.error("service_start_blocked", "$title isn't ready: $b")
@@ -71,6 +73,14 @@ class Registry(app: BridgeApp) {
         net.finleg.bridget.feedback.FeedbackModule(app),
         net.finleg.bridget.interact.InteractionModule(app),
         LocationModule(app), SpeakerModule(app), net.finleg.bridget.tour.TourModule(app),
+        net.finleg.bridget.planned.ScreenShareModule(app),
+        net.finleg.bridget.planned.PhoneModule(app), net.finleg.bridget.planned.ControlsModule(app),
+        net.finleg.bridget.planned.TorchModule(app), net.finleg.bridget.planned.RingModule(app),
+        net.finleg.bridget.planned.SensorsModule(app), net.finleg.bridget.planned.UsageModule(app),
+        net.finleg.bridget.planned.NotificationsModule(app), net.finleg.bridget.planned.HealthModule(app),
+        net.finleg.bridget.planned.TransferModule(app, "files"), net.finleg.bridget.planned.TransferModule(app, "shares"),
+        net.finleg.bridget.planned.TransferModule(app, "downloads"), net.finleg.bridget.planned.ClipboardModule(app),
+        net.finleg.bridget.planned.VideoModule(app), net.finleg.bridget.planned.GalleryVideoModule(app), net.finleg.bridget.planned.OcrModule(app),
     )
 
     fun caps(): List<net.finleg.bridget.api.CapInfo> = modules.map { it.status() }

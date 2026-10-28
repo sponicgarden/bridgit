@@ -17,6 +17,10 @@ add each agent again.
 `GET /v1/openapi.json`. [`docs/scenarios.md`](docs/scenarios.md) lists what
 you can do with Bridgit.
 
+## Local planned-feature development
+
+The local development build adds the planned device controls, context/sensors, files/sharing, media/OCR/transcription, screen-share grants, usage/Health Connect/notification reads, clipboard approval, and per-agent permissions. See [implementation and supported bounds](docs/planned-features-implementation.md) for phone entry points, exact endpoint paths, validation and device limitations. These additions are not a published release.
+
 ## Install
 
 1. Get the APK from the private GitHub release (`sponicgarden/bridgit`, tag

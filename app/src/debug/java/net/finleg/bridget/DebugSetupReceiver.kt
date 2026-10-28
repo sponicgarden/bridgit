@@ -18,6 +18,10 @@ import net.finleg.bridget.core.Connection
 class DebugSetupReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val app = context.applicationContext as BridgeApp
+        if (intent.hasExtra("port")) {
+            app.settings.port = intent.getIntExtra("port", BuildConfig.DEFAULT_PORT).also { require(it in 1024..65535) }
+            BridgeService.running?.poke("test port changed")
+        }
         intent.getStringExtra("speaker_ceiling")?.toIntOrNull()?.let { app.settings.speakerCeiling = it }
         for (m in app.registry.switchable()) {
             val k = m.switchKey!!
@@ -41,6 +45,14 @@ class DebugSetupReceiver : BroadcastReceiver() {
             val (n, v) = spec.split("=").let { it[0] to (it.getOrNull(1) != "false") }
             app.agents.byName(n)?.let { a -> app.agents.update(a.id) { it.copy(developer = v) } }
         }
+        intent.getStringExtra("caps")?.let { spec ->
+            val (name, grants) = spec.split("=", limit = 2)
+            app.agents.byName(name)?.let { a -> app.agents.update(a.id) { it.copy(caps = if (grants == "*") null else grants.split(',').filter(String::isNotBlank).toSet()) } }
+        }
+        intent.getStringExtra("clipboard_decide")?.let { spec ->
+            val p = spec.split(":", limit = 2)
+            app.clipboardRequests.decide(p[0], p.getOrNull(1) == "approve")
+        }
         var code = ""
         intent.getStringExtra("rotate")?.let { n ->
             app.agents.byName(n)?.let { a ->
@@ -57,6 +69,9 @@ class DebugSetupReceiver : BroadcastReceiver() {
         if (intent.getBooleanExtra("listener", true)) {
             app.settings.listenerEnabled = true
             BridgeService.start(context)
+        } else if (intent.hasExtra("listener")) {
+            app.settings.listenerEnabled = false
+            BridgeService.pauseSilently(context)
         }
         resultData = code
         // Last, after the result is set: never block the main thread (ask() reads the compass on it).

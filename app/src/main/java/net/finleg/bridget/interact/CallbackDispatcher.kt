@@ -32,6 +32,8 @@ class CallbackDispatcher(private val app: BridgeApp, private val store: Callback
     private val wake = Channel<Unit>(Channel.CONFLATED)
     @Volatile private var knownAgents: Set<String> = app.agents.all().map { it.id }.toSet()
 
+    private var knownGrants = app.agents.all().associate { it.id to it.caps }
+
     /** The outcome of one attempt: [status] when the receiver answered, else [reason]. */
     class Outcome(val host: String, val status: Int?, val reason: String?) {
         val delivered get() = status != null && CallbackRules.success(status)
@@ -41,7 +43,12 @@ class CallbackDispatcher(private val app: BridgeApp, private val store: Callback
     init {
         // Agent removal deletes its callback config and pending deliveries; rotation keeps both (same id).
         app.agents.addListener {
-            val ids = app.agents.all().map { it.id }.toSet()
+            val grants = app.agents.all().associate { it.id to it.caps }
+            synchronized(queue) {
+                (knownGrants.keys + grants.keys).filter { knownGrants[it] != grants[it] || it !in grants }.forEach { queue.removeAgent(it) }
+                knownGrants = grants
+            }
+            val ids = grants.keys
             if (ids != knownAgents) {
                 knownAgents = ids
                 val gone = store.prune(ids)
@@ -54,7 +61,7 @@ class CallbackDispatcher(private val app: BridgeApp, private val store: Callback
     /** Called for every stored event (InteractionStore). Only enqueues: it runs under the store's lock. */
     fun onEvent(e: Event) {
         if (e.type == TEST_TYPE) return // delivered synchronously by POST /v1/callback/test
-        if (store.get(e.agentId) == null) return
+        if (store.get(e.agentId) == null || !EventAccess.allowed(app.agents.get(e.agentId), e.type)) return
         val dropped = synchronized(queue) { queue.add(CallbackQueue.Item(e.agentId, e, 1, System.currentTimeMillis())) }
         if (dropped > 0) log(e.agentId, "warn", null, null,
             "Callback queue full: dropped $dropped oldest event${if (dropped == 1) "" else "s"} (they stay in /v1/events)")
@@ -80,10 +87,11 @@ class CallbackDispatcher(private val app: BridgeApp, private val store: Callback
     }
 
     private fun attempt(item: CallbackQueue.Item<Event>) {
+        if (!EventAccess.allowed(app.agents.get(item.agentId), item.value.type)) return
         val cfg = store.get(item.agentId) ?: return // removed meanwhile
         val name = app.agents.get(item.agentId)?.name ?: return
-        val out = deliver(cfg, name, item.value)
-        val e = item.value
+        val e = app.interactions.eventById(item.value.id, item.agentId) ?: return
+        val out = deliver(cfg, name, e)
         if (out.delivered) {
             log(item.agentId, "info", out, e, "Callback to ${out.host}: ${out.words()} (${e.type})")
             return
@@ -100,6 +108,7 @@ class CallbackDispatcher(private val app: BridgeApp, private val store: Callback
     /** One signed POST (blocking, at most 10 s). */
     private fun deliver(cfg: CallbackStore.Config, agentName: String, e: Event): Outcome {
         val host = cfg.host
+        if (!EventAccess.allowed(app.agents.get(cfg.agentId), e.type)) return Outcome(host, null, "access_revoked")
         val check = CallbackRules.check(cfg.url, CallbackRules.tailnetDomain(app.listener.value.magicDns), app.settings.allowInternetCallbacks)
         if (check !is CallbackRules.Check.Ok) return Outcome(host, null, "not_allowed")
         val secret = store.secret(cfg.agentId) ?: return Outcome(host, null, "no_secret")

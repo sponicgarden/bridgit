@@ -103,6 +103,7 @@ object UiActions {
     /** The Android permissions to ask for a module; Gallery also asks for the "Select photos" grant. */
     fun permissionsFor(module: Capability): Array<String> {
         val p = module.permissions.toMutableList()
+        if (Manifest.permission.READ_MEDIA_VIDEO in p) p += Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
         if (Manifest.permission.READ_MEDIA_IMAGES in p) p += Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED
         return p.toTypedArray()
     }

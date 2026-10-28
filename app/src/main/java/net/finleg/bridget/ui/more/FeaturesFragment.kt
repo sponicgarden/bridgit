@@ -72,6 +72,10 @@ class FeaturesFragment : Fragment() {
     private fun build() {
         b.list.removeAllViews()
         rows.clear()
+        b.list.addView(com.google.android.material.button.MaterialButton(requireContext()).apply {
+            text = "Device tools, files and special access"
+            setOnClickListener { startActivity(android.content.Intent(requireContext(), net.finleg.bridget.planned.OwnerToolsActivity::class.java)) }
+        })
         val groups = app.registry.switchable().groupBy { it.group }
         for ((group, modules) in groups) {
             val header = layoutInflater.inflate(R.layout.features_header, b.list, false) as TextView

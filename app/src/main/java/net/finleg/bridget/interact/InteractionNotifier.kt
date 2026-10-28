@@ -176,6 +176,7 @@ object InteractionNotifier {
     private fun maybeSpeak(ctx: Context, i: Interaction) {
         if (!i.speak) return
         val app = ctx.applicationContext as BridgeApp
+        if (!app.settings.isOn("speaker") || app.agents.get(i.agentId)?.allows("speaker") != true) return
         val speaker = app.speaker
         val quiet = speaker.silenced()
         val allowed = prefs(ctx).getBoolean(PREF_SPEAK_URGENT_IN_DND, false)

@@ -170,7 +170,7 @@ def main():
     def _():
         r = c.call("GET", "/health", T); expect(r, 200); j = r.json()
         assert j["agent"] == T and j["port"] == c.port, j
-        assert re.match(r"^1\.[0-9]+\.[0-9]+$", j["app_version"]), j["app_version"]
+        assert re.match(r"^1\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?$", j["app_version"]), j["app_version"]
         assert r.headers.get("x-request-id") == j["request_id"], "X-Request-Id differs from body"
         return f"{r.secs*1000:.0f} ms, base_url {j['base_url']}"
 
@@ -220,11 +220,11 @@ def main():
             assert p in j["paths"], p
         return f"{len(j['paths'])} paths"
 
-    @c.check("A07", "GET /v1/tools/bridget needs no key and matches tools/bridget")
+    @c.check("A07", "GET /v1/tools/bridget needs no key and matches tools/bridgit")
     def _():
         r = c.call("GET", "/tools/bridget"); expect(r, 200)
-        here = open(os.path.join(os.path.dirname(__file__), "bridget"), "rb").read()
-        assert r.body == here, "served helper differs from tools/bridget"
+        here = open(os.path.join(os.path.dirname(__file__), "bridgit"), "rb").read()
+        assert r.body == here, "served helper differs from tools/bridgit"
         return f"{len(r.body)} bytes"
 
     @c.check("A08", "switch off -> 403 capability_disabled (camera)")
@@ -664,8 +664,9 @@ def main():
         blobs = {
             **api,
             "log.db": c.run_as("cat", "databases/log.db") + c.run_as("cat", "databases/log.db-wal"),
+            "interactions.db": c.run_as("cat", "databases/interactions.db") + c.run_as("cat", "databases/interactions.db-wal"),
             "feedback.db": c.run_as("cat", "databases/feedback.db") + c.run_as("cat", "databases/feedback.db-journal"),
-            "shared_prefs": b"".join(c.run_as("cat", f"shared_prefs/{n}") for n in ("agents.xml", "settings.xml", "pending_key.xml")),
+            "shared_prefs": b"".join(c.run_as("cat", f"shared_prefs/{n}") for n in ("agents.xml", "settings.xml", "pending_key.xml", "callbacks.xml", "clipboard_requests.xml", "transfers.xml")),
             "logcat": subprocess.run(["adb", "-s", c.serial, "logcat", "-d"], capture_output=True, timeout=60).stdout,
         }
         assert len(blobs["log.db"]) > 4096, "could not read log.db with run-as"
@@ -675,6 +676,8 @@ def main():
                 bad.append(f"{name}: a test key value")
             if KEY_RE.search(b.decode("latin-1")):
                 bad.append(f"{name}: a brg_ key pattern")
+            if re.search(rb"cbs_[A-Za-z0-9_-]{43}", b):
+                bad.append(f"{name}: a callback secret pattern")
             if re.search(rb"Bearer brg_", b):
                 bad.append(f"{name}: a Bearer header")
         assert not bad, "; ".join(bad)

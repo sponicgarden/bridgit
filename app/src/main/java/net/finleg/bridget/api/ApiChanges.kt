@@ -60,6 +60,20 @@ object ApiChanges {
             Item("Screenshot on request: what's on Rahul's screen now, nothing saved (once he turns on Screenshots)", "/v1/screen/capture"),
             Item("Gallery with \"Select photos\" access: photo_not_found and /v1/gallery/recent say how Rahul allows all", "/v1/gallery/recent"),
         )),
+        Revision(8, "1.6.0", "2026-10-29", listOf(
+            Item("Device context, sensors, flashlight, timed sound/display controls and find-phone ring", "/v1/phone/status"),
+            Item("Private file transfers, owner-selected Downloads, Android sharing and clipboard approval", "/v1/files"),
+            Item("On-device OCR and transcription; short video and accessible gallery videos", "/v1/ocr"),
+            Item("Read-only Health Connect, app usage and opt-in notification text", "/v1/health/records"),
+            Item("Owner-approved, per-agent MediaProjection screen-sharing grants", "/v1/screen/grant"),
+            Item("Sensors", "/v1/sensors"), Item("Flashlight", "/v1/flashlight"),
+            Item("Phone context", "/v1/phone/context"), Item("DND", "/v1/phone/dnd"), Item("Sound", "/v1/phone/sound"),
+            Item("Brightness", "/v1/phone/brightness"), Item("Undo timed changes", "/v1/phone/undo"), Item("Ring", "/v1/phone/ring"),
+            Item("Shares", "/v1/shares"), Item("Downloads", "/v1/downloads"), Item("Clipboard", "/v1/clipboard"),
+            Item("Video recording", "/v1/camera/video"), Item("Gallery videos", "/v1/gallery/videos/recent"), Item("Gallery video bytes", "/v1/gallery/video/{id}"),
+            Item("Notification reads", "/v1/notifications"), Item("Usage summaries", "/v1/usage"), Item("Shared-screen capture", "/v1/screen/share/capture"),
+            Item("Per-agent capability grants, enforced for HTTP and MCP", "/v1/capabilities"),
+        )),
     )
 
     val CURRENT: Int = revisions.maxOf { it.revision }

@@ -29,6 +29,7 @@ import net.finleg.bridget.log.LogEntry
 import net.finleg.bridget.log.Redactor
 import org.json.JSONObject
 import java.util.UUID
+import kotlinx.coroutines.*
 
 /** What an endpoint hands back to the pipeline. */
 sealed class Reply {
@@ -57,6 +58,7 @@ class Req(val spec: EndpointSpec, val agent: Agent?, val requestId: String, val 
     fun hasRawFile(): Boolean = rawFile != null
     internal fun leftoverRawFile(): java.io.File? = rawFile
     /** What goes into the log entry's params (redacted before storing). */
+    var viaMcp = false
     val params = JSONObject()
     var bytesOut = 0L
     var message: String? = null
@@ -74,15 +76,22 @@ class Req(val spec: EndpointSpec, val agent: Agent?, val requestId: String, val 
  * (ARC-04); every request is checked, rate-limited and logged once.
  * Ktor's own call logging is not installed (SEC-14a).
  */
+class RequestState {
+    val limiter = RateLimiter()
+    val waits = WaitGate()
+    val idempotency = IdempotencyCache()
+    val uploadSlots = kotlinx.coroutines.sync.Semaphore(2)
+}
+
 class ApiServer(val service: BridgeService, private val hosts: List<String>, val port: Int) {
     val app = service.application as BridgeApp
-    private val limiter = RateLimiter()
-    val waits = WaitGate()
-    private val idempotency = IdempotencyCache()
+    private val limiter = app.requests.limiter
+    val waits = app.requests.waits
+    private val idempotency = app.requests.idempotency
     private var engine: ApplicationEngine? = null
     /** Large uploads read at once (finding: concurrent 25 MB bodies). */
-    private val uploadSlots = kotlinx.coroutines.sync.Semaphore(MAX_CONCURRENT_UPLOADS)
-    private val uploads = java.io.File(app.cacheDir, "uploads").apply { mkdirs(); listFiles()?.forEach { it.delete() } }
+    private val uploadSlots = app.requests.uploadSlots
+    private val uploads = java.io.File(app.cacheDir, "uploads").apply { mkdirs() }
 
     fun start() {
         val env = applicationEngineEnvironment {
@@ -165,6 +174,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                         throw ErrorCatalog.error("unauthorized", "Missing or wrong key. Send Authorization: Bearer <your key>.")
                     }
                 }
+                requireGrant(agent!!, spec)
                 app.agents.recordUse(agent!!.id, source)
                 if (agent!!.knownApiRevision < ApiChanges.CURRENT)
                     call.response.header("X-Bridget-Whats-New", "/v1/changes?since=${agent!!.knownApiRevision}")
@@ -184,7 +194,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                 val ctype = call.request.headers["Content-Type"] ?: ""
                 // Media endpoints take raw bytes (audio/*, image/*, ...), streamed to a size-limited temp file;
                 // everything else is a JSON object, held to the normal 2 MB even on those endpoints.
-                if (spec.maxBody > MAX_BODY && ctype.isNotEmpty() && !ctype.startsWith("application/json") && !ctype.startsWith("text/")) {
+                if (spec.maxBody > MAX_BODY && ctype.isNotEmpty() && !ctype.startsWith("application/json") && (spec.capability == "files" || !ctype.startsWith("text/"))) {
                     val f = readBodyToFile(call, spec.maxBody)
                     rawFile = f
                     bytesIn = f.length()
@@ -214,6 +224,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                     is IdempotencyCache.Claim.Expired -> { idemKey = null; throw ErrorCatalog.error("idempotency_expired", "This Idempotency-Key was already used; its media result is no longer kept.") }
                     is IdempotencyCache.Claim.Done -> {
                         idemKey = null
+                        requireReplayUsable(spec)
                         http = c.stored.status
                         logParams.put("replay", true)
                         c.stored.headers.forEach { (k, v) -> call.response.header(k, v) }
@@ -238,7 +249,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
 
             // Capture limits are charged only for work that really runs (not for replays, SEC-07).
             chargeCapture(spec, agent, source)
-            val reply = r.block()
+            val reply = runGuarded(r, block)
             val (status, ctype, bytes, headers) = render(reply, rid)
             http = status
             headers.forEach { (k, v) -> call.response.header(k, v) }
@@ -252,6 +263,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
             call.respondBytes(body, ContentType.Application.Json, HttpStatusCode.fromValue(e.http))
         } catch (e: Exception) {
             if (e is kotlinx.coroutines.CancellationException) {
+                http = 499; result = "cancelled"
                 idemKey?.let { k -> agent?.let { idempotency.abandon(it.id, k) } }
                 throw e
             }
@@ -297,6 +309,44 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
     private val handlers = java.util.concurrent.ConcurrentHashMap<String, suspend Req.() -> Reply>()
     /** Admission checks (switch, rate, queue) of large-body endpoints; MCP runs them too, it has no upload stage. */
     private val admits = java.util.concurrent.ConcurrentHashMap<String, suspend (Map<String, String>, Agent?) -> Unit>()
+    private suspend fun runGuarded(req: Req, block: suspend Req.() -> Reply): Reply = coroutineScope {
+        val a = req.agent ?: return@coroutineScope req.block()
+        val work = async { req.block() }
+        val watcher = launch {
+            while (work.isActive) {
+                delay(200)
+                val live = app.agents.get(a.id)
+                val switchedOff = req.spec.capture && app.registry.byId(req.spec.capability)?.enabled == false
+                if (live == null || live.keyHash != a.keyHash || !live.allows(req.spec.capability) || switchedOff) {
+                    work.cancel(); break
+                }
+            }
+        }
+        try {
+            val reply = work.await()
+            requireGrant(a, req.spec)
+            reply
+        } catch (e: CancellationException) {
+            currentCoroutineContext().ensureActive()
+            if (e is TimeoutCancellationException) throw ErrorCatalog.error("capture_timeout", "The operation did not finish before its deadline.")
+            requireGrant(a, req.spec)
+            if (req.spec.capture && app.registry.byId(req.spec.capability)?.enabled == false)
+                throw ErrorCatalog.error("capability_disabled", "Capability was switched off during this capture.")
+            throw ErrorCatalog.error("conflict", "Authorization changed while this request was running. Start a new request if it is still wanted.")
+        } finally { watcher.cancel() }
+    }
+
+    private fun requireReplayUsable(spec: EndpointSpec) {
+        if (app.registry.byId(spec.capability)?.enabled == false)
+            throw ErrorCatalog.error("capability_disabled", "The capability is off; cached responses are unavailable.")
+    }
+
+    private fun requireGrant(agent: Agent, spec: EndpointSpec) {
+        val live = app.agents.get(agent.id) ?: throw ErrorCatalog.error("unauthorized", "Agent removed.")
+        if (live.keyHash != agent.keyHash) throw ErrorCatalog.error("unauthorized", "Agent key was rotated during the request.")
+        if (!live.allows(spec.capability)) throw ErrorCatalog.error("agent_not_allowed", "This agent does not have ${spec.capability} access. Ask the owner to update its permissions on the phone.")
+    }
+
     private fun handlerKey(spec: EndpointSpec) = "${spec.method} ${spec.path}"
 
     /** The MCP endpoint's JSON-RPC side; StatusModule routes POST /v1/mcp to it. */
@@ -326,10 +376,12 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
         val r = Req(spec, agent, rid, source, body, null, queries, pathParams) { name ->
             if (name.equals("Content-Type", ignoreCase = true)) "application/json" else null
         }
+        r.viaMcp = true
         var http = 200
         var result = "ok"
         var idemKey: String? = null
         try {
+            requireGrant(agent, spec)
             val block = handlers[handlerKey(spec)] ?: throw ErrorCatalog.error("not_found", "No such endpoint.")
             if (spec.developerOnly && !agent.developer) throw ErrorCatalog.error("forbidden",
                 "Only developer agents can read bug reports. Ask Rahul to turn on Developer for ${agent.name}.", mapOf("reason" to "developer_only"))
@@ -344,6 +396,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                     is IdempotencyCache.Claim.Expired -> { idemKey = null; throw ErrorCatalog.error("idempotency_expired", "This idempotency_key was already used; its media result is no longer kept.") }
                     is IdempotencyCache.Claim.Done -> {
                         idemKey = null
+                        requireReplayUsable(spec)
                         http = c.stored.status
                         logParams.put("replay", true)
                         var bytes = c.stored.body!!
@@ -362,7 +415,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
             }
             admits[handlerKey(spec)]?.invoke(queries, agent)
             chargeCapture(spec, agent, source)
-            val (status, ctype, bytes, headers) = render(r.block(), rid)
+            val (status, ctype, bytes, headers) = render(runGuarded(r, block), rid)
             http = status
             if (r.bytesOut == 0L) r.bytesOut = bytes.size.toLong()
             idemKey?.let { idempotency.finish(agent.id, it, status, ctype, bytes, headers, spec.media); idemKey = null }
@@ -374,7 +427,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
             return Outcome(e.http, "application/json", bytes, emptyMap(), e)
         } catch (e: Exception) {
             idemKey?.let { idempotency.abandon(agent.id, it) }
-            if (e is kotlinx.coroutines.CancellationException) throw e
+            if (e is kotlinx.coroutines.CancellationException) { http = 499; result = "cancelled"; throw e }
             http = 500; result = "internal_error"
             app.log.system("diagnostic", "crash", "Error in ${spec.fullPath} (via MCP): ${e.javaClass.simpleName} at ${e.stackTrace.firstOrNull()}", level = "error")
             val err = ErrorCatalog.error("internal_error", "Bridgit hit a bug (${e.javaClass.simpleName}). It's in the diagnostic log.")

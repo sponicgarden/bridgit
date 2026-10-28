@@ -10,7 +10,7 @@ enum class Connection(val id: String, val label: String) {
     companion object { fun of(id: String?) = values().firstOrNull { it.id == id } ?: DIRECT }
 }
 
-/** The agent record, AGT-01. `caps` is reserved for per-agent permissions (section 15) and always null in v2. */
+/** The agent record, AGT-01. `caps` is an explicit grant set; null preserves unrestricted legacy access. */
 data class Agent(
     val id: String,
     val name: String,
@@ -31,7 +31,10 @@ data class Agent(
     val model: String? = null,
     val harness: String? = null,
     val modelReportedAt: Long = 0,
+    val caps: Set<String>? = null,
 ) {
+    fun allows(capability: String): Boolean = capability == "status" || caps == null || capability in caps
+
     /** "Claude Opus 5.5 · Claude Code", or null until the agent reports it. */
     val modelLabel: String? get() = model?.let { m -> harness?.let { "$m · $it" } ?: m }
 
@@ -40,7 +43,7 @@ data class Agent(
         .put("key_prefix", keyPrefix).put("created_at", createdAt).put("last_used_at", lastUsedAt)
         .put("last_source_ip", lastSourceIp ?: JSONObject.NULL).put("request_count", requestCount)
         .put("connection", connection.id).put("notes", notes).put("developer", developer)
-        .put("key_created_at", keyCreatedAt).put("known_api_revision", knownApiRevision).put("caps", JSONObject.NULL)
+        .put("key_created_at", keyCreatedAt).put("known_api_revision", knownApiRevision).put("caps", caps?.let { JSONArray(it.sorted()) } ?: JSONObject.NULL)
         .put("model", model ?: JSONObject.NULL).put("harness", harness ?: JSONObject.NULL).put("model_reported_at", modelReportedAt)
 
     companion object {
@@ -56,6 +59,7 @@ data class Agent(
             model = o.optString("model", "").takeIf { it.isNotEmpty() && !o.isNull("model") },
             harness = o.optString("harness", "").takeIf { it.isNotEmpty() && !o.isNull("harness") },
             modelReportedAt = o.optLong("model_reported_at", 0),
+            caps = o.optJSONArray("caps")?.let { a -> (0 until a.length()).map { a.getString(it) }.toSet() },
         )
     }
 }
