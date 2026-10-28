@@ -21,7 +21,7 @@ if (track) {
   previous.addEventListener('click',()=>move(-1));
   next.addEventListener('click',()=>move(1));
   track.addEventListener('keydown',event=>{
-    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+    if (!['ArrowRight','ArrowLeft','Home','End'].includes(event.key)) return;
     event.preventDefault(); if (event.key === 'Home' || event.key === 'End') {
       track.scrollTo({left:event.key === 'Home' ? 0 : track.scrollWidth,behavior:reducedMotion.matches ? 'instant' : 'smooth'});
     } else move(event.key === 'ArrowRight' ? 1 : -1);
