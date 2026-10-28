@@ -32,6 +32,19 @@ for (const [file, text] of pages) {
     references++;
   }
 }
+const origin = new URL(process.env.SITE_ORIGIN || config.origin).origin;
+const robots = await readFile(path.join(dist, 'robots.txt'), 'utf8');
+const sitemap = await readFile(path.join(dist, 'sitemap.xml'), 'utf8');
+if (config.indexable) {
+  if (!robots.includes('Allow: /') || /^Disallow:\s*\/\s*$/m.test(robots)) errors.push('Public site must allow crawling.');
+  if (!robots.includes(`Sitemap: ${origin}/sitemap.xml`)) errors.push('robots.txt must advertise the canonical sitemap.');
+}
+for (const [file, text] of pages) {
+  const route = '/' + path.relative(dist, file).split(path.sep).join('/').replace(/index\.html$/, '');
+  if (!text.includes(`<link rel="canonical" href="${origin + route}">`)) errors.push(`${file}: incorrect canonical URL.`);
+  if (config.indexable && !text.includes('<meta name="robots" content="index,follow">')) errors.push(`${file}: indexing blocked.`);
+  if (config.indexable && !sitemap.includes(`<loc>${origin + route}</loc>`)) errors.push(`${file}: missing from sitemap.`);
+}
 const icon = await readFile(path.join(dist, 'assets/social-card-1200x630.png'));
 if (icon.readUInt32BE(16) !== 1200 || icon.readUInt32BE(20) !== 630) errors.push('Incorrect social image dimensions.');
 if (process.argv.includes('--release')) {
@@ -39,7 +52,7 @@ if (process.argv.includes('--release')) {
   if (!config.supportEmail) warnings.push('Verified support mailbox is pending.');
   if (!config.privacyEmail) warnings.push('Verified privacy mailbox is pending.');
   if (!config.indexable) warnings.push('Search indexing is disabled deliberately.');
-  warnings.push('Privacy/terms pages are labeled drafts. Finalize before using them for Play submission.');
+
 }
 for (const warning of warnings) console.warn(`NOTE: ${warning}`);
 if (errors.length) { for (const error of errors) console.error(`FAIL: ${error}`); process.exitCode = 1; }

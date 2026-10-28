@@ -2,9 +2,9 @@
   "name": "BRIDGIT Device Manager for Android",
   "tagline": "Turn any Android device into an agentic appliance.",
   "origin": "https://bridgit.cc",
-  "supportEmail": null,
-  "privacyEmail": null,
+  "supportEmail": "support@bridgit.cc",
+  "privacyEmail": "support@bridgit.cc",
   "playStoreUrl": null,
-  "indexable": false,
+  "indexable": true,
   "brand": "BRIDGIT"
 }
