@@ -21,7 +21,9 @@ test('download email confirms only on explicit POST, tokens are hashed, replay i
  const token=/confirm-download\/\?token=([a-f0-9]+)/.exec(message.text)[1];
  let row=s.sql.prepare('SELECT * FROM download_requests').get(); assert.notEqual(row.token_hash,token); assert.equal(row.confirmed_at,null); assert.equal(row.wants_updates,0);
  const get=new Request('https://bridgit.cc/confirm-download/?token='+token);
- assert.equal((await handleDownloads(get,s.env,{now:()=>now})).status,200);
+ const landing=await handleDownloads(get,s.env,{now:()=>now});
+ assert.equal(landing.status,200);
+ assert.equal(landing.headers.get('referrer-policy'),'strict-origin');
  assert.equal(s.sql.prepare('SELECT confirmed_at FROM download_requests').get().confirmed_at,null);
  const confirmed=await handleDownloads(post('/api/confirm-download',token),s.env,{now:()=>now});
  assert.equal(confirmed.status,303); assert.equal(confirmed.headers.get('location'),'https://bridgit.cc/download/?confirmed=1');
