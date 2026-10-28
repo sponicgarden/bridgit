@@ -219,3 +219,7 @@ The independent fresh Opus pass is preserved in `2026-10-29-opus-verification.md
 - Restoration retries pause after twelve failures while keeping owner Undo available. Owner action audit lines are explicit, and service shutdown is not attributed to an owner tap.
 
 The full-source verification was followed by a focused final check of these changes.
+
+The focused final Opus report is in `2026-10-29-opus-final-verification.md`. Its only additional P3 finding (retaining the original owner baseline when a rollback itself fails) was fixed using the recommended shared baseline rule before publication.
+
+A concurrent session edited onboarding files after the first review-fix commit. Those edits were preserved in the earlier worktree and excluded from this release by using a separate clean production checkout.

@@ -158,7 +158,8 @@ class Hardware(private val app: BridgeApp) {
             applied.entries.toList().reversed().forEach { (k, value) ->
                 if (runCatching { if (read(k) == value) put(k, before.getValue(k)) }.isFailure) {
                     retry += k
-                    prefs.edit().putString(k, JSONObject().put("before", before.getValue(k)).put("applied", value)
+                    val previous = savedLeases[k]?.let(::JSONObject)
+                    prefs.edit().putString(k, JSONObject().put("before", Rules.leaseBaseline(before.getValue(k), previous?.getInt("before"), previous?.getInt("applied"))).put("applied", value)
                         .put("until", System.currentTimeMillis()).put("retry_after", System.currentTimeMillis() + 60_000).toString()).commit()
                 }
             }
