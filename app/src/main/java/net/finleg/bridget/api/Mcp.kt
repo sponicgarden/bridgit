@@ -24,7 +24,7 @@ import org.json.JSONObject
 class McpDispatch(private val api: ApiServer) {
 
     suspend fun handle(r: Req): Reply {
-        // A browser page must never drive Bridget's tools (DNS rebinding and the like); MCP clients send no Origin.
+        // A browser page must never drive Bridgit's tools (DNS rebinding and the like); MCP clients send no Origin.
         r.header("Origin")?.takeIf { it.isNotBlank() }?.let {
             throw ErrorCatalog.error("forbidden", "Browser pages may not call /v1/mcp.", mapOf("reason" to "origin"))
         }

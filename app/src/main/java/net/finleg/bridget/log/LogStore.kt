@@ -38,7 +38,7 @@ class LogStore(context: Context, private val retention: () -> Retention) {
         }
     }
 
-    /** Convenience for Bridget's own entries (agent = null). */
+    /** Convenience for Bridgit's own entries (agent = null). */
     fun system(channel: String, kind: String, message: String, level: String = "info", data: JSONObject? = null) =
         append(LogEntry(ts = System.currentTimeMillis(), channel = channel, kind = kind, level = level,
             message = Redactor.string(message, 500), data = data))

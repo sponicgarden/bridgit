@@ -1,7 +1,7 @@
 package net.finleg.bridget.api
 
 /**
- * The public API page (owner request, 1.5.1): one section per "What can Bridget do?" card with
+ * The public API page (owner request, 1.5.1): one section per "What can Bridgit do?" card with
  * every call it uses, then the full endpoint reference, the error catalog and the API revisions.
  * Generated from the same EndpointSpecs as the router and openapi.json, so it can't drift.
  * Published next to the updates (tools/publish-apk.sh); each card's Share button links to its anchor.
@@ -31,7 +31,7 @@ object ApiDocs {
 
     fun html(cards: List<Card>, appVersion: String): String = buildString {
         append("""<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bridget API</title><style>
+<title>Bridgit API</title><style>
 :root{--bg:#F8F9FF;--card:#E6EBF5;--ink:#151B27;--muted:#3C4558;--line:#B5BFD2;--accent:#1F5BD6;--ok:#C3EFCD;--okink:#00210B;--next:#D6E2FF;--nextink:#001849;--code:#D7DEEC}
 @media (prefers-color-scheme:dark){:root{--bg:#0B0F17;--card:#1A2130;--ink:#E1E6F2;--muted:#BAC4D8;--line:#3D475C;--accent:#ADC6FF;--ok:#005226;--okink:#9CF6B4;--next:#1B4AAE;--nextink:#DCE6FF;--code:#262F42}}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
@@ -46,11 +46,11 @@ pre{background:var(--code);padding:10px;border-radius:8px;overflow-x:auto;white-
 table{border-collapse:collapse;width:100%;font-size:14px}td,th{border-bottom:1px solid var(--line);padding:6px 4px;text-align:left;vertical-align:top}
 a{color:var(--accent)}nav a{margin-right:12px}ul{margin:4px 0 4px 20px;padding:0}
 </style></head><body><main>""")
-        append("<h1>Bridget API</h1><p class=\"sub\">Bridget: Agentic Android Device Bridge, version ${h(appVersion)}, API revision ${ApiChanges.CURRENT}. ")
+        append("<h1>Bridgit API</h1><p class=\"sub\">Bridgit: Agentic Android Device Bridge, version ${h(appVersion)}, API revision ${ApiChanges.CURRENT}. ")
         append("What an AI agent can ask an Android phone to do, and the exact calls. Base URL <code>http://&lt;phone&gt;:8734/v1</code> on the owner's Tailscale network; ")
         append("every call needs <code>Authorization: Bearer &lt;key&gt;</code> except where noted. A running phone also serves this live at <code>GET /v1/guide</code> and <code>GET /v1/openapi.json</code>.</p>")
         append("<nav><a href=\"#abilities\">Supported Agent Requests</a><a href=\"#technical\">How it works</a><a href=\"#${slug(APPLET_TITLE)}\">Build an applet</a><a href=\"#reference\">All endpoints</a><a href=\"#errors\">Errors</a><a href=\"#revisions\">Revisions</a></nav>")
-        for ((id, title, technical) in listOf(Triple("abilities", "Supported Agent Requests:", false), Triple("technical", "How Bridget works", true))) {
+        for ((id, title, technical) in listOf(Triple("abilities", "Supported Agent Requests:", false), Triple("technical", "How Bridgit works", true))) {
             append("<h2 id=\"$id\">${h(title)}</h2>")
             for (c in cards.filter { it.technical == technical }) card(c)
         }
@@ -86,15 +86,15 @@ a{color:var(--accent)}nav a{margin-right:12px}ul{margin:4px 0 4px 20px;padding:0
             "Stop when the owner says so (a Stop button on your card) or after a time limit you announced. Only capture while the applet runs; every capture is shown and logged.",
         ).forEach { append("<li>${md(it)}</li>") }
         append("</ol></section>")
-        append("<section class=\"card\"><h3>B. Add it to the Bridget app (a coding agent with the repository)</h3>")
+        append("<section class=\"card\"><h3>B. Add it to the Bridgit app (a coding agent with the repository)</h3>")
         append("<p>Copy City tour. Each step names the City tour file to copy from; keep its rules.</p><ol>")
         listOf(
-            "Write the spec first: a section next to 8.25 City tour in `docs/bridget-spec-v2.md` with numbered rules like TOUR-01..07 (what it needs switched on, what is sent to whom, limits).",
+            "Write the spec first: a section next to 8.25 City tour in `docs/bridgit-spec-v2.md` with numbered rules like TOUR-01..07 (what it needs switched on, what is sent to whom, limits).",
             "Session engine: a manager like `TourManager` in `tour/Tour.kt`. One session at a time, one agent, sends `<applet>.started` (with a `brief` string telling the agent what to do), `<applet>.tick`, owner actions, and `<applet>.ended` through `app.interactions.event(agentId, type, data)`. Create it in `BridgeApp`.",
             "Agent API: a `Capability` module like `TourModule` (register it in `capability/Capability.kt`), with an `EndpointSpec` for every call in `api/Endpoints.kt` and in `Endpoints.all`. Only the session's own agent may read it.",
             "Screen: a fragment like `ui/tour/TourFragment.kt` (setup: pick an agent and options, list what is missing; running: big buttons, what was said, End). Add it to `res/navigation/nav_main.xml`.",
             "Card: add it to `res/layout/fragment_applets.xml` and `AppletsFragment`, with a running chip.",
-            "Tell agents: add an `ApiChanges` revision, a section in the live guide (`api/SelfDescription.kt`), and a \"What can Bridget do?\" card in `ui/more/WhatCanData.kt`.",
+            "Tell agents: add an `ApiChanges` revision, a section in the live guide (`api/SelfDescription.kt`), and a \"What can Bridgit do?\" card in `ui/more/WhatCanData.kt`.",
             "Bump `versionName` / `versionCode` in `app/build.gradle.kts`, run `./gradlew testDebugUnitTest` (ApiDocsTest checks every endpoint is documented), install, and try it on the phone with a real agent.",
         ).forEach { append("<li>${md(it)}</li>") }
         append("</ol><p class=\"sub\">Rules every applet keeps: data goes only to the session's agent and only while it runs; the owner can always end it; nothing is kept afterwards except log lines.</p></section>")
@@ -110,7 +110,7 @@ a{color:var(--accent)}nav a{margin-right:12px}ul{margin:4px 0 4px 20px;padding:0
             append("<div class=\"label\">API</div>")
             eps.forEach { endpoint(it, short = true) }
         } else if (!c.stage.startsWith("Available")) {
-            append("<div class=\"label\">API</div><p class=\"sub\">Not built yet. Spec ${h(c.ref)} in <code>docs/bridget-spec-v2.md</code> describes the planned calls.</p>")
+            append("<div class=\"label\">API</div><p class=\"sub\">Not built yet. Spec ${h(c.ref)} in <code>docs/bridgit-spec-v2.md</code> describes the planned calls.</p>")
         }
         append("</section>")
     }

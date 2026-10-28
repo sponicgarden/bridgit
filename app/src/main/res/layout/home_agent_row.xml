@@ -34,7 +34,7 @@
             android:id="@+id/endpoint"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textAppearance="@style/TextAppearance.Bridget.Mono"
+            android:textAppearance="@style/TextAppearance.Bridgit.Mono"
             android:textColor="?attr/colorOnSurfaceVariant"
             android:visibility="gone" />
     </LinearLayout>

@@ -437,14 +437,14 @@ class TourFragment : Fragment() {
     private fun startPhoto() {
         val v = view ?: return
         val values = ContentValues().apply {
-            put(MediaStore.Images.Media.DISPLAY_NAME, "Bridget tour ${System.currentTimeMillis()}.jpg")
+            put(MediaStore.Images.Media.DISPLAY_NAME, "Bridgit tour ${System.currentTimeMillis()}.jpg")
             put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Bridget")
+            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Bridgit")
         }
         val uri = runCatching { requireContext().contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) }.getOrNull()
             ?: run { Snackbar.make(v, R.string.tour_photo_failed, Snackbar.LENGTH_LONG).show(); return }
         pendingShot = uri
-        // Bridget declares CAMERA, so Android refuses ACTION_IMAGE_CAPTURE until it's granted.
+        // Bridgit declares CAMERA, so Android refuses ACTION_IMAGE_CAPTURE until it's granted.
         if (!requireContext().granted(Manifest.permission.CAMERA)) { perms.request(Manifest.permission.CAMERA); pendingShot = null
             runCatching { requireContext().contentResolver.delete(uri, null, null) }; return }
         runCatching { takePhoto.launch(uri) }.onFailure {

@@ -63,7 +63,7 @@ class InteractionModule(app: BridgeApp) : Capability(app) {
             if (!enabled) throw ErrorCatalog.error("capability_disabled", "Interactions are switched off on the phone. Ask Rahul to turn them on in Features.",
                 mapOf("setting" to switchKey))
             if (!app.captureNotificationsOn()) throw ErrorCatalog.error("notifications_required",
-                "Bridget's notifications are off, so Rahul wouldn't see your message. Ask him to turn them on.")
+                "Bridgit's notifications are off, so Rahul wouldn't see your message. Ask him to turn them on.")
             val a = agent!!
             val d = try { InteractionRules.parse(body) } catch (e: InteractionError) { fail(e) }
             val jpeg: ByteArray? = when {

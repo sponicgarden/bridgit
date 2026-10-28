@@ -36,7 +36,7 @@ class CallbacksTest {
         assertEquals("1700000000", h["X-Bridget-Timestamp"])
         assertEquals("7", h["X-Bridget-Event-Id"])
         assertEquals("application/json", h["Content-Type"])
-        assertEquals("Bridget/1.5.2", h["User-Agent"])
+        assertEquals("Bridgit/1.5.2", h["User-Agent"])
         assertEquals(CallbackRules.sign("cbs_x", 1700000000L, body), h["X-Bridget-Signature"])
         val parsed = JSONObject(String(body))
         assertEquals("Grok", parsed.getString("agent"))

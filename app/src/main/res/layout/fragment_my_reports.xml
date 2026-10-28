@@ -35,28 +35,28 @@
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/filter_all"
-                style="@style/Widget.Bridget.FilterChip"
+                style="@style/Widget.Bridgit.FilterChip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/feedback_filter_all" />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/filter_bugs"
-                style="@style/Widget.Bridget.FilterChip"
+                style="@style/Widget.Bridgit.FilterChip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/feedback_filter_bugs" />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/filter_features"
-                style="@style/Widget.Bridget.FilterChip"
+                style="@style/Widget.Bridgit.FilterChip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/feedback_filter_features" />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/filter_open"
-                style="@style/Widget.Bridget.FilterChip"
+                style="@style/Widget.Bridgit.FilterChip"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/feedback_filter_open" />

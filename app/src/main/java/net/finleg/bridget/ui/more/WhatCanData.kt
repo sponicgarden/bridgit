@@ -3,7 +3,7 @@ package net.finleg.bridget.ui.more
 import net.finleg.bridget.api.ApiDocs
 
 /**
- * "What can Bridget do?" (owner request, 1.4.2): one card per feature with a use case,
+ * "What can Bridgit do?" (owner request, 1.4.2): one card per feature with a use case,
  * covering everything in the spec, marked built or with its planned phase (section 16).
  * Plain Kotlin so the list is easy to keep in step with the spec.
  */
@@ -13,7 +13,7 @@ object WhatCanData {
         P6("Planned: P6"), LATER("Later"), IDEA("Needs your OK"),
     }
 
-    /** ABILITY = something an agent can do with the phone; MECHANIC = how Bridget works and keeps you in control. */
+    /** ABILITY = something an agent can do with the phone; MECHANIC = how Bridgit works and keeps you in control. */
     enum class Kind { ABILITY, MECHANIC }
 
     data class Feature(val stage: Stage, val title: String, val what: String, val useCase: String, val ref: String,
@@ -58,19 +58,19 @@ object WhatCanData {
             "Runs on the phone with no internet access",
             "Sends one answer back to the agent (up to 16 KB of data)",
             "Images inside the card only (data: images), up to 256 KB of HTML",
-            "Bridget's own header shows which agent sent it; you can always dismiss it"),
+            "Bridgit's own header shows which agent sent it; you can always dismiss it"),
         "Live text panel" to listOf(
             "Lower half of the screen, scrolls as text arrives",
             "Pause scrolling to read, then resume",
             "The agent marks it finished; you close it whenever you like",
             "Keeps the last 200 KB of text"),
-        "Use Bridget over MCP" to listOf(
+        "Use Bridgit over MCP" to listOf(
             "Same key, same switches, same log as the normal API",
             "Every endpoint the agent may use becomes a tool, with its options",
             "Photos and screenshots come back as images"),
         "Send a screenshot" to listOf(
             "A private copy: nothing is saved and there's no flash",
-            "Turn on Bridget's screenshot service once (Access), then Screenshots in Features",
+            "Turn on Bridgit's screenshot service once (Access), then Screenshots in Features",
             "Same size choices as photos",
             "At most one every 2 seconds and 60 an hour per agent"),
         "Open a link or app" to listOf("Web links, maps, phone numbers (dialler only), email", "Or open an app by name", "Only when you tap it"),
@@ -138,7 +138,7 @@ object WhatCanData {
         "Events and callbacks" to listOf("GET /v1/events", "POST /v1/callback/test"),
         "Rich HTML cards" to listOf("POST /v1/interactions", "GET /v1/interactions/{id}"),
         "Live text panel" to listOf("POST /v1/interactions", "POST /v1/text/stream", "DELETE /v1/interactions/{id}"),
-        "Use Bridget over MCP" to listOf("POST /v1/mcp"),
+        "Use Bridgit over MCP" to listOf("POST /v1/mcp"),
         "Open a link or app" to listOf("POST /v1/interactions"),
         "Location details" to listOf("GET /v1/location"),
         "City tour" to listOf("GET /v1/tour", "DELETE /v1/tour", "GET /v1/events", "POST /v1/speaker/say", "POST /v1/speaker/play", "GET /v1/gallery/photo/{id}"),
@@ -148,13 +148,13 @@ object WhatCanData {
     val all = listOf(
         // ---- Available now --------------------------------------------------------------------------
         Feature(Stage.NOW, "Add an agent in a minute",
-            "Bridget makes a setup prompt with the agent's own key, the address and the rules. Paste it into any AI agent and it can use the phone straight away.",
+            "Bridgit makes a setup prompt with the agent's own key, the address and the rules. Paste it into any AI agent and it can use the phone straight away.",
             "You add Claude: name it, copy the prompt, paste it into Claude. The screen turns to \"Claude connected\" as soon as it calls.", "6.2", kind = Kind.MECHANIC),
         Feature(Stage.NOW, "One key per agent",
             "Every agent has its own key. Rotate it or remove the agent in one tap; the old key stops at once and the agent is told why.",
             "You pasted Grok's prompt into the wrong chat. Rotate Grok's key; the leaked one is dead in a second.", "AGT-12", kind = Kind.MECHANIC),
         Feature(Stage.NOW, "Take a photo",
-            "An agent can take a photo with the front or back camera. Android's green dot and a Bridget notification show every time.",
+            "An agent can take a photo with the front or back camera. Android's green dot and a Bridgit notification show every time.",
             "From your laptop: \"Is the stove off?\" Your agent takes a photo of the kitchen and tells you.", "8.2"),
         Feature(Stage.NOW, "Record a short clip",
             "An agent can record 1 to 120 seconds of audio and get it back as a file.",
@@ -163,7 +163,7 @@ object WhatCanData {
             "One call returns the newest screenshot or camera photo, sized for an AI to read. It can also wait for the next one you take.",
             "You screenshot an error on your phone; your agent already has it and explains the fix.", "8.6"),
         Feature(Stage.NOW, "Find photos in your gallery",
-            "Agents can list recent images and fetch one at the size they need. Bridget never edits or deletes anything.",
+            "Agents can list recent images and fetch one at the size they need. Bridgit never edits or deletes anything.",
             "\"Find the receipt photo from this morning and add it to my expenses.\"", "8.5"),
         Feature(Stage.NOW, "Everything is logged",
             "Every request, switch change and agent note is in Activity on the phone. Agents can read and follow the log too, so they know what they did.",
@@ -175,19 +175,19 @@ object WhatCanData {
             "Agents read a live guide and an OpenAPI file that list what's switched on, every call and every error.",
             "A brand-new agent reads the guide and learns everything without a manual.", "API-09", kind = Kind.MECHANIC),
         Feature(Stage.NOW, "Agents learn what's new",
-            "Every reply says which API revision Bridget speaks. After an update, agents are told there's something new until they read the list of changes, so they pick up new features by themselves.",
-            "Bridget gains camera zoom; the next time Grok calls, it reads what's new and starts using zoom.", "API-14", kind = Kind.MECHANIC),
+            "Every reply says which API revision Bridgit speaks. After an update, agents are told there's something new until they read the list of changes, so they pick up new features by themselves.",
+            "Bridgit gains camera zoom; the next time Grok calls, it reads what's new and starts using zoom.", "API-14", kind = Kind.MECHANIC),
         Feature(Stage.NOW, "Report a bug or ask for a feature",
             "From any screen: the last screen is attached, plus screenshots and the recent log. Developer agents read reports and mark them fixed; you confirm or say it's still broken.",
             "The app misbehaves; you report it in 10 seconds. Claude picks it up, fixes it and marks it fixed.", "11", kind = Kind.MECHANIC),
         Feature(Stage.NOW, "Check for updates",
-            "Bridget finds a new version, checks it really is Bridget, and lets Android install it after you confirm.",
-            "A fix ships; your phone offers the update the next time you open Bridget.", "12.14", kind = Kind.MECHANIC),
+            "Bridgit finds a new version, checks it really is Bridgit, and lets Android install it after you confirm.",
+            "A fix ships; your phone offers the update the next time you open Bridgit.", "12.14", kind = Kind.MECHANIC),
         Feature(Stage.NOW, "You stay in control",
             "Every feature starts off and has its own switch. Pause listening in one tap. Access shows each Android permission with one button to the right page.",
             "Going into a meeting: turn off Camera and Microphone from Home in two taps.", "12.8", kind = Kind.MECHANIC),
         Feature(Stage.NOW, "Only over Tailscale",
-            "Bridget answers only on your private Tailscale network, never the open internet.",
+            "Bridgit answers only on your private Tailscale network, never the open internet.",
             "Your agents on your Mac and your server can reach the phone; nobody else can.", "ARC-04", kind = Kind.MECHANIC),
         // ---- P2 ----------------------------------------------------------------------------------------
         Feature(Stage.NOW, "Questions and notices to you",
@@ -199,9 +199,9 @@ object WhatCanData {
         Feature(Stage.NOW, "Live text panel",
             "An agent streams text into the lower half of the screen and it scrolls as it arrives, like the transcript of an AI session. Pause the scrolling or close it any time.",
             "Claude Code is fixing a bug on your laptop; you watch what it's doing on the phone while you make coffee.", "D26"),
-        Feature(Stage.NOW, "Use Bridget over MCP",
-            "Agents that speak MCP (Claude Code, Codex and others) add Bridget as a tool server with their own key, and every feature appears as a tool.",
-            "Add Bridget to Claude Code once; from then on \"take a photo of my desk\" just works.", "API-15", kind = Kind.MECHANIC),
+        Feature(Stage.NOW, "Use Bridgit over MCP",
+            "Agents that speak MCP (Claude Code, Codex and others) add Bridgit as a tool server with their own key, and every feature appears as a tool.",
+            "Add Bridgit to Claude Code once; from then on \"take a photo of my desk\" just works.", "API-15", kind = Kind.MECHANIC),
         Feature(Stage.P2, "Inbox",
             "One place for every question, notice, file and share between you and your agents.",
             "See what Grok asked you this morning and what you answered.", "12.6", kind = Kind.MECHANIC),
@@ -215,7 +215,7 @@ object WhatCanData {
             "An agent can suggest a link or app; it opens when you tap it.",
             "\"Here's the boarding pass\" [Open in Wallet].", "8.20"),
         Feature(Stage.NOW, "Quick Settings tile",
-            "Pause or resume Bridget from the notification shade.", "Pull down, tap Bridget, and agents can't reach the phone until you tap again.", "UI-23", kind = Kind.MECHANIC),
+            "Pause or resume Bridgit from the notification shade.", "Pull down, tap Bridgit, and agents can't reach the phone until you tap again.", "UI-23", kind = Kind.MECHANIC),
         // ---- P3 ----------------------------------------------------------------------------------------
         Feature(Stage.P3, "Phone status and context",
             "Battery, network, ringer, Do Not Disturb, screen on, headphones, and a guess like \"driving\" or \"in a pocket\".",
@@ -262,7 +262,7 @@ object WhatCanData {
         // ---- Later / needs a decision -------------------------------------------------------------------
         Feature(Stage.LATER, "Per-agent permissions", "Choose what each agent may use, for example photos for Claude but not for Grok.",
             "Let your shopping agent see the gallery but never the camera.", "15", kind = Kind.MECHANIC),
-        Feature(Stage.IDEA, "Reach Bridget without Tailscale (relay)",
+        Feature(Stage.IDEA, "Reach Bridgit without Tailscale (relay)",
             "Agents that can't join Tailscale, like hosted assistants, leave jobs in an encrypted mailbox; a push wakes the phone.",
             "Muse, which runs on Meta's servers, takes a photo for you.", "4.4, Q10", kind = Kind.MECHANIC),
         Feature(Stage.NOW, "Play an audio file",
@@ -270,7 +270,7 @@ object WhatCanData {
             "Your reminder agent plays \"Time to leave for the airport\" in its own voice.", "new idea"),
         Feature(Stage.IDEA, "Listen for a word on the phone",
             "On-device word spotting while you allow it, sending only what follows the word. Needs a change to the \"no always-on listening\" rule.",
-            "Say \"Bridget, note\" and the next sentence goes to your notes agent.", "PRD-09"),
+            "Say \"Bridgit, note\" and the next sentence goes to your notes agent.", "PRD-09"),
         Feature(Stage.IDEA, "Messages, contacts, calendar, calls",
             "Read and, with your approval each time, send.", "\"Text Sam I'm 10 minutes late\" — you approve on the phone.", "8.22, Q1"),
         Feature(Stage.IDEA, "Location history and places",

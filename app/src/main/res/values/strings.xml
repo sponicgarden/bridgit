@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Shared strings. Each screen keeps its own strings in strings_<screen>.xml. -->
 <resources>
-    <string name="app_name">Bridget</string>
+    <string name="app_name">Bridgit</string>
     <!-- Full name (owner, 27 Oct 2026): shown on first run, under the Home title and in About. -->
     <string name="app_tagline">Agentic Android Device Bridge</string>
-    <string name="app_full_name">Bridget: Agentic Android Device Bridge</string>
+    <string name="app_full_name">Bridgit: Agentic Android Device Bridge</string>
 
     <!-- Notification channels (UI-21) -->
     <string name="channel_listener">Listener</string>
-    <string name="channel_listener_desc">Shown while Bridget listens for your agents</string>
+    <string name="channel_listener_desc">Shown while Bridgit listens for your agents</string>
     <string name="channel_capture">Captures</string>
     <string name="channel_capture_desc">Shown every time an agent uses the camera or microphone</string>
 
     <!-- Listener notification (UI-22) -->
-    <string name="notif_listening">Bridget is listening</string>
-    <string name="notif_waiting_tailscale">Bridget is waiting for Tailscale</string>
+    <string name="notif_listening">Bridgit is listening</string>
+    <string name="notif_waiting_tailscale">Bridgit is waiting for Tailscale</string>
     <string name="notif_not_reachable">Agents can\'t reach the phone until Tailscale is on</string>
     <string name="notif_last_request">%1$s · %2$s</string>
-    <string name="notif_capture_sub">Logged in Bridget\'s activity</string>
+    <string name="notif_capture_sub">Logged in Bridgit\'s activity</string>
     <string name="notif_taking_photo">%1$s is taking a photo</string>
     <string name="notif_recording">%1$s is recording audio (%2$d s)</string>
     <string name="action_pause">Pause</string>
@@ -33,11 +33,11 @@
     <string name="cap_gallery">Gallery</string>
     <string name="cap_gallery_desc">Find and send photos from your gallery</string>
     <string name="cap_screen">Screenshots</string>
-    <string name="cap_screen_desc">Agents see your screen when they ask. Needs Bridget\'s screenshot service (Access).</string>
+    <string name="cap_screen_desc">Agents see your screen when they ask. Needs Bridgit\'s screenshot service (Access).</string>
     <string name="notif_screenshot">%1$s is taking a screenshot</string>
-    <string name="screenshot_service_label">Bridget screenshots</string>
+    <string name="screenshot_service_label">Bridgit screenshots</string>
     <string name="screenshot_service_summary">Lets your agents take a screenshot when they ask</string>
-    <string name="screenshot_service_desc">Bridget uses this only to take a screenshot when one of your agents asks, and only while Screenshots is on in Bridget\'s Features. It can\'t read, tap or type on your screen. Every screenshot shows a notification and is logged. Apps that block screenshots come out blank.</string>
+    <string name="screenshot_service_desc">Bridgit uses this only to take a screenshot when one of your agents asks, and only while Screenshots is on in Bridgit\'s Features. It can\'t read, tap or type on your screen. Every screenshot shows a notification and is logged. Apps that block screenshots come out blank.</string>
     <string name="cap_log">Log</string>
     <string name="cap_log_desc">Agents can read the activity log</string>
 

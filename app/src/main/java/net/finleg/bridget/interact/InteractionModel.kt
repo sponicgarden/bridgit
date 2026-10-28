@@ -20,7 +20,7 @@ sealed class Control(val id: String, val label: String) {
     class Button(id: String, label: String, val style: String) : Control(id, label)
     class Text(id: String, label: String, val placeholder: String?) : Control(id, label)
     class Choice(id: String, label: String, val options: List<String>) : Control(id, label)
-    /** [target] is a URL (https/geo/tel/mailto) or null when [pkg] names an app. [shownAs] is drawn by Bridget under the button. */
+    /** [target] is a URL (https/geo/tel/mailto) or null when [pkg] names an app. [shownAs] is drawn by Bridgit under the button. */
     class Link(id: String, label: String, val target: String?, val pkg: String?, val shownAs: String) : Control(id, label)
 
     fun toJson(): JSONObject = JSONObject().put("id", id).put("label", label).apply {
@@ -155,7 +155,7 @@ object InteractionRules {
         return Control.Link(id, label, url, null, shown)
     }
 
-    /** What Bridget draws under a link button, or null if the URL isn't allowed. */
+    /** What Bridgit draws under a link button, or null if the URL isn't allowed. */
     fun linkShownAs(url: String): String? {
         val u = runCatching { URI(url) }.getOrNull() ?: return null
         return when (u.scheme?.lowercase()) {

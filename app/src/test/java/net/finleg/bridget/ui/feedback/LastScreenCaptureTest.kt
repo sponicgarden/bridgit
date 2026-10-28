@@ -41,7 +41,7 @@ class LastScreenCaptureTest {
         assertSame(otherBytes, choose(otherBytes))
     }
 
-    // Bridget-only (FBK-02): a blank capture is rejected, not kept as a fallback.
+    // Bridgit-only (FBK-02): a blank capture is rejected, not kept as a fallback.
     @Test fun selectUsableRejectsWhenNothingPasses() =
         assertNull(LastScreenCapture.selectUsable(earlyBytes, laterBytes) { false })
 

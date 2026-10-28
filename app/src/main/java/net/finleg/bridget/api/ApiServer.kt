@@ -119,7 +119,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
         val rid = newRequestId()
         val source = sourceOf(call)
         call.response.header("X-Request-Id", rid)
-        val err = if (!Net.isTailnet(source)) ErrorCatalog.error("forbidden_source", "Only devices on Rahul's Tailscale network may call Bridget.")
+        val err = if (!Net.isTailnet(source)) ErrorCatalog.error("forbidden_source", "Only devices on Rahul's Tailscale network may call Bridgit.")
         else ErrorCatalog.error("not_found", "No such endpoint. GET /v1/guide lists them all.")
         call.respondText(err.toJson(rid).toString(), ContentType.Application.Json, HttpStatusCode.fromValue(err.http))
         app.log.append(LogEntry(ts = System.currentTimeMillis(), channel = "audit", kind = "request", level = "warn",
@@ -146,7 +146,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
         var idemKey: String? = null
         var rawFile: java.io.File? = null
         try {
-            if (!Net.isTailnet(source)) throw ErrorCatalog.error("forbidden_source", "Only devices on Rahul's Tailscale network may call Bridget.")
+            if (!Net.isTailnet(source)) throw ErrorCatalog.error("forbidden_source", "Only devices on Rahul's Tailscale network may call Bridgit.")
             if (spec.auth) {
                 val token = call.request.headers["Authorization"]?.takeIf { it.startsWith("Bearer ") }?.removePrefix("Bearer ")?.trim()
                 when (val r = app.agents.authenticate(token)) {
@@ -159,7 +159,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                             revokedReason = r.reason
                             throw ErrorCatalog.error("unauthorized",
                                 if (r.reason == "key_rotated") "${r.agentName}'s key was rotated. Ask Rahul for the new setup prompt."
-                                else "${r.agentName} was removed from Bridget. Ask Rahul to add you again.",
+                                else "${r.agentName} was removed from Bridgit. Ask Rahul to add you again.",
                                 mapOf("reason" to r.reason))
                         }
                         throw ErrorCatalog.error("unauthorized", "Missing or wrong key. Send Authorization: Bearer <your key>.")
@@ -258,7 +258,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
             http = 500; result = "internal_error"
             idemKey?.let { k -> agent?.let { idempotency.abandon(it.id, k) } }
             app.log.system("diagnostic", "crash", "Error in ${spec.fullPath}: ${e.javaClass.simpleName} at ${e.stackTrace.firstOrNull()}", level = "error")
-            val err = ErrorCatalog.error("internal_error", "Bridget hit a bug (${e.javaClass.simpleName}). It's in the diagnostic log.")
+            val err = ErrorCatalog.error("internal_error", "Bridgit hit a bug (${e.javaClass.simpleName}). It's in the diagnostic log.")
             runCatching { call.respondBytes(err.toJson(rid).toString().toByteArray(), ContentType.Application.Json, HttpStatusCode.InternalServerError) }
         } finally {
             // An upload the endpoint didn't take (error, replay, crash) is deleted now.
@@ -377,7 +377,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
             if (e is kotlinx.coroutines.CancellationException) throw e
             http = 500; result = "internal_error"
             app.log.system("diagnostic", "crash", "Error in ${spec.fullPath} (via MCP): ${e.javaClass.simpleName} at ${e.stackTrace.firstOrNull()}", level = "error")
-            val err = ErrorCatalog.error("internal_error", "Bridget hit a bug (${e.javaClass.simpleName}). It's in the diagnostic log.")
+            val err = ErrorCatalog.error("internal_error", "Bridgit hit a bug (${e.javaClass.simpleName}). It's in the diagnostic log.")
             return Outcome(500, "application/json", err.toJson(rid).toString().toByteArray(), emptyMap(), err)
         } finally {
             r.params.keys().forEach { logParams.put(it, r.params.get(it)) }

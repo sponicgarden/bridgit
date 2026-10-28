@@ -112,7 +112,7 @@ class AgentRegistry(private val storage: AgentStorage, private val clock: () -> 
         !NAME_RE.matches(name) -> "Use letters, numbers, spaces, - or _ (1 to 24)."
         agents.any { it.id != exceptId && it.name.equals(name, ignoreCase = true) } ->
             "You already have an agent called ${agents.first { it.name.equals(name, true) }.name}."
-        exceptId == null && agents.size >= MAX_AGENTS -> "Bridget holds up to $MAX_AGENTS agents. Remove one to add another."
+        exceptId == null && agents.size >= MAX_AGENTS -> "Bridgit holds up to $MAX_AGENTS agents. Remove one to add another."
         else -> null
     }
 

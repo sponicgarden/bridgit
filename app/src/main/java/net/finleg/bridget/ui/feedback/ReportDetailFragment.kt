@@ -217,7 +217,7 @@ class ReportDetailFragment : Fragment() {
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         })
         row.addView(TextView(ctx).apply {
-            setTextAppearance(R.style.TextAppearance_Bridget_Mono)
+            setTextAppearance(R.style.TextAppearance_Bridgit_Mono)
             setTextColor(ctx.themeColor(M.attr.colorOnSurface))
             text = value
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO

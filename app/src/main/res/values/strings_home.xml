@@ -8,7 +8,7 @@
     <string name="home_state_starting">Starting…</string>
     <string name="home_state_tailscale_down">Tailscale is down</string>
     <string name="home_state_capturing">Capturing</string>
-    <string name="home_state_bind_error">Bridget can\'t listen on port %1$d</string>
+    <string name="home_state_bind_error">Bridgit can\'t listen on port %1$d</string>
     <string name="home_pause">Pause</string>
     <string name="home_resume">Resume</string>
     <string name="home_address">%1$s:%2$d</string>
@@ -18,7 +18,7 @@
     <string name="home_chip_tailscale">Tailscale</string>
     <string name="home_chip_tailscale_off">Tailscale off</string>
     <string name="home_chip_battery">Battery %1$d%%</string>
-    <string name="home_cd_hero">Bridget is %1$s.</string>
+    <string name="home_cd_hero">Bridgit is %1$s.</string>
     <string name="home_cd_address">Address %1$s.</string>
     <string name="home_cd_tailscale_on">Tailscale connected.</string>
     <string name="home_cd_tailscale_off">Tailscale not connected.</string>
@@ -29,11 +29,11 @@
     <string name="home_banner_fix_now">Fix now</string>
     <string name="home_banner_notifications">Notifications are off. Camera, mic and screenshots stay off until they\'re on.</string>
     <string name="home_banner_turn_on">Turn on</string>
-    <string name="home_banner_tailscale">Tailscale isn\'t connected. Agents can\'t reach Bridget.</string>
+    <string name="home_banner_tailscale">Tailscale isn\'t connected. Agents can\'t reach Bridgit.</string>
     <string name="home_banner_open_tailscale">Open Tailscale</string>
-    <string name="home_banner_tailscale_missing">Tailscale isn\'t installed. Agents reach Bridget through Tailscale, so install it and sign in.</string>
+    <string name="home_banner_tailscale_missing">Tailscale isn\'t installed. Agents reach Bridgit through Tailscale, so install it and sign in.</string>
     <string name="home_banner_install_tailscale">Install Tailscale</string>
-    <string name="home_banner_battery">Android may stop Bridget when the screen is off.</string>
+    <string name="home_banner_battery">Android may stop Bridgit when the screen is off.</string>
     <string name="home_banner_fix">Fix</string>
     <string name="home_banner_permission">%1$s permission was removed.</string>
     <string name="home_banner_grant">Grant</string>
@@ -65,17 +65,17 @@
     <string name="perm_photos">Photos</string>
 
     <!-- First run (UI-08) -->
-    <string name="firstrun_p1_title">Meet Bridget.</string>
-    <string name="firstrun_p1_tagline">Bridget: Agentic Android Device Bridge</string>
+    <string name="firstrun_p1_title">Meet Bridgit.</string>
+    <string name="firstrun_p1_tagline">Bridgit: Agentic Android Device Bridge</string>
     <string name="firstrun_p1_body">Let your AI agents use this phone\'s camera, mic, photos and more, only when they ask, always visibly.</string>
     <string name="firstrun_p2_title">Private by design.</string>
-    <string name="firstrun_p2_body">Bridget only answers over your Tailscale network. Each agent gets its own key. Everything is logged here.</string>
+    <string name="firstrun_p2_body">Bridgit only answers over your Tailscale network. Each agent gets its own key. Everything is logged here.</string>
     <string name="firstrun_p3_title">You\'re in control.</string>
     <string name="firstrun_p3_body">Every feature starts off. Turn on what you want, and switch anything off in one tap.</string>
     <string name="firstrun_ts_checking">Checking Tailscale…</string>
     <string name="firstrun_ts_connected">Tailscale: connected (%1$s)</string>
     <string name="firstrun_ts_missing">Tailscale isn\'t connected</string>
-    <string name="firstrun_notif_line">Bridget uses notifications to show you every time an agent uses your phone. Without them, camera, mic and screenshots stay off.</string>
+    <string name="firstrun_notif_line">Bridgit uses notifications to show you every time an agent uses your phone. Without them, camera, mic and screenshots stay off.</string>
     <string name="firstrun_allow_notifications">Allow notifications</string>
     <string name="firstrun_notif_on">Notifications are on.</string>
     <string name="firstrun_add_first">Add your first agent</string>
@@ -94,8 +94,8 @@
     <string name="more_request_feature">Request a feature</string>
     <string name="more_my_reports">My reports</string>
     <string name="more_check_updates">Check for updates</string>
-    <string name="more_about_title">Bridget: Agentic Android Device Bridge</string>
-    <string name="more_about_body">Version %1$s (%2$s)\nCommit %3$s\n\nSpec: docs/bridget-spec-v2.md in sponicgarden/bridget</string>
+    <string name="more_about_title">Bridgit: Agentic Android Device Bridge</string>
+    <string name="more_about_body">Version %1$s (%2$s)\nCommit %3$s\n\nSpec: docs/bridgit-spec-v2.md in sponicgarden/bridgit</string>
     <string name="more_dirty">%1$s (dirty)</string>
 
     <!-- Features (UI-18) -->
@@ -157,7 +157,7 @@
     <string name="settings_cert">Signing certificate SHA-256</string>
     <string name="settings_cert_copied">Certificate fingerprint copied</string>
     <string name="settings_spec">Spec</string>
-    <string name="settings_spec_value">docs/bridget-spec-v2.md</string>
+    <string name="settings_spec_value">docs/bridgit-spec-v2.md</string>
     <string name="settings_save">Save</string>
     <string name="settings_changed_port">You changed the port to %1$d</string>
     <string name="settings_changed_listener">You turned Always on %1$s</string>
@@ -171,7 +171,7 @@
     <dimen name="firstrun_banner_pad">12dp</dimen>
     <item name="home_action_copy_address" type="id" />
 
-    <style name="SettingsHeader" parent="Widget.Bridget.SectionHeader">
+    <style name="SettingsHeader" parent="Widget.Bridgit.SectionHeader">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:paddingStart">16dp</item>

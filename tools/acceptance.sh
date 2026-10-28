@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bridget device acceptance test (spec TST-03).
+# Bridgit device acceptance test (spec TST-03).
 #
 # Runs every check against the DEBUG build on the Pixel over Tailscale and ADB,
 # then writes docs/acceptance/<date>-<version>-debug.md with PASS / FAIL /

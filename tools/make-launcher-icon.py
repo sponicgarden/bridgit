@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Builds Bridget's adaptive launcher icon layers from one square artwork PNG.
+"""Builds Bridgit's adaptive launcher icon layers from one square artwork PNG.
 
 Usage:
     python3 -m venv /tmp/iconvenv && /tmp/iconvenv/bin/pip install pillow numpy

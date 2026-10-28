@@ -60,7 +60,7 @@
     <string name="interactions_back">Back</string>
     <string name="interactions_ok">OK</string>
 
-    <!-- HTML cards (CAP-34). Bridget draws this header and toolbar; the agent's page can't cover them. -->
+    <!-- HTML cards (CAP-34). Bridgit draws this header and toolbar; the agent's page can't cover them. -->
     <string name="interactions_card_headline">%1$s sent a card: %2$s</string>
     <string name="interactions_card_from">From %1$s · custom card</string>
     <string name="interactions_card_desc">Card from %1$s. Its content is made by the agent.</string>

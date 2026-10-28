@@ -35,7 +35,7 @@ object CrashReports {
             o.isEnableSystemEventBreadcrumbs = false
             o.isEnableAppComponentBreadcrumbs = false
             o.isAnrEnabled = true
-            o.isEnableAutoSessionTracking = false // no ping on every launch: Bridget talks to Sentry only when something breaks
+            o.isEnableAutoSessionTracking = false // no ping on every launch: Bridgit talks to Sentry only when something breaks
             o.tracesSampleRate = null
             o.setBeforeSend { e, _ -> scrub(e) }
             o.setBeforeBreadcrumb { b, _ -> b.message = b.message?.let(Keys::scrub); b }

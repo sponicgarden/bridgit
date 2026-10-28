@@ -35,7 +35,7 @@ import java.net.InetAddress
 import java.net.NetworkInterface
 
 /**
- * Bridget's always-on listener (ARC-02): one foreground service that runs the
+ * Bridgit's always-on listener (ARC-02): one foreground service that runs the
  * HTTP listener and owns camera and microphone access. Camera and microphone
  * types can only be added while the app is visible; a start from the background
  * (boot, or Android restarting us) uses specialUse only (ARC-02b, ARC-03).
@@ -289,7 +289,7 @@ class BridgeService : LifecycleService() {
 
 /**
  * ARC-02b: after a reboot, start the listener with specialUse only. Android sends
- * BOOT_COMPLETED only after the first unlock, so Bridget comes back at the first
+ * BOOT_COMPLETED only after the first unlock, so Bridgit comes back at the first
  * unlock, not before.
  */
 class BootReceiver : BroadcastReceiver() {

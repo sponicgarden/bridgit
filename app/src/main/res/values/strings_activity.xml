@@ -19,7 +19,7 @@
     <string name="activity_choose_type">Choose types</string>
     <string name="activity_choose_level">Choose level</string>
     <string name="activity_all_agents">All agents</string>
-    <string name="activity_bridget_system">Bridget (system)</string>
+    <string name="activity_bridget_system">Bridgit (system)</string>
     <string name="activity_type_requests">Requests</string>
     <string name="activity_type_settings">Settings</string>
     <string name="activity_type_agents">Agents</string>
@@ -32,7 +32,7 @@
     <string name="activity_level_warn">Warnings and errors</string>
     <string name="activity_level_error">Errors only</string>
     <string name="activity_empty_title">Nothing yet.</string>
-    <string name="activity_empty_body">When an agent uses Bridget, it shows up here.</string>
+    <string name="activity_empty_body">When an agent uses Bridgit, it shows up here.</string>
     <string name="activity_nomatch_title">No entries match</string>
     <string name="activity_clear_filters">Clear filters</string>
     <plurals name="activity_new_entries">
@@ -51,7 +51,7 @@
     <string name="activity_sheet_copy">Copy as JSON</string>
     <string name="activity_sheet_agent">%1$s\'s activity</string>
     <string name="activity_sheet_copied">Copied</string>
-    <string name="activity_sheet_clip_label">Bridget log entry</string>
+    <string name="activity_sheet_clip_label">Bridgit log entry</string>
     <string name="activity_sheet_missing">This entry is no longer in the log.</string>
 
     <string name="activity_export_title">Export activity</string>
@@ -66,7 +66,7 @@
     <!-- Access -->
     <string name="access_title">Access</string>
     <string name="access_back">Back</string>
-    <string name="access_intro">Android settings Bridget can use. Each button opens the exact page.</string>
+    <string name="access_intro">Android settings Bridgit can use. Each button opens the exact page.</string>
     <string name="access_needs_you">Needs you</string>
     <string name="access_all_set">All set</string>
     <string name="access_show_me_how">Show me how</string>
@@ -92,7 +92,7 @@
     <string name="access_photos_unlocks">Lets agents find and fetch photos from your gallery.</string>
     <string name="access_photos_partly">Only the photos you picked. New photos and screenshots stay hidden until you choose \"Allow all\"</string>
     <string name="access_screenshots">Screenshots</string>
-    <string name="access_screenshots_unlocks">Lets agents see your screen when they ask. Bridget\'s screenshot service can\'t read or tap anything.</string>
+    <string name="access_screenshots_unlocks">Lets agents see your screen when they ask. Bridgit\'s screenshot service can\'t read or tap anything.</string>
     <string name="access_battery">Battery: unrestricted</string>
     <string name="access_battery_unlocks">Keeps the listener running when the screen is off.</string>
 
@@ -101,7 +101,7 @@
     <string-array name="access_how_notifications">
         <item>Tap Turn on.</item>
         <item>If Android asks, choose \"Allow\".</item>
-        <item>If a settings page opens, turn on \"All Bridget notifications\" and \"Captures\".</item>
+        <item>If a settings page opens, turn on \"All Bridgit notifications\" and \"Captures\".</item>
         <item>Come back here.</item>
     </string-array>
     <string-array name="access_how_camera">
@@ -123,9 +123,9 @@
         <item>To change it later, tap Change, then Permissions, then \"Photos and videos\".</item>
     </string-array>
     <string-array name="access_how_screenshots">
-        <item>Tap Turn on. Android opens \"Bridget screenshots\".</item>
-        <item>Turn on \"Use Bridget screenshots\" and tap Allow.</item>
-        <item>If Android says \"Restricted setting\": open Bridget\'s App info, tap the three dots (top right), tap \"Allow restricted settings\", confirm, then try again.</item>
+        <item>Tap Turn on. Android opens \"Bridgit screenshots\".</item>
+        <item>Turn on \"Use Bridgit screenshots\" and tap Allow.</item>
+        <item>If Android says \"Restricted setting\": open Bridgit\'s App info, tap the three dots (top right), tap \"Allow restricted settings\", confirm, then try again.</item>
         <item>Come back here, and turn on Screenshots in Features.</item>
     </string-array>
     <string-array name="access_how_battery">

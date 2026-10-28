@@ -32,7 +32,7 @@ import net.finleg.bridget.ui.common.Fmt
 import net.finleg.bridget.ui.feedback.decodeFileThumb
 
 /**
- * Interaction detail (UI-16): the header is drawn by Bridget (agent, time, status), then the agent's title,
+ * Interaction detail (UI-16): the header is drawn by Bridgit (agent, time, status), then the agent's title,
  * image, text and controls. Toolbar: Play aloud and Close. Opening a new notice marks it seen.
  */
 class InteractionDetailFragment : Fragment() {
@@ -158,9 +158,9 @@ class InteractionDetailFragment : Fragment() {
     }
 
     /**
-     * CAP-34: Bridget's header ("From <Agent> · custom card", title, status), the agent's page in a bounded
-     * frame, and Bridget's toolbar with Dismiss under it. The page is loaded once; later refreshes only
-     * update Bridget's parts.
+     * CAP-34: Bridgit's header ("From <Agent> · custom card", title, status), the agent's page in a bounded
+     * frame, and Bridgit's toolbar with Dismiss under it. The page is loaded once; later refreshes only
+     * update Bridgit's parts.
      */
     private fun renderCard(i: Interaction) {
         val bb = _b ?: return
@@ -199,7 +199,7 @@ class InteractionDetailFragment : Fragment() {
         bb.cardDismiss.setOnClickListener { close(i) }
     }
 
-    /** The card's renderer died: drop the WebView (Bridget keeps running) and say so. */
+    /** The card's renderer died: drop the WebView (Bridgit keeps running) and say so. */
     private fun cardCrashed() {
         cardCrashed = true
         card?.let { runCatching { it.release() } }

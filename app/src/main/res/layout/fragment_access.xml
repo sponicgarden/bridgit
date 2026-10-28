@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Access (UI-25 … UI-27, ui-spec 5.9): Android settings Bridget can use, one tap each. -->
+<!-- Access (UI-25 … UI-27, ui-spec 5.9): Android settings Bridgit can use, one tap each. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -41,7 +41,7 @@
 
             <TextView
                 android:id="@+id/needs_header"
-                style="@style/Widget.Bridget.SectionHeader"
+                style="@style/Widget.Bridgit.SectionHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingHorizontal="16dp"
@@ -55,7 +55,7 @@
 
             <TextView
                 android:id="@+id/ok_header"
-                style="@style/Widget.Bridget.SectionHeader"
+                style="@style/Widget.Bridgit.SectionHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingHorizontal="16dp"

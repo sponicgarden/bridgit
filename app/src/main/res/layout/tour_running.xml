@@ -21,7 +21,7 @@
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/status_card"
-                style="@style/Widget.Bridget.Card"
+                style="@style/Widget.Bridgit.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 app:cardBackgroundColor="?attr/colorPrimaryContainer">
@@ -127,7 +127,7 @@
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/playing_card"
-                style="@style/Widget.Bridget.Card"
+                style="@style/Widget.Bridgit.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp">
@@ -158,7 +158,7 @@
             </com.google.android.material.card.MaterialCardView>
 
             <TextView
-                style="@style/Widget.Bridget.SectionHeader"
+                style="@style/Widget.Bridgit.SectionHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:paddingTop="12dp"

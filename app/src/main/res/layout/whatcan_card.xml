@@ -2,7 +2,7 @@
 <!-- One feature: picture, stage chip, title, what it does, options (in an inset panel), a use case, and a Share button linking to its API section. -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    style="@style/Widget.Bridget.Card"
+    style="@style/Widget.Bridgit.Card"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="@dimen/whatcan_gap"
@@ -22,7 +22,7 @@
             android:adjustViewBounds="true"
             android:scaleType="centerCrop"
             android:importantForAccessibility="no"
-            app:shapeAppearanceOverlay="@style/ShapeAppearance.Bridget.CardTop" />
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.Bridgit.CardTop" />
 
         <FrameLayout
             android:layout_width="match_parent"
@@ -133,7 +133,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:textAppearance="@style/TextAppearance.Bridget.Mono"
+                android:textAppearance="@style/TextAppearance.Bridgit.Mono"
                 android:textColor="?attr/colorOnSurfaceVariant" />
         </LinearLayout>
 

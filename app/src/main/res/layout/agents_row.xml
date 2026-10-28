@@ -2,7 +2,7 @@
 <!-- One agent card (UI-12). The whole card is one focus stop with a full description. -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    style="@style/Widget.Bridget.Card"
+    style="@style/Widget.Bridgit.Card"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginTop="8dp"
@@ -44,7 +44,7 @@
 
                 <TextView
                     android:id="@+id/connection"
-                    style="@style/Widget.Bridget.MonoChip"
+                    style="@style/Widget.Bridgit.MonoChip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center_vertical"
@@ -53,7 +53,7 @@
 
                 <TextView
                     android:id="@+id/developer"
-                    style="@style/Widget.Bridget.MonoChip"
+                    style="@style/Widget.Bridgit.MonoChip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/bg_mono_chip"

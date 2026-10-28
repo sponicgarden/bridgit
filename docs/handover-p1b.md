@@ -1,4 +1,4 @@
-# Hand-over: Bridget P1a (1.3.0) → P1b
+# Hand-over: Bridgit P1a (1.3.0) → P1b
 
 > Update 27 Oct 2026: the owner asked the same session to go on with P1b (Spotka-style bug and feature
 > reports), a "Check for updates" feature like Spotka's, and a new app icon, as 1.4.0. This file
@@ -9,7 +9,7 @@ Written 27 Oct 2026 by the P1a session. The P1b session starts from this file.
 ## 1. Read first (in this order)
 
 1. This file.
-2. `docs/bridget-spec-v2.md`: section 1 (decisions, especially **D20**), section 11 (bug reports and
+2. `docs/bridgit-spec-v2.md`: section 1 (decisions, especially **D20**), section 11 (bug reports and
    feature requests: all of P1b), 12.10 (UI-20), AGT-15 (Developer switch, already built), section 16
    (the P1b row), Appendix C (error codes).
 3. `docs/ui-spec.md` 5.11 (Report form) and 5.12 (My reports); mockups `Report.dc.html` /
@@ -20,7 +20,7 @@ Written 27 Oct 2026 by the P1a session. The P1b session starts from this file.
 
 ## 2. What P1a built
 
-Bridget **1.3.0** (versionCode 4), installed on the Pixel as the release build on 27 Oct 2026 after
+Bridgit **1.3.0** (versionCode 4), installed on the Pixel as the release build on 27 Oct 2026 after
 uninstalling 1.2.0 (D20: nothing migrated).
 
 - **Keys and agents:** `brg_` keys (SEC-09), salted SHA-256, shown once in the setup prompt; up to 16 agents;
@@ -82,14 +82,14 @@ stored and switchable in Agent detail.
   marker until 24 h and the new code `idempotency_expired` (409); 48 MB body budget; replays get their own
   `request_id` plus `idempotent_replay_of`.
 - Wrong pairing codes count toward the SEC-06 per-address failure limit; pairing obeys that block.
-- Log visibility "own" also hides Bridget's own (agent-less) entries from normal agents.
+- Log visibility "own" also hides Bridgit's own (agent-less) entries from normal agents.
 - System monospace font (Q7 not bundled yet). Notification channels: only `listener` and `capture`.
 - Quick switches: Camera, Microphone, Gallery (Location isn't built).
 - Codex `gpt-6.1-sol` reviewed the plan and the server code; its 13 code findings were fixed.
 
 ## 5. Spec changes made in P1a
 
-All in `docs/bridget-spec-v2.md` (page rebuilt with `tools/spec-page` after each change):
+All in `docs/bridgit-spec-v2.md` (page rebuilt with `tools/spec-page` after each change):
 D20 and Appendix F dropped; changes table (section 2) for keys and `/v1/audit`; SEC-09, LOG-04, LOG-12;
 ARC-02b (starts at first unlock after a reboot; update restart checked); ARC-04a (IPv6 checked on the
 Pixel); ARC-10 (debug port 8735); ARC-12a (no outgoing HTTP); API-12 (no producer yet); API-13 (as built);
@@ -100,7 +100,7 @@ steps only); TST-03 (script as built); Appendix C (`idempotency_expired`); P1a r
 
 **Not checked on the Pixel:**
 - A real reboot (ARC-02b). Only the update restart (`MY_PACKAGE_REPLACED`) was tested.
-- Tailscale going off and on while Bridget runs (ARC-04a callback). ADB runs over Tailscale, so it
+- Tailscale going off and on while Bridgit runs (ARC-04a callback). ADB runs over Tailscale, so it
   can't be tested remotely. The bind and IPv6 were checked.
 - Grok's and Muse's real calls (see the table in section 2).
 - UI at 200 % font scale and with TalkBack (UI-29): built for it, not walked through on the phone.

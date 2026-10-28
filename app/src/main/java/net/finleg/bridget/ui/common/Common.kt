@@ -122,8 +122,8 @@ object Sentences {
     fun reason(code: String?): String? = when (code) {
         "capability_disabled" -> "It's switched off in Features."
         "permission_denied" -> "Android permission missing. See Access."
-        "notifications_required" -> "Bridget's notifications are off."
-        "service_start_blocked" -> "Open Bridget once to enable camera and mic."
+        "notifications_required" -> "Bridgit's notifications are off."
+        "service_start_blocked" -> "Open Bridgit once to enable camera and mic."
         "device_locked" -> "The phone was locked."
         "unauthorized" -> "Wrong or old key."
         "rate_limited" -> "Too many requests."
@@ -135,7 +135,7 @@ object Sentences {
 
 /**
  * Agent avatar (UI-12): first letter on a tinted circle, colour picked by
- * hashing the name into 8 fixed pairs (ui-spec 2.1). Gear-less grey circle for Bridget.
+ * hashing the name into 8 fixed pairs (ui-spec 2.1). Gear-less grey circle for Bridgit.
  */
 class AgentAvatarView @JvmOverloads constructor(ctx: Context, attrs: AttributeSet? = null) : View(ctx, attrs) {
     private val bg = Paint(Paint.ANTI_ALIAS_FLAG)

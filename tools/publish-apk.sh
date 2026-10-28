@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Publish a Bridget release build for the in-app updater (spec 12.14, D21, UPD-01).
+# Publish a Bridgit release build for the in-app updater (spec 12.14, D21, UPD-01).
 #
 # Usage:
 #   tools/publish-apk.sh --notes "What changed, in one or two plain sentences" [options]
 #
 # Options:
-#   --notes TEXT     Release notes shown in Bridget's update dialog and on the GitHub release (required).
+#   --notes TEXT     Release notes shown in Bridgit's update dialog and on the GitHub release (required).
 #   --apk PATH       Publish this APK instead of building one.
 #   --no-build       Don't run ./gradlew assembleRelease; use app/build/outputs/apk/release/app-release.apk.
 #   --no-github      Skip `gh release create`.
@@ -17,14 +17,14 @@
 #   1. Builds the release APK (unless --apk / --no-build).
 #   2. Reads package, versionName and versionCode with `aapt2 dump badging`; refuses anything but
 #      net.finleg.bridget (so a .debug build can never be published).
-#   3. Checks the signing certificate with `apksigner verify --print-certs` against Bridget's release
+#   3. Checks the signing certificate with `apksigner verify --print-certs` against Bridgit's release
 #      key (SHA-256 6bbd482d…2f61).
 #   4. Computes SHA-256 and size and writes latest.json:
 #      {"package","version_name","version_code","url","sha256","size_bytes","published_at","notes"}.
 #   5. Uploads bridget/bridget-<version>.apk, then bridget/latest.json, to the public R2 bucket
 #      sponic-images via the Cloudflare API, and checks each reply says "success": true.
 #   5a. Generates the public API page (ApiDocsTest writes app/build/apidocs/api.html for this version)
-#      and uploads it as bridget/api.html; the What can Bridget do? cards' Share buttons link to it.
+#      and uploads it as bridget/api.html; the What can Bridgit do? cards' Share buttons link to it.
 #   6. Downloads both back from the public host and checks the SHA-256.
 #   7. Creates the GitHub release bridget-v<version> with the APK attached (unless --no-github).
 #
@@ -44,7 +44,7 @@ R2_ACCOUNT="394b5de665bbfdea54cdd57be9094762"
 R2_BUCKET="sponic-images"
 R2_API="https://api.cloudflare.com/client/v4/accounts/${R2_ACCOUNT}/r2/buckets/${R2_BUCKET}/objects"
 BW_ITEM="0a573694-8b9d-44f1-9600-b43f011a48cf"
-GH_REPO="sponicgarden/bridget"
+GH_REPO="sponicgarden/bridgit"
 UA="bridget-publish/1"
 MAX_BYTES=$((100 * 1024 * 1024))
 
@@ -120,7 +120,7 @@ echo "==> ${PKG} ${VNAME} (versionCode ${VCODE})"
 # ---- 3. Signing certificate ----
 CERTS="$("${APKSIGNER}" verify --print-certs "${APK}" 2>/dev/null | sed -n 's/^Signer #[0-9]* certificate SHA-256 digest: //p' | tr "A-F" "a-f" | sort -u || true)"
 [[ -n "${CERTS}" ]] || die "apksigner found no signer (unsigned APK?)"
-[[ "${CERTS}" == "${EXPECTED_CERT}" ]] || die "signing certificate is not Bridget's release key: ${CERTS//$'\n'/, }"
+[[ "${CERTS}" == "${EXPECTED_CERT}" ]] || die "signing certificate is not Bridgit's release key: ${CERTS//$'\n'/, }"
 echo "==> Signed with the release key (${EXPECTED_CERT:0:8}…${EXPECTED_CERT: -4})"
 
 # ---- 4. Hash, size, latest.json ----
@@ -245,11 +245,11 @@ if [[ ${GITHUB} -eq 1 ]]; then
   # Tag the commit the APK was built from (it must be pushed), not the default branch.
   COMMIT="$(git -C "${ROOT:-.}" rev-parse HEAD)"
   git -C "${ROOT:-.}" branch -r --contains "${COMMIT}" | grep -q . || die "commit ${COMMIT} isn't pushed; push the branch first"
-  gh release create "bridget-v${VNAME}" "${ASSET}" --repo "${GH_REPO}" --target "${COMMIT}" --title "Bridget ${VNAME}" \
+  gh release create "bridget-v${VNAME}" "${ASSET}" --repo "${GH_REPO}" --target "${COMMIT}" --title "Bridgit ${VNAME}" \
     --notes "${NOTES}
 
 SHA-256: ${SHA}
 Download: ${URL}"
 fi
 
-echo "==> Published Bridget ${VNAME} (${VCODE}): ${URL}"
+echo "==> Published Bridgit ${VNAME} (${VCODE}): ${URL}"

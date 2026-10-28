@@ -66,7 +66,7 @@ object CallbackRules {
             when {
                 literal != null && !SafeHttp.isPublic(literal) -> return Check.Bad("That address is on a private network, not the tailnet.")
                 literal == null && host.endsWith(".ts.net") -> return Check.Bad(
-                    if (tailnetDomain == null) "Bridget doesn't know its tailnet name yet. Use the 100.x address instead."
+                    if (tailnetDomain == null) "Bridgit doesn't know its tailnet name yet. Use the 100.x address instead."
                     else "That name isn't on your tailnet ($tailnetDomain).")
                 literal == null && (host == "localhost" || !host.contains('.')) -> return Check.Bad("Use a full host name or a tailnet address.")
                 !allowInternet -> return Check.Bad("Only tailnet addresses are allowed. Turn on Allow internet callbacks in Settings for an internet URL.")
@@ -110,7 +110,7 @@ object CallbackRules {
     /** Every header of one attempt; the same [timestampS] is signed and sent. */
     fun headers(secret: String, timestampS: Long, eventId: String, body: ByteArray, appVersion: String): Map<String, String> = linkedMapOf(
         "Content-Type" to "application/json",
-        "User-Agent" to "Bridget/$appVersion",
+        "User-Agent" to "Bridgit/$appVersion",
         "X-Bridget-Timestamp" to timestampS.toString(),
         "X-Bridget-Event-Id" to eventId,
         "X-Bridget-Signature" to sign(secret, timestampS, body),

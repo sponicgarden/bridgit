@@ -9,7 +9,7 @@
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/bubble"
-        style="@style/Widget.Bridget.Card"
+        style="@style/Widget.Bridgit.Card"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:focusable="true"

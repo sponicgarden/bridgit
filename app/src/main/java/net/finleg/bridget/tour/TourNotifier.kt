@@ -110,7 +110,7 @@ object TourNotifier {
 }
 
 /**
- * The tour notification's actions. Not exported: only Bridget's own explicit PendingIntents reach it.
+ * The tour notification's actions. Not exported: only Bridgit's own explicit PendingIntents reach it.
  * Never logs the question text.
  */
 class TourActionReceiver : BroadcastReceiver() {

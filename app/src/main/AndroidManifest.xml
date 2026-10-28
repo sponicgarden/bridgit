@@ -25,7 +25,7 @@
     <!-- In-app updates (12.14, UPD-04): hands a verified APK to Android's installer, which always asks to confirm. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
-    <!-- Lets Bridget open the Tailscale app from Home and first run. -->
+    <!-- Lets Bridgit open the Tailscale app from Home and first run. -->
     <queries>
         <package android:name="com.tailscale.ipn" />
         <!-- CAP-31/41: interaction link controls may open an app by package (its launch intent). -->
@@ -48,7 +48,7 @@
         android:label="@string/app_name"
         android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Bridget">
+        android:theme="@style/Theme.Bridgit">
 
         <!-- D32: CrashReports.start() initialises Sentry itself, after checking the Settings switch. -->
         <meta-data android:name="io.sentry.auto-init" android:value="false" />
@@ -118,7 +118,7 @@
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:taskAffinity=""
-            android:theme="@style/Theme.Bridget.Invisible" />
+            android:theme="@style/Theme.Bridgit.Invisible" />
 
         <!-- UPD-04: shares only cacheDir/updates/ with the package installer. -->
         <provider

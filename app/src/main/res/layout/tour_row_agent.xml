@@ -2,7 +2,7 @@
 <!-- City tour setup: one agent as a radio card. -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    style="@style/Widget.Bridget.Card"
+    style="@style/Widget.Bridgit.Card"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:layout_marginBottom="8dp"

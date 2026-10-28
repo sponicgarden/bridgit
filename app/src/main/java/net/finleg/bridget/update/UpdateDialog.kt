@@ -61,7 +61,7 @@ object UpdateDialog {
     }
 
     /**
-     * Turning on "Install unknown apps" can restart Bridget, which loses the Ready dialog.
+     * Turning on "Install unknown apps" can restart Bridgit, which loses the Ready dialog.
      * If Rahul went to that page from the dialog in the last 30 minutes and installs are now
      * allowed, run the check again (the download is verified again before Install).
      */

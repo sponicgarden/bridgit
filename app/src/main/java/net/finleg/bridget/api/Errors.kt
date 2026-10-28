@@ -15,18 +15,18 @@ class ApiError(val http: Int, val code: String, message: String, val extra: Map<
 /**
  * Appendix C, as code. The guide and openapi.json are generated from this list,
  * and a unit test checks every code here is in the spec table and vice versa.
- * [built] = Bridget can return it in this release.
+ * [built] = Bridgit can return it in this release.
  */
 object ErrorCatalog {
     data class Entry(val http: Int, val code: String, val meaning: String, val agentShould: String, val built: Boolean = true)
 
     val all = listOf(
         Entry(400, "bad_request", "Malformed HTTP or JSON", "Fix the request"),
-        Entry(401, "unauthorized", "Key missing or wrong; `reason` = `key_rotated` or `agent_removed` when Bridget knows", "Stop; tell Rahul the key needs replacing"),
+        Entry(401, "unauthorized", "Key missing or wrong; `reason` = `key_rotated` or `agent_removed` when Bridgit knows", "Stop; tell Rahul the key needs replacing"),
         Entry(403, "forbidden_source", "Caller is not on the tailnet", "Check Tailscale"),
         Entry(403, "capability_disabled", "Master switch off", "Tell Rahul which switch (`setting` field)"),
         Entry(403, "permission_denied", "Android permission not granted (`permission` field)", "Tell Rahul; the Access screen fixes it"),
-        Entry(403, "access_needed", "Android special access off (`setting` field)", "Tell Rahul; Bridget also notifies him"),
+        Entry(403, "access_needed", "Android special access off (`setting` field)", "Tell Rahul; Bridgit also notifies him"),
         Entry(403, "pairing_closed", "No pairing window open", "Ask Rahul to open one"),
         Entry(403, "screen_denied", "Rahul denied screen access", "Don't ask again soon", built = false),
         Entry(403, "agent_not_allowed", "(Reserved for section 15)", "—", built = false),
@@ -39,7 +39,7 @@ object ErrorCatalog {
         Entry(422, "not_supported", "Android doesn't allow this (for example Wi-Fi toggle)", "Don't retry", built = false),
         Entry(429, "rate_limited", "Over a limit (`retry_after_s`)", "Wait"),
         Entry(429, "too_many_open", "Too many open questions/notices", "Wait for answers or cancel some"),
-        Entry(403, "notifications_required", "Bridget's notifications are off, so captures are refused (PRD-05)", "Tell Rahul to turn notifications on"),
+        Entry(403, "notifications_required", "Bridgit's notifications are off, so captures are refused (PRD-05)", "Tell Rahul to turn notifications on"),
         Entry(403, "forbidden", "Not allowed for this agent (`reason`, for example `developer_only`)", "Don't retry"),
         Entry(409, "in_progress", "Same `Idempotency-Key` still running", "Wait, then retry with the same key"),
         Entry(409, "conflict", "The interaction isn't in a state for this (for example a text panel that's closed or finished)", "Read it with GET /v1/interactions/{id}; start a new one if needed"),
@@ -47,8 +47,8 @@ object ErrorCatalog {
         Entry(429, "quota_exceeded", "Daily data, file storage or relay job quota used up (`limit`)", "Wait until tomorrow", built = false),
         Entry(429, "too_many_waits", "Too many open `wait` requests (SEC-08a)", "Close some waits"),
         Entry(502, "callback_failed", "Your callback URL didn't accept the test event (`http_status` or `reason` field)", "Check the receiver; Rahul sees the host in Activity"),
-        Entry(500, "internal_error", "Bridget bug", "Report via `POST /v1/feedback`"),
-        Entry(503, "service_start_blocked", "Android hasn't given the service this sensor", "Ask Rahul to open Bridget once"),
+        Entry(500, "internal_error", "Bridgit bug", "Report via `POST /v1/feedback`"),
+        Entry(503, "service_start_blocked", "Android hasn't given the service this sensor", "Ask Rahul to open Bridgit once"),
         Entry(504, "capture_timeout", "Sensor didn't answer in time", "Retry once"),
         Entry(504, "phone_unreachable", "(Relay) phone didn't pick up the job", "Retry later", built = false),
     )

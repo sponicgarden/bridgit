@@ -84,7 +84,7 @@ object LastScreenCapture {
     }
 
     /**
-     * Bridget differs from Spotka here: FBK-02 says a blank image is rejected, so when no
+     * Bridgit differs from Spotka here: FBK-02 says a blank image is rejected, so when no
      * candidate passes the gate the form opens without a last screen.
      */
     fun selectUsable(

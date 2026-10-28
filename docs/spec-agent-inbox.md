@@ -1,6 +1,6 @@
-# Spec: Interactions, send to phone, and the Inbox screen (Bridget 1.4)
+# Spec: Interactions, send to phone, and the Inbox screen (Bridgit 1.4)
 
-> **Superseded by [bridget-spec-v2.md](bridget-spec-v2.md)** (27 Oct 2026). Kept for history; v2 is the source of truth.
+> **Superseded by [bridgit-spec-v2.md](bridgit-spec-v2.md)** (27 Oct 2026). Kept for history; v2 is the source of truth.
 
 Status: proposed, 26 Oct 2026. Not built. Covers feature ideas #2 and #6
 (agents reach Rahul with an **interaction**: a one-way **notice**, or a
@@ -15,20 +15,20 @@ setups may, but Codex and Claude Code sessions usually don't. So every
 "something for the agent" item can be fetched **two ways**:
 
 - **Wait-and-ask (works for every agent):** the agent sends a request such as
-  `GET /v1/interactions/{id}?wait=55`. Bridget holds the request open until there
+  `GET /v1/interactions/{id}?wait=55`. Bridgit holds the request open until there
   is an answer or 55 seconds pass, then the agent asks again. This is called
   *long polling*. The answer arrives within a moment of Rahul tapping, with no
   webhook, no open port and no server on the agent's side. The agent only
   needs something running that keeps asking: a loop script, a cron job, or a
   Claude Code background monitor.
 - **Callback (optional, for agents with a webhook):** if the agent registered
-  a callback URL, Bridget also POSTs the result there right away. Rahul
+  a callback URL, Bridgit also POSTs the result there right away. Rahul
   approves each agent's callback URL on the phone. By default, only addresses
-  on the tailnet (`100.64.0.0/10` or `*.ts.net`) can be approved, so Bridget
+  on the tailnet (`100.64.0.0/10` or `*.ts.net`) can be approved, so Bridgit
   never talks to the public internet unless Rahul adds a public URL himself.
   Every callback is signed (`X-Bridget-Signature`: HMAC-SHA256 of the body
   with a per-agent callback secret shown once at registration), so the
-  receiver can check it came from Bridget.
+  receiver can check it came from Bridgit.
 
 This changes spec v1.0 section 5.6 ("no network calls other than answering"):
 outbound calls happen only to callback URLs Rahul approved on the phone.
@@ -43,7 +43,7 @@ An agent sends a small card to the phone. There are two kinds:
 - **question**: needs an answer, given with buttons, a choice or a text reply.
 
 Either kind can be **spoken aloud** on the phone (feature #6) with
-`"speak": true`. Bridget reads the title and text with Android's built-in
+`"speak": true`. Bridgit reads the title and text with Android's built-in
 text-to-speech, prefixed with the agent's name ("Grok says: ..."). Speaking
 is skipped while the phone is in Do Not Disturb or silent mode, or on a call,
 unless `priority` is `urgent` and Rahul allowed urgent speech for that agent.
@@ -105,7 +105,7 @@ For agents that want a custom layout, `"html": "<...>"` replaces
 - JavaScript runs only to call `Bridget.respond({...})`, which submits the
   answer. Any JSON is allowed, up to 16 KB, and it comes back as `answer.data`.
 - No cookies, no storage, no file or camera access from the page.
-- The card header is always drawn by Bridget, not the page ("From Grok -
+- The card header is always drawn by Bridgit, not the page ("From Grok -
   custom card"), so a page can't pretend to be another agent or the system.
 
 The fast template covers most cases (yes/no, pick one, short reply) and opens
@@ -123,16 +123,16 @@ POST /v1/files
 
 - Max 25 MB per file. PDF, images, text, CSV, audio, video, ZIP. APKs and
   other executables are refused.
-- Files land in the Inbox, kept in Bridget's private storage. Rahul can open,
+- Files land in the Inbox, kept in Bridgit's private storage. Rahul can open,
   share or **Save to Downloads** from there. With `save_to_downloads: true`,
-  Bridget saves a copy to `Downloads/Bridget/<agent>/` right away.
+  Bridgit saves a copy to `Downloads/Bridgit/<agent>/` right away.
 - Notification: "**Codex sent** Hostinger invoice Oct.pdf".
 - The agent can check whether Rahul opened it: `GET /v1/files/{id}` returns
   `{opened_at, saved_at}`.
 
 ## 4. Share to an agent (Rahul to agent)
 
-- Bridget appears in Android's **Share** menu. Android also offers one
+- Bridgit appears in Android's **Share** menu. Android also offers one
   direct-share shortcut per agent ("Grok", "Claude", ...), so sharing a photo,
   PDF, link or text to an agent is two taps. Sharing to plain "Bridget" asks
   which agent.
@@ -198,7 +198,7 @@ off.
 4. An HTML card can't load an external image or script (blocked and logged),
    and `Bridget.respond` round-trips JSON.
 5. Claude sends a PDF; it appears in the Inbox, opens in-app, and **Save to
-   Downloads** puts it in `Downloads/Bridget/Claude/`.
+   Downloads** puts it in `Downloads/Bridgit/Claude/`.
 6. Rahul shares a screenshot to Grok from Photos; Grok's long poll returns it
    resized to 1568 px; the Inbox shows "picked up".
 7. With the phone locked, the notification text is hidden until unlock.

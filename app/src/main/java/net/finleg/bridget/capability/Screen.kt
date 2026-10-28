@@ -45,14 +45,14 @@ class ScreenshotService : AccessibilityService() {
                 val bmp = Bitmap.wrapHardwareBuffer(hw, result.colorSpace)?.copy(Bitmap.Config.ARGB_8888, false)
                 hw.close()
                 if (bmp != null) cont.resume(bmp)
-                else cont.resumeWithException(ErrorCatalog.error("internal_error", "Android returned a screenshot Bridget couldn't read."))
+                else cont.resumeWithException(ErrorCatalog.error("internal_error", "Android returned a screenshot Bridgit couldn't read."))
             }
             override fun onFailure(errorCode: Int) {
                 cont.resumeWithException(when (errorCode) {
                     ERROR_TAKE_SCREENSHOT_INTERVAL_TIME_SHORT -> ErrorCatalog.error("rate_limited",
                         "Android allows about one screenshot a second. Retry shortly.", mapOf("retry_after_s" to 2))
                     ERROR_TAKE_SCREENSHOT_SECURE_WINDOW -> ErrorCatalog.error("not_supported",
-                        "The app on screen blocks screenshots (secure window). Bridget doesn't work around that.",
+                        "The app on screen blocks screenshots (secure window). Bridgit doesn't work around that.",
                         mapOf("secure_content" to true))
                     else -> ErrorCatalog.error("capture_timeout", "Android couldn't take the screenshot (code $errorCode). Retry once.")
                 })
@@ -112,7 +112,7 @@ class ScreenModule(app: BridgeApp) : Capability(app) {
             if (!enabled) throw ErrorCatalog.error("capability_disabled",
                 "Screenshots are switched off on the phone. Ask Rahul to turn on Screenshots in Features.", mapOf("setting" to switchKey))
             if (!ScreenshotService.isEnabled(app)) throw ErrorCatalog.error("access_needed",
-                "Bridget's screenshot service is off. Ask Rahul to open Bridget > More > Access > Screenshots and turn it on.",
+                "Bridgit's screenshot service is off. Ask Rahul to open Bridgit > More > Access > Screenshots and turn it on.",
                 mapOf("setting" to "accessibility_screenshot"))
             requireUsable()
             val svc = ScreenshotService.instance ?: throw ErrorCatalog.error("service_start_blocked",
