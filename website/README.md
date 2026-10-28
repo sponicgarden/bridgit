@@ -16,11 +16,11 @@ Run `npm run build`, then `npm run check`. The output is `website/dist/`, which 
 
 Set `origin` in `site.config.json` to the real HTTPS origin when chosen, or supply `SITE_ORIGIN` to the build. Also set verified `supportEmail` and `privacyEmail` when those mailboxes exist. Build generates canonical URLs, Open Graph URLs, sitemap and robots rules from that origin. The selected domain is `bridgit.cc` and the configured origin is `https://bridgit.cc`. The zone is active in the Wingsiebird account; the repository includes its deployment configuration.
 
-`indexable` is enabled for the public site. The build emits `index,follow`, canonical HTTPS apex URLs and a seven-page sitemap, and robots.txt allows crawling. Run `npm run preflight` to see remaining launch inputs; privacy and terms describe the current app and website, with support/privacy requests sent to `support@bridgit.cc`. Reconcile these disclosures with the actual app release and Play declarations before store submission. A missing domain fails release preflight; unfinished contact/legal details are reported as notes, not fabricated.
+`indexable` is enabled for the public site. The build emits `index,follow`, canonical HTTPS apex URLs and a nine-page sitemap, and robots.txt allows crawling. Run `npm run preflight` to see remaining launch inputs; privacy and terms describe the current app and website, with support/privacy requests sent to `support@bridgit.cc`. Reconcile these disclosures with the actual app release and Play declarations before store submission. A missing domain fails release preflight; unfinished contact/legal details are reported as notes, not fabricated.
 
 Deploy the contents of `dist/` to any static host with HTTPS and directory-index support. Build command: `npm --prefix website run build`. Publish directory: `website/dist`. For a host rooted directly at `website/`, use `npm run build` and publish `dist`. The `_headers` file supplies basic headers on hosts that support that convention; configure equivalent headers on other hosts. Use the site's ordinary trailing-slash URLs; no SPA fallback is needed.
 
-Routes: `/`, `/how-it-works/`, `/developers/`, `/support/`, `/privacy/`, `/terms/`, `/delete-data/`.
+Routes: `/`, `/how-it-works/`, `/developers/`, `/support/`, `/privacy/`, `/terms/`, `/delete-data/`, `/features/`, `/download/`.
 
 There are no hosted BRIDGIT device accounts. Website email signup data can be deleted using the link in the download email. Keep unsupported features labeled as planned; adding a domain does not change feature readiness. The literal "any Android device" tagline describes the product direction; compatibility copy states the current Android 14+ requirement and proposed older-device support.
 
