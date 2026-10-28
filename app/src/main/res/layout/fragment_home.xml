@@ -40,13 +40,26 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
-                    <TextView
-                        android:id="@+id/brand_title"
+                    <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:accessibilityHeading="true"
-                        android:textAppearance="?attr/textAppearanceTitleLarge"
-                        android:textColor="?attr/colorOnSurface" />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+                        <ImageView
+                            android:layout_width="124dp"
+                            android:layout_height="39dp"
+                            android:contentDescription="@string/app_name"
+                            android:accessibilityHeading="true"
+                            android:src="@drawable/brand_wordmark"
+                            app:tint="?attr/colorOnSurface" />
+                        <TextView
+                            android:id="@+id/brand_title"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:textSize="11sp"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+                    </LinearLayout>
 
                     <TextView
                         android:layout_width="wrap_content"

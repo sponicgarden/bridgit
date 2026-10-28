@@ -1,5 +1,6 @@
 import { readFile, writeFile, cp, mkdir, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
+import { buildFeatures } from './features.mjs';
 import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const config = JSON.parse(await readFile(path.join(root, 'site.config.json'), 'utf8'));
@@ -17,6 +18,8 @@ const out = path.join(root, 'dist');
 await rm(out, { recursive: true, force: true });
 await mkdir(out, { recursive: true });
 await cp(path.join(root, 'public'), out, { recursive: true });
+const featureCounts = await buildFeatures(root, out);
+console.log(`App catalog: ${featureCounts.total} entries, ${featureCounts.implemented} implemented.`);
 const escape = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pages = [];
 async function prepare(dir) {
@@ -27,6 +30,7 @@ async function prepare(dir) {
     const relative = path.relative(out, target).split(path.sep).join('/');
     const route = '/' + relative.replace(/index\.html$/, '');
     let html = (await readFile(target, 'utf8')).replaceAll('{{SITE_ORIGIN}}', origin);
+    html = html.replaceAll('{{TURNSTILE_SITE_KEY}}', config.turnstileSiteKey || '').replaceAll('{{DOWNLOAD_URL}}', config.downloadUrl || '').replaceAll('{{DOWNLOAD_VERSION}}', config.downloadVersion || '').replaceAll('{{DOWNLOAD_SHA256}}', config.downloadSha256 || '');
     html = html.replace('<meta name="robots" content="noindex,nofollow">', `<meta name="robots" content="${config.indexable ? 'index,follow' : 'noindex,nofollow'}">`);
     if (origin) {
       html = html.replace('</head>', `<link rel="canonical" href="${escape(origin + route)}"><meta property="og:url" content="${escape(origin + route)}"></head>`);
