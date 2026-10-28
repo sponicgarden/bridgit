@@ -1,4 +1,4 @@
-# Bridget (Android)
+# BRIDGIT Device Manager for Android
 
 Copyright 2026 Sponic Garden, Inc. Licensed under the [Apache License 2.0](LICENSE).
 
@@ -12,26 +12,30 @@ written as "Almusca Device Bridge"), with these changes:
 
 | Topic | Decision |
 |---|---|
-| Name | **Bridget** (26 Oct 2026) |
+| Name | **Bridgit** (26 Oct 2026) |
 | Agents | **Any number of named agents** (max 8), each with its own key, instead of one agent |
 | Listener availability | **Always on**: one foreground service with a permanent notification |
 | Gallery access | **Full** photo access (selected-photos mode still works and is reported) |
 | Spec questions 3-7 | Spec defaults: snapshots not saved to the gallery, 120 s mic cap, rear camera at 2048 px, 1,000-entry log kept on the phone |
 
-**For agents:** [`docs/scenarios.md`](docs/scenarios.md) lists everything you can do with Bridget, with exact calls and what works today vs. what's planned.
+**For agents:** [`docs/scenarios.md`](docs/scenarios.md) lists everything you can do with Bridgit, with exact calls and what works today vs. what's planned.
+
+## Marketing website
+
+The BRIDGIT marketing website lives in [`website/`](website/README.md). It includes the landing page, appliance concepts, developer information, support and policy drafts. Run `npm --prefix website run dev` for a local preview. Domain connection and deployment are pending.
 
 ## Install
 
-1. Download the APK from the private GitHub release (`sponicgarden/bridget`,
+1. Download the APK from the private GitHub release (`sponicgarden/bridgit`,
    tag `bridget-v1.2.0`), or build it (below).
 2. Open it on the Pixel and allow installs from that source. Let Play Protect scan.
-3. Open **Bridget**. The listener and all three capabilities start **off**.
+3. Open **Bridgit**. The listener and all three capabilities start **off**.
 
 Updates install over the top as long as they are signed with the same key.
 
 ## Adding an agent (phone unlocked, in hand)
 
-1. Tailscale on, open Bridget, tap **Grant permissions** (notifications,
+1. Tailscale on, open Bridgit, tap **Grant permissions** (notifications,
    camera, microphone, photos).
 2. Tap **Add agent**, type its name (for example `Muse`). The app shows a
    6-digit code, the key and a QR code for 5 minutes, and the listener turns on.
@@ -150,7 +154,7 @@ Signing certificate SHA-256:
 `6bbd482d18efdc58ca28de8358405602ebb0405b479cabd36b37ff8242042f61`.
 Backup: Bitwarden item **"Almusca Device Bridge — Android release keystore"**
 (password in the notes, `release.jks` attached; verified 26 Oct 2026). That
-key signs Bridget; the folder and item keep the original name. Without it, an
+key signs Bridgit; the folder and item keep the original name. Without it, an
 update means uninstalling, which wipes the agents and the audit log.
 
 Icon: adaptive vector (`res/drawable/ic_launcher_*`), a bridge with a beacon,
@@ -175,14 +179,14 @@ real 5-second mic clip** (AAC, 5.9 s), and `image/last` for all three types
 
 ## Next (specs, not built)
 
-**Master spec: [`docs/bridget-spec-v2.md`](docs/bridget-spec-v2.md)** (27 Oct 2026) covers everything below and more, with requirement IDs, API shapes, screens, roadmap and open questions. The files below are kept for history.
+**Master spec: [`docs/bridgit-spec-v2.md`](docs/bridgit-spec-v2.md)** (27 Oct 2026) covers everything below and more, with requirement IDs, API shapes, screens, roadmap and open questions. The files below are kept for history.
 
 - `docs/spec-per-agent-permissions.md`: separate switches per agent.
 - `docs/spec-flashlight.md`: agents can turn the flashlight on (auto-off).
 - `docs/spec-screenshot.md`: screenshot on request, approved on the phone
   once, for 1 hour or for 16 hours.
 - `docs/spec-access-screen.md`: an Access tab listing every Android setting
-  Bridget needs, with one-tap links straight to each switch.
+  Bridgit needs, with one-tap links straight to each switch.
 - `docs/spec-agent-inbox.md`: interactions (one-way notices and questions,
   optionally spoken aloud), files sent to the phone, and things Rahul shares
   to an agent, all in a new Inbox screen. Works for
@@ -204,3 +208,11 @@ governing permissions and limitations under the License.
 Third-party components keep their own licences: Ktor (Apache 2.0), CameraX
 and AndroidX (Apache 2.0), Material Components (Apache 2.0), ZXing (Apache
 2.0), Kotlin coroutines (Apache 2.0).
+
+## BRIDGIT naming and compatibility
+
+The repository and public brand are now **Bridgit / BRIDGIT**, at https://github.com/sponicgarden/bridgit and https://bridgit.cc. Android package `net.finleg.bridget`, existing `X-Bridget-*` headers, pairing identifiers, signing-key and agent-key vault item names, configuration under `~/.config/bridget`, and historical release tags remain unchanged so existing installations and agents keep working. Use `tools/bridgit`; `tools/bridget` remains a compatibility entry point.
+
+Cloudflare deployment configuration lives in `website/wrangler.jsonc` and pins the Wingsiebird account. See [website deployment](website/README.md#cloudflare).
+
+New CLI configuration uses `~/.config/bridgit/env` and `BRIDGIT_KEY`, `BRIDGIT_HOST`, `BRIDGIT_PORT` (or `BRIDGIT_ENV` for an explicit config path). The old names remain accepted; new names take precedence.

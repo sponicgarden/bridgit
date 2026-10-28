@@ -1,6 +1,6 @@
-# Bridget user scenarios (for AI agents)
+# Bridgit user scenarios (for AI agents)
 
-This file lists the things an agent can do for Rahul through Bridget, the app
+This file lists the things an agent can do for Rahul through Bridgit, the app
 on his Pixel 10 Pro XL. It is written for agents: each scenario says when to
 use it, exactly which calls to make, what must be switched on, and whether it
 works **today** or is **planned**.
@@ -11,14 +11,14 @@ works **today** or is **planned**.
   (`curl -H @~/.config/bridget/header`); never put the key on a command line.
 - Agents on a host where Tailscale runs in userspace mode use the
   `tools/bridget` helper instead of curl (`bridget GET /v1/health`).
-- Full reference: `docs/bridget-spec-v2.md` (spec 2.1). Requirement IDs in
+- Full reference: `docs/bridgit-spec-v2.md` (spec 2.1). Requirement IDs in
   brackets point into it.
 
 ## How to read a scenario
 
 | Field | Meaning |
 |---|---|
-| **Status** | `TODAY` = works in Bridget 1.2.0. `PLANNED (Pn)` = specced for roadmap phase Pn; the endpoint returns 404 until that phase ships. `UNDECIDED` = waiting on Rahul. |
+| **Status** | `TODAY` = works in Bridgit 1.2.0. `PLANNED (Pn)` = specced for roadmap phase Pn; the endpoint returns 404 until that phase ships. `UNDECIDED` = waiting on Rahul. |
 | **Say** | Example phrases from Rahul that should trigger it. |
 | **Needs** | Master switches that must be on, and Android permissions. Check `GET /v1/capabilities` first: if `enabled` is false, tell Rahul which switch to turn on; don't retry. |
 | **Calls** | The exact requests, in order. |
@@ -42,15 +42,15 @@ Ground rules for every scenario:
 
 ## 0. Before anything else
 
-### S00 Check that Bridget is reachable and what's on
+### S00 Check that Bridgit is reachable and what's on
 - **Status:** TODAY
 - **Say:** (do this at the start of any session, silently)
 - **Calls:**
   1. `GET /v1/health` → `status`, `agent` (your name), `battery_level`, `charging`
   2. `GET /v1/capabilities` → per capability `enabled`, `permission`, `service_ready`
 - **Notes:** if `service_ready` is false for camera or mic, Android stopped
-  Bridget's camera/mic access (usually after a reboot). Ask Rahul to open the
-  Bridget app once. Gallery keeps working meanwhile.
+  Bridgit's camera/mic access (usually after a reboot). Ask Rahul to open the
+  Bridgit app once. Gallery keeps working meanwhile.
 
 ---
 
@@ -137,7 +137,7 @@ Ground rules for every scenario:
 - **Status:** PLANNED (P3)
 - **Needs:** Location
 - **Calls:** `GET /v1/location?fresh=true` (`fresh=false` for the last known fix, instant). `address=true` only if Rahul turned on Address lookup. [CAP-18, CAP-19]
-- **Notes:** one fix per request; Bridget keeps no history.
+- **Notes:** one fix per request; Bridgit keeps no history.
 
 ### S23 "Find my phone, I can't find it"
 - **Status:** PLANNED (P3)
@@ -170,7 +170,7 @@ Ground rules for every scenario:
 ### S31 "Silence my phone for the meeting" / "Turn on Do Not Disturb for an hour"
 - **Status:** PLANNED (P3)
 - **Calls:** `POST /v1/phone/dnd {"mode":"priority","duration_minutes":60}` or `POST /v1/phone/sound {"ringer_mode":"vibrate"}`
-- **Notes:** Bridget restores the previous setting when the time ends.
+- **Notes:** Bridgit restores the previous setting when the time ends.
   `"none"` (total silence) also mutes alarms. [CAP-22, CAP-22a, CAP-23]
 
 ### S32 "Turn the brightness down / volume up"
@@ -225,7 +225,7 @@ Ground rules for every scenario:
 ### S43 Get told about events instead of polling
 - **Status:** PLANNED (P2)
 - **Calls:** loop `GET /v1/events?since=<cursor>&wait=55` → interaction answers, shares for you, files opened, switches changed
-- **Notes:** if Rahul set a callback URL for you, Bridget also POSTs each
+- **Notes:** if Rahul set a callback URL for you, Bridgit also POSTs each
   event, signed: check `X-Bridget-Signature` = HMAC-SHA256 of
   `"<X-Bridget-Timestamp>.<raw body>"` with your callback secret. [EVT-01..EVT-06]
 
@@ -236,7 +236,7 @@ Ground rules for every scenario:
 ### S50 "Send me that PDF" (agent → phone)
 - **Status:** PLANNED (P4)
 - **Calls:** `POST /v1/files {"name":"Invoice Oct.pdf","mime":"application/pdf","data_base64":"…","note":"For your records"}`; check `GET /v1/files/{id}` for `opened_at`
-- **Notes:** max 25 MB; executables refused. Appears in Bridget's Inbox. [CAP-27, CAP-28]
+- **Notes:** max 25 MB; executables refused. Appears in Bridgit's Inbox. [CAP-27, CAP-28]
 
 ### S51 Rahul shares something to you from any app
 - **Status:** PLANNED (P4)
@@ -259,7 +259,7 @@ Ground rules for every scenario:
 
 ---
 
-## 8. Bridget itself
+## 8. Bridgit itself
 
 ### S70 "What have you (or other agents) done on my phone?"
 - **Status:** TODAY (`/v1/audit`) · PLANNED (P1a) full log API
@@ -269,16 +269,16 @@ Ground rules for every scenario:
 - **Status:** PLANNED (P1a)
 - **Calls:** `POST /v1/log {"level":"info","message":"Checked the fridge photo: milk is low."}` [LOG-11]
 
-### S72 Report a Bridget bug you ran into
+### S72 Report a Bridgit bug you ran into
 - **Status:** PLANNED (P1b)
 - **Calls:** `POST /v1/feedback {"kind":"bug","description":"camera/snapshot returned capture_timeout twice at 21:03"}` [FBK-12]
 
-### S73 Work on Bridget's bug reports (developer agents only)
+### S73 Work on Bridgit's bug reports (developer agents only)
 - **Status:** PLANNED (P1b)
 - **Calls:** `GET /v1/feedback?status=new`, `GET /v1/feedback/{id}`, `POST /v1/feedback/{id}/status {"status":"in_progress","note":"…"}`
 - **Notes:** only agents Rahul marked as Developer. Respect `no_autofix: true`. [FBK-10, FBK-11, AGT-15]
 
-### S74 Learn everything Bridget can do right now
+### S74 Learn everything Bridgit can do right now
 - **Status:** PLANNED (P1a)
 - **Calls:** `GET /v1/guide` (Markdown, tailored to you and to what's switched on) or `GET /v1/openapi.json` [API-09]
 
@@ -301,7 +301,7 @@ Ground rules for every scenario:
 
 ### R04 "Remember where I parked"
 1. S10 photo of the spot, or S03 the photo he took; S22 location (P3).
-2. Save them in your own memory; Bridget keeps no history.
+2. Save them in your own memory; Bridgit keeps no history.
 
 ### R05 Watch for a screenshot and act on it
 1. S05 wait for the next screenshot.
@@ -309,7 +309,7 @@ Ground rules for every scenario:
 
 ---
 
-## Not possible through Bridget
+## Not possible through Bridgit
 
 - Reading other apps' private data directly (WhatsApp chats, banking apps).
 - Capturing without Rahul seeing a notification, or recording continuously.
@@ -318,4 +318,4 @@ Ground rules for every scenario:
 - Reading the clipboard.
 - SMS, calls, contacts and calendar: not scheduled (spec Q1).
 - Location history and "tell me when I get home": undecided (spec Q14).
-- Reaching Bridget without Tailscale: undecided (relay mode, spec Q10).
+- Reaching Bridgit without Tailscale: undecided (relay mode, spec Q10).

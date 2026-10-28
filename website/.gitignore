@@ -1,0 +1,8 @@
+dist/
+.DS_Store
+
+preview.png
+
+.wrangler/
+
+carousel-preview.png

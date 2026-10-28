@@ -306,7 +306,9 @@ class MainActivity : AppCompatActivity() {
             setOnCheckedChangeListener { _, on -> if (!binding) onChange(on) }
         }.also { root.addView(it, LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(4) }) }
 
-        root.addView(TextView(this).apply { text = "Bridget"; textSize = 28f; setTypeface(typeface, Typeface.BOLD) })
+        root.addView(TextView(this).apply { text = "BRIDGIT"; textSize = 28f; setTypeface(typeface, Typeface.BOLD) })
+        body("Device Manager for Android")
+        body("Turn any Android device into an agentic appliance.")
         body("Lets your AI agents take a photo, record a short clip or fetch a gallery photo over Tailscale. " +
             "Every capture shows a notification and Android's green indicator, and is logged below.")
 

@@ -1,0 +1,59 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BRIDGIT Appliance Plan</title><link rel="stylesheet" href="/Users/otter/.codex/skills/html-plan/runtime/htmlplan.css"><script src="/Users/otter/.codex/skills/html-plan/runtime/htmlplan.js" defer></script><body><header><h1>Agent Created Appliances in BRIDGIT</h1><details class="thread"><summary>Why · 3 requests</summary><doc-quote via="prompt" from="the user">the key thign is any agent can now control this for you, so your app is build on some agent, potentially on the fly.</doc-quote><doc-quote via="prompt" from="the user">make your old android a baby monitor.</doc-quote><doc-quote via="prompt" from="the user">make it a help device for your parent in case of emergency with a special tirgger word, etc...</doc-quote></details></header><main><doc-plan>
+<doc-claim><p>The owner can approve an appliance that an agent creates.</p><doc-mock frame="none" w="440"><template><div style="padding:24px;background:#f5f2e9;color:#142c32;font:15px system-ui;border:1px solid #ccd2c4;border-radius:12px"><small>PROPOSED UI · REVIEW CHANGE</small><h2>Desk scanner</h2><p>Agent: My assistant</p><p>Uses: camera snapshots and a local button.</p><p>Sends photos to: My assistant only.</p><p>New recipients require a new approval.</p><button style="padding:12px;background:#d8f36a;border:1px solid #142c32">Activate appliance</button> <button style="padding:12px">Decline</button></div></template></doc-mock><doc-claim><p>A new scope or destination requires approval on the phone.</p><doc-code title="Grant rule · sketch" lang="kotlin"><script type="text/plain">fun authorize(run: Run, grant: Grant) {
+    require(run.workflowDigest == grant.workflowDigest)
+    require(run.scopes.all { it in grant.scopes })
+    require(run.destinations.all { it in grant.destinations })
+    require(!grant.revoked)
+    require(clock.now() < grant.expiresAt)
+}</script></doc-code><doc-claim at="app/src/main/java/net/finleg/bridget/ApiServer.kt:309"><p>ApiServer.kt:309 · require()</p><doc-code src="app/src/main/java/net/finleg/bridget/ApiServer.kt" lines="309-323"></doc-code></doc-claim></doc-claim></doc-claim>
+<doc-claim><p>The phone runs approved workflows when the agent disconnects.</p><doc-machine name="workflow" caption="The phone shows the actual state."><script type="text/plain">machine workflow initial draft
+state draft # The agent proposes a workflow.
+state review # The owner reviews the change.
+state ready # The owner grants access.
+state running # The phone runs the workflow.
+state blocked # The phone needs an owner action.
+state stopped final # The owner stops the workflow.
+| draft | review | ready |
+| blocked | running | stopped |
+draft -submit-> review : submit
+review -approve-> ready : approve
+review -decline-> stopped : decline
+ready -start-> running : start
+running -loss-> blocked : grant loss
+blocked -restore-> review : review again
+running -stop-> stopped : stop
+ready -stop-> stopped : stop
+</script><div data-state="draft"><doc-mock frame="none" w="340"><template><p>Draft appliance · No sensors active</p></template></doc-mock></div><div data-state="review"><doc-mock frame="none" w="340"><template><p>Review required · Activate or decline</p></template></doc-mock></div><div data-state="ready"><doc-mock frame="none" w="340"><template><p>Ready · Waiting for local trigger</p></template></doc-mock></div><div data-state="running"><doc-mock frame="none" w="340"><template><p>Active · Stop appliance</p></template></doc-mock></div><div data-state="blocked"><doc-mock frame="none" w="340"><template><p>Needs attention · Open BRIDGIT to resume</p></template></doc-mock></div><div data-state="stopped"><doc-mock frame="none" w="340"><template><p>Stopped · No automatic restart</p></template></doc-mock></div></doc-machine><doc-claim><p>The runtime accepts bounded JSON and app supplied actions.</p><doc-schema id="workflow" lang="json" title="Workflow input · sketch"><script type="text/plain">{
+  "schema_version": 1,
+  "name": "Desk scanner",
+  "trigger": { "type": "local_button" },
+  "steps": [ { "action": "camera.snapshot" } ],
+  "required_scopes": [ "camera.snapshot" ],
+  "approved_destination_ids": [],
+  "limits": { "max_steps": 32, "timeout_seconds": 30 }
+}</script></doc-schema></doc-claim></doc-claim>
+<doc-claim><p>Owners can use older phones with supported capabilities.</p><doc-mock frame="none" w="440"><template><div style="font:15px system-ui;padding:22px;background:#f5f2e9"><h3>Device readiness · Proposed</h3><p>Android 10+ support: needs validation</p><p>Camera snapshots: check hardware</p><p>Local phrase detector: check model support</p><p>Reboot: owner action can be required</p></div></template></doc-mock><doc-ask id="minimum"><p>Which Android version starts the public support range?</p><label><input type="radio" name="minimum" value="29" checked>Android 10 <small>Test more old devices.</small></label><label><input type="radio" name="minimum" value="31">Android 12 <small>Use a smaller first test range.</small></label></doc-ask><doc-claim><p>The minimum OS and target API use separate values.</p><doc-code title="SDK values · sketch" lang="kotlin"><script type="text/plain">android {
+    compileSdk = 36
+    defaultConfig {
+        minSdk = 29
+        targetSdk = 36
+    }
+}</script></doc-code><doc-claim at="app/build.gradle.kts:17"><p>app/build.gradle.kts:17 · android</p><doc-code src="app/build.gradle.kts" lines="15-25"></doc-code></doc-claim></doc-claim></doc-claim>
+<doc-claim><p>Live monitoring and help alerts have separate release gates.</p><doc-mock frame="none" w="440"><template><div style="font:15px system-ui;padding:22px;background:#f5f2e9"><h3>Proposed release order</h3><p>A · Bridge permissions and visibility</p><p>B · Local appliance workflows</p><p>C · Live camera with loss alerts</p><p>D · Local phrase and family help pilot</p><p>Only measured features enter the store listing.</p></div></template></doc-mock><doc-ask id="scope"><p>Which features enter the first public release?</p><label><input type="radio" name="scope" value="foundation" checked>Bridge and local workflows <small>Keep live monitoring and help for later.</small></label><label><input type="radio" name="scope" value="camera">Include live camera <small>Wait for streaming and long device tests.</small></label></doc-ask><doc-claim><p>A help alert separates delivery from a person’s response.</p><doc-code title="Alert events · sketch" lang="kotlin"><script type="text/plain">sealed interface AlertState {
+    data object Queued : AlertState
+    data object Delivered : AlertState
+    data class Acknowledged(val contactId: String) : AlertState
+    data object Escalated : AlertState
+    data class Failed(val reason: String) : AlertState
+}</script></doc-code></doc-claim></doc-claim>
+<doc-claim><p>The Play build uses a defined set of capabilities.</p><doc-mock frame="none" w="440"><template><div style="font:15px system-ui;padding:22px;background:#f5f2e9"><h3>Play release · Proposed</h3><p>Scoped agents · Selected photos · Visible sessions</p><p>No Accessibility service in the first Play build.</p><p>The owner keeps the personal sideload build.</p><p>Policy forms describe the actual release.</p></div></template></doc-mock><doc-ask id="distribution"><p>Which distribution plan do we use?</p><label><input type="radio" name="distribution" value="both" checked>Play build and personal build <small>Keep explicit feature differences.</small></label><label><input type="radio" name="distribution" value="personal">Personal build first <small>Keep Play preparation without submission.</small></label></doc-ask></doc-claim>
+<doc-claim aux="shared"><p>All workflows use one grant and event model.</p><doc-schema id="grant" lang="kotlin" title="Grant record · sketch"><script type="text/plain">data class Grant(
+    val agentId: String,
+    val workflowDigest: String,
+    val scopes: Set<String>,
+    val destinationIds: Set<String>,
+    val expiresAt: Instant,
+    val revoked: Boolean
+)</script></doc-schema></doc-claim>
+<doc-claim aux="scope"><p>This proposal keeps the current app available during development.</p><ul><li>No app code changes form part of this spec task.</li><li>No Play submission, domain change or public launch occurs in this task.</li><li>The private website preview shows planned features as planned.</li><li>No emergency dispatch or medical claims form part of the release.</li></ul></doc-claim>
+</doc-plan></main></body></html>

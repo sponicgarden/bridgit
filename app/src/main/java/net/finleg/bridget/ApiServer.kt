@@ -168,7 +168,7 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
             if (l >= 0) l * 100 / s else null
         }
         val plugged = (bat?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0
-        return JSONObject().put("status", "ok").put("app", "Bridget").put("agent", agent)
+        return JSONObject().put("status", "ok").put("app", "Bridgit").put("agent", agent)
             .put("app_version", BuildConfigInfo.versionName(service))
             .put("listener_uptime_seconds", (System.currentTimeMillis() - service.startedAt) / 1000)
             .put("battery_level", level ?: JSONObject.NULL)
@@ -312,7 +312,7 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
         if (!service.granted(perm)) throw ApiError(403, "permission_denied", "Grant $perm on the phone",
             mapOf("permission" to perm))
         if (!ready) throw ApiError(503, "service_start_blocked",
-            "Android has not allowed ${c.key} access for the listener yet. Open the Bridget app once on the phone.")
+            "Android has not allowed ${c.key} access for the listener yet. Open BRIDGIT Device Manager once on the phone.")
     }
 
     private fun requireGallery(): String {

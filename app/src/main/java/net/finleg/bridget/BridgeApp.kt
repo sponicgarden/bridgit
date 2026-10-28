@@ -14,7 +14,7 @@ class BridgeApp : Application() {
         policy = Policy(this)
         audit = AuditLog(this)
         getSystemService(NotificationManager::class.java).createNotificationChannel(
-            NotificationChannel(CHANNEL, "Bridget listener", NotificationManager.IMPORTANCE_LOW).apply {
+            NotificationChannel(CHANNEL, "BRIDGIT Device Manager", NotificationManager.IMPORTANCE_LOW).apply {
                 description = "Shown while the listener runs and during every capture"
             }
         )

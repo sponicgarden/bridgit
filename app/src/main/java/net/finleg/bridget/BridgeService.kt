@@ -21,7 +21,7 @@ import java.net.Inet4Address
 import java.net.NetworkInterface
 
 /**
- * Bridget's always-on listener. One long-lived foreground service that both runs the
+ * Bridgit's always-on listener. One long-lived foreground service that both runs the
  * HTTP listener and owns camera/microphone access. It must be started by a tap
  * while the app is on screen: Android only grants camera/microphone access to a
  * foreground service that started while the app was visible.
@@ -132,7 +132,7 @@ class BridgeService : LifecycleService() {
             ?: "Waiting for Tailscale - not reachable"
         return NotificationCompat.Builder(this, BridgeApp.CHANNEL)
             .setSmallIcon(R.drawable.ic_notif)
-            .setContentTitle(if (captureNote != null) "Bridget - capturing" else "Bridget")
+            .setContentTitle(if (captureNote != null) "BRIDGIT - capturing" else "BRIDGIT Device Manager")
             .setContentText(text)
             .setOngoing(true)
             .setOnlyAlertOnce(captureNote == null)

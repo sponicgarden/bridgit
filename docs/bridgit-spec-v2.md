@@ -1,14 +1,14 @@
-# Bridget — Product and Technical Specification v2.0
+# Bridgit — Product and Technical Specification v2.0
 
 | | |
 |---|---|
-| **Document** | `docs/bridget-spec-v2.md` in `sponicgarden/bridget` (Apache License 2.0, © Sponic Garden, Inc.) |
+| **Document** | `docs/bridgit-spec-v2.md` in `sponicgarden/bridgit` (Apache License 2.0, © Sponic Garden, Inc.) |
 | **Version** | 2.1, 27 Oct 2026: revised after the Grok 4.7 review (`reviews/2026-10-27-grok-4.7-review.md`) |
 | **Owner** | Rahul Sonnad (sole user, sole device) |
-| **Product** | Bridget, a general-purpose Android bridge for personal AI agents |
+| **Product** | Bridgit, a general-purpose Android bridge for personal AI agents |
 | **Package** | `net.finleg.bridget` (sideloaded, not on the Play Store) |
 | **Device** | Google Pixel 10 Pro XL, Android 17 (API 37); minimum Android 14 (API 34) |
-| **Current build** | Bridget 1.2.0 (installed 26 Oct 2026) |
+| **Current build** | Bridgit 1.2.0 (installed 26 Oct 2026) |
 | **Supersedes** | `spec-v1.0.pdf` (as amended), `spec-per-agent-permissions.md`, `spec-agent-inbox.md`, `spec-flashlight.md`, `spec-screenshot.md`, `spec-access-screen.md` |
 
 This document is written to be reviewed by people and by other AI systems
@@ -67,14 +67,14 @@ tied to a phase keep a status tag ([Decided], [Proposed], [Open]).
 | Term | Meaning |
 |---|---|
 | **Agent** | An AI system Rahul has given access, for example Muse, Grok, Claude or Codex. Each has a name and its own key. |
-| **Key** | The secret an agent sends as `Authorization: Bearer <key>`. One per agent. Bridget stores only a salted hash. |
-| **Setup prompt** | A block of text Bridget generates when an agent is added. It contains the key, the address and the rules, and is pasted into the agent so it can connect immediately. |
+| **Key** | The secret an agent sends as `Authorization: Bearer <key>`. One per agent. Bridgit stores only a salted hash. |
+| **Setup prompt** | A block of text Bridgit generates when an agent is added. It contains the key, the address and the rules, and is pasted into the agent so it can connect immediately. |
 | **Capability** | Something an agent can ask the phone to do, for example take a photo or read the location. |
 | **Master switch** | The on/off switch for a capability. In v2 it applies to all agents. |
 | **Interaction** | Something an agent sends to Rahul: a one-way **notice**, or a **question** that waits for his answer. Never called "prompt" or "query" in the product. |
 | **Grant** | A time-limited approval Rahul gives on the phone, for example "screen sharing for 1 hour" (used only as the screenshot fallback, 8.10). |
-| **Listener** | Bridget's always-on HTTP server, which runs inside a foreground service. |
-| **Tailnet** | Rahul's private Tailscale network. Bridget is reachable only from it. |
+| **Listener** | Bridgit's always-on HTTP server, which runs inside a foreground service. |
+| **Tailnet** | Rahul's private Tailscale network. Bridgit is reachable only from it. |
 | **Audit log** | The record of every request, setting change and event. Readable by agents through the log API. |
 
 ---
@@ -89,9 +89,9 @@ should treat these as settled unless a serious problem is found.
 | D1 | 26 Oct 2026 | The listener is **always on** (one foreground service with a permanent notification), not "only while the app is open". | Decided |
 | D2 | 26 Oct 2026 | Gallery access is **full** access. Selected-photos mode is still detected and reported. | Decided |
 | D3 | 26 Oct 2026 | Source lives in `android/` in the private `rahuliofam/finleg` repo. Superseded by D19. | Superseded |
-| D19 | 27 Oct 2026 | Bridget is **its own repo**, `sponicgarden/bridget` (private), owned by Sponic Garden, Inc., under the **Apache License 2.0**. History moved from finleg's `android/` folder. | Decided |
-| D4 | 26 Oct 2026 | The app is named **Bridget** (was "Almusca Device Bridge"). Package `net.finleg.bridget`. | Decided |
-| D5 | 26 Oct 2026 | Bridget is **general-purpose**: any number of named agents, each with its own key, with nothing tied to one agent vendor. | Decided |
+| D19 | 27 Oct 2026 | Bridgit is **its own repo**, `sponicgarden/bridgit` (private), owned by Sponic Garden, Inc., under the **Apache License 2.0**. History moved from finleg's `android/` folder. | Decided |
+| D4 | 26 Oct 2026 | The app is named **Bridgit** (was "Almusca Device Bridge"). Package `net.finleg.bridget`. | Decided |
+| D5 | 26 Oct 2026 | Bridgit is **general-purpose**: any number of named agents, each with its own key, with nothing tied to one agent vendor. | Decided |
 | D6 | 26 Oct 2026 | Four agents are paired: **Muse, Grok, Claude, Codex**. Keys are in Bitwarden as "Bridget — <Name> agent key". | Decided |
 | D7 | 26 Oct 2026 | Fast "last image" endpoint, sized for AI vision: long edge **1568 px, JPEG quality 85**, optional raw JPEG body. | Decided |
 | D8 | 26 Oct 2026 | Agents reach Rahul through **interactions**: a **notice** (one-way) or a **question** (needs an answer). Either may be **spoken aloud**. | Decided |
@@ -100,7 +100,7 @@ should treat these as settled unless a serious problem is found.
 | D11 | 27 Oct 2026 | **Per-agent permissions are deferred.** In v2 all switches are global. The data model keeps room for them (section 15). | Decided |
 | D12 | 27 Oct 2026 | **Logging is available programmatically to every agent** (section 10). | Decided |
 | D13 | 27 Oct 2026 | Adding an agent produces a **setup prompt** containing the key that can be pasted into any agent for immediate access (section 6). | Decided |
-| D14 | 27 Oct 2026 | Bug reports and feature requests copy the **Spotka** apps' reporter (sponic repo), adapted to Bridget (section 11). | Decided |
+| D14 | 27 Oct 2026 | Bug reports and feature requests copy the **Spotka** apps' reporter (sponic repo), adapted to Bridgit (section 11). | Decided |
 | D15 | 27 Oct 2026 | Screens use **native Kotlin Android Views with Material 3 components**, with a "techie but friendly" look (section 12). | Decided |
 | D16 | 27 Oct 2026 | Spec **"maximum capabilities"**: describe everything Android allows that's useful to a personal agent, phased (section 16). | Decided |
 | D17 | 27 Oct 2026 | **Screenshots use an Accessibility service**, with no per-screenshot approval (replaces D10's approve-each-time design). Default mode: a private in-memory copy; optional mode: Android's normal screenshot, saved to the gallery. The screen-share grant flow (once / 1 h / 16 h) stays only as the fallback when Accessibility is off. | Decided |
@@ -128,7 +128,7 @@ are the deliberate departures. Anything not listed still applies.
 
 ### 3.1 Purpose
 
-- **PRD-01 [Decided]** Bridget gives Rahul's personal AI agents controlled,
+- **PRD-01 [Decided]** Bridgit gives Rahul's personal AI agents controlled,
   visible, logged access to his phone: its sensors (camera, microphone,
   location), its data (photos, screenshots, files, phone status), its
   controls (flashlight and similar), and Rahul himself (notices and questions).
@@ -138,7 +138,7 @@ are the deliberate departures. Anything not listed still applies.
 
 ### 3.2 Principles (carried from v1, extended)
 
-- **PRD-03 [Decided] Request-driven.** Bridget does nothing with a sensor
+- **PRD-03 [Decided] Request-driven.** Bridgit does nothing with a sensor
   until an authenticated request arrives, and stops as soon as the request
   completes. The only standing exceptions are the Accessibility screenshot
   service (enabled once by Rahul, used only per request, D17) and
@@ -148,17 +148,17 @@ are the deliberate departures. Anything not listed still applies.
   naming the agent, Android's own privacy indicator, and the log.
 - **PRD-05 [Decided] Fail closed.** A missing permission, a switch turned
   off, an expired grant or a bad key returns an error. Nothing falls back to
-  a weaker path. Because visibility (PRD-04) depends on Bridget's own
+  a weaker path. Because visibility (PRD-04) depends on Bridgit's own
   notifications, captures are refused with `notifications_required` when
   POST_NOTIFICATIONS is denied or the `capture` channel is turned off
   (camera, mic, video, screenshot, location, flashlight).
 - **PRD-06 [Decided] The phone is the record.** The log lives on the phone.
-  Agents can read it; Bridget doesn't send it anywhere on its own.
+  Agents can read it; Bridgit doesn't send it anywhere on its own.
 - **PRD-07 [Proposed] Agent-friendly.** The API describes itself
   (`/v1/guide`, `/v1/openapi.json`), returns data sized for AI models by
   default, and gives every error a stable code and a plain next step.
 - **PRD-08 [Proposed] Two taps or fewer** for any setting Rahul must change.
-  Bridget deep-links to the exact Android page (section 12.12).
+  Bridgit deep-links to the exact Android page (section 12.12).
 
 ### 3.3 Users
 
@@ -166,14 +166,14 @@ are the deliberate departures. Anything not listed still applies.
 |---|---|
 | **Rahul** (owner) | Add an agent in under a minute; see at a glance what's on and what agents did; answer agents quickly; switch anything off instantly; report a bug in seconds. |
 | **Agents** (Muse, Grok, Claude, Codex, future) | Connect from a pasted prompt with no other setup; discover what's available; get fast, small, readable images; know exactly why a request failed; read the log; reach Rahul. |
-| **Developer agents** (Claude, Codex working on Bridget) | Read bug reports, feature requests and diagnostics straight from the phone through the API. |
+| **Developer agents** (Claude, Codex working on Bridgit) | Read bug reports, feature requests and diagnostics straight from the phone through the API. |
 
 ### 3.4 Not in scope
 
 - **PRD-09 [Decided]** No continuous or scheduled capture, live streaming,
   call recording or always-on listening. Location history/tracking is off
   by default and only possible as the owner-enabled option CAP-20a (Q14).
-- **PRD-10 [Decided, reworded after review]** Bridget never reaches into
+- **PRD-10 [Decided, reworded after review]** Bridgit never reaches into
   other apps' storage or private databases (Android forbids it). But some
   grants **do** expose data other apps produced, and each is in scope only
   when Rahul turns it on, with an Access-screen line saying exactly what it
@@ -184,12 +184,12 @@ are the deliberate departures. Anything not listed still applies.
   - screenshots: whatever is on screen except secure windows, 8.10;
   - Health Connect: data other apps wrote, 8.17.
   "Now playing" (8.7) needs notification access, so it's off unless 8.18 is
-  on; Bridget never enables notification access just for it.
-- **PRD-11 [Decided]** Nothing is done invisibly. Bridget never suppresses
+  on; Bridgit never enables notification access just for it.
+- **PRD-11 [Decided]** Nothing is done invisibly. Bridgit never suppresses
   Android's camera, microphone, location or screen-share indicators.
-  Accessibility screenshots have no Android indicator, so Bridget shows its
+  Accessibility screenshots have no Android indicator, so Bridgit shows its
   own notification for every one (CAP-25).
-- **PRD-12 [Decided]** No public internet exposure. Bridget listens only on
+- **PRD-12 [Decided]** No public internet exposure. Bridgit listens only on
   the Tailscale interface.
 
 ---
@@ -199,7 +199,7 @@ are the deliberate departures. Anything not listed still applies.
 ### 4.1 Shape
 
 ```
-Agent host (on tailnet) ──WireGuard (Tailscale)──▶ Pixel: Bridget
+Agent host (on tailnet) ──WireGuard (Tailscale)──▶ Pixel: Bridgit
                                                    ├─ BridgeService (foreground service, always on)
                                                    │   ├─ HTTP listener (Ktor CIO), bound to 100.x only
                                                    │   ├─ Capability modules (camera, mic, gallery, …)
@@ -249,7 +249,7 @@ Agent host (on tailnet) ──WireGuard (Tailscale)──▶ Pixel: Bridget
   (`onLinkPropertiesChanged`, `onLost`), not a 10-second poll, to keep the
   process idle (NFR-06). A safety re-check runs every 5 minutes.
   [Verify] On 27 Oct 2026 the Pixel had no Tailscale IPv6 address on `tun0`,
-  and `curl -6` to the MagicDNS name still reached Bridget; re-check on
+  and `curl -6` to the MagicDNS name still reached Bridgit; re-check on
   Tailscale updates.
 - **ARC-05 [Proposed]** Code is organised as **capability modules**. Each
   module declares its endpoints, the Android permissions or special access it
@@ -292,12 +292,12 @@ Agent host (on tailnet) ──WireGuard (Tailscale)──▶ Pixel: Bridget
 - **ARC-12 [Proposed]** HTTP only (WireGuard encrypts the tunnel). HTTPS with
   Tailscale certificates is listed as Open Q8.
 - **ARC-12a [P1]** Android blocks the app's own outgoing cleartext HTTP
-  (target 28+). Bridget ships a network security config that allows
+  (target 28+). Bridgit ships a network security config that allows
   cleartext only to the tailnet (`100.64.0.0/10` and the tailnet's `ts.net`
   domain); everything else, including public callbacks, must be HTTPS. The
   inbound listener isn't affected.
 
-### 4.4 Relay mode: reaching Bridget without Tailscale (push-woken mailbox)
+### 4.4 Relay mode: reaching Bridgit without Tailscale (push-woken mailbox)
 
 Direct mode (4.3) needs every agent on the tailnet. Many useful agents can't
 join it: hosted assistants, cloud automations, ChatGPT-style actions, email or
@@ -310,7 +310,7 @@ result back.
 Agent (anywhere) ──HTTPS──▶ Relay (Supabase edge function + tables + storage, finleg project)
                                 │  stores job (encrypted), sends push
                                 ▼
-                     FCM high-priority data message ──▶ Pixel: Bridget wakes
+                     FCM high-priority data message ──▶ Pixel: Bridgit wakes
                                                           fetches job ─▶ runs capability
                                                           uploads result (encrypted) ─▶ Relay
 Agent ◀── long-poll / webhook ── Relay ◀─────────────────────────────────────┘
@@ -362,7 +362,7 @@ Agent ◀── long-poll / webhook ── Relay ◀─────────�
   notification, and a force-stopped app gets no FCM until opened. So relay
   wake-ups post a short visible notification, jobs live 30 minutes (not 10),
   and a force-stopped phone reports `service_start_blocked` on the next pick-up.
-- **ARC-17 [Decided] Android rules still apply.** A push doesn't let Bridget
+- **ARC-17 [Decided] Android rules still apply.** A push doesn't let Bridgit
   open the camera or microphone from the background. Relay mode works
   through the same always-on service (ARC-02), and if that service lacks
   camera or mic access, relay jobs get the same `service_start_blocked`.
@@ -380,7 +380,7 @@ Agent ◀── long-poll / webhook ── Relay ◀─────────�
 | A hosted agent (for example a cloud Muse) uses the phone without joining Tailscale | Relay mode, same API |
 | Phone on mobile data with Tailscale off or broken still reaches agents | Phone talks outbound HTTPS only |
 | "Ask Rahul" from anywhere: any system can send a notice or question by HTTPS, and the answer comes back by webhook or long poll | Interactions (8.13) over the relay |
-| Bridget's listener can sleep: the push wakes it, saving battery (later, if always-on proves costly) | FCM wake + on-demand listener (Open Q11) |
+| Bridgit's listener can sleep: the push wakes it, saving battery (later, if always-on proves costly) | FCM wake + on-demand listener (Open Q11) |
 | Email-to-phone or SMS-to-phone triggers (forward an email to an address, it becomes a notice) | Relay inbound adapter, later |
 | Several devices (a second phone, a tablet, a watch) behind one agent key | Relay routes by device id, later |
 
@@ -398,7 +398,7 @@ Agent ◀── long-poll / webhook ── Relay ◀─────────�
 - **SEC-03 [Decided] Master switches:** each capability has a switch,
   changeable only on the phone. All switches start **off** on a fresh install.
 - **SEC-04 [Decided] Screenshots:** need the master switch **and** either
-  Bridget's Accessibility service (enabled once in Android Settings, D17) or,
+  Bridgit's Accessibility service (enabled once in Android Settings, D17) or,
   as the fallback, a time-limited screen-share grant approved on the phone
   (8.10).
 - **SEC-05 [Decided] Visibility:** PRD-04.
@@ -435,11 +435,11 @@ Agent ◀── long-poll / webhook ── Relay ◀─────────�
 - **SEC-11 [Proposed, corrected after review]** Copying the prompt or key
   marks the clip as sensitive (`ClipDescription.EXTRA_IS_SENSITIVE`), so
   Android hides the preview. Android doesn't let a background app read or
-  clear the clipboard, so Bridget can't clear it on a timer. Instead, the
-  next time Bridget is in the foreground it checks the clip's **label**
+  clear the clipboard, so Bridgit can't clear it on a timer. Instead, the
+  next time Bridgit is in the foreground it checks the clip's **label**
   (`getPrimaryClipDescription()`, which doesn't trigger the "pasted from
-  clipboard" toast) and, if the label is still Bridget's, clears it. The
-  snackbar says: "Copied. Bridget clears it the next time you open the app."
+  clipboard" toast) and, if the label is still Bridgit's, clears it. The
+  snackbar says: "Copied. Bridgit clears it the next time you open the app."
 - **SEC-12 [Decided]** Pasting a key into a hosted AI service is Rahul's
   accepted risk. The UI says so in one line, and makes rotation one tap.
 
@@ -464,15 +464,15 @@ Agent ◀── long-poll / webhook ── Relay ◀─────────�
 
 | Threat | Mitigation |
 |---|---|
-| Another tailnet device calls Bridget | Needs a valid key (SEC-02). ACL hardening (SEC-01). |
+| Another tailnet device calls Bridgit | Needs a valid key (SEC-02). ACL hardening (SEC-01). |
 | A key leaks (pasted chat, log, repo) | One-tap rotation (SEC-10); `brg_` prefix for scanners (SEC-09); Bitwarden as the store of record. |
 | A paired agent misbehaves (captures too much) | Notification and indicator every time (PRD-04); full log; rate limits; master switches; remove agent in one tap; per-agent permissions later (section 15). |
 | Phone lost | 1. Remove the phone from the tailnet in the Tailscale admin console: this alone cuts every direct-mode path. 2. Relay mode: flip **device disable** on the relay (ARC-15a). 3. Lock or erase with Find My Device. 4. Delete the agents' copies of their keys (Bitwarden items "Bridget — <Name> agent key" and the agents' own stores). Keys can't be rotated from the lost phone, so steps 1-2 are the kill switches. |
 | LAN attacker sends packets to the 100.x address | Listener binds only to the Tailscale address, and the source check rejects non-tailnet callers (ARC-04). |
-| An agent takes screenshots without Rahul noticing | Every capture posts a Bridget notification and a log entry (CAP-25a); master switch; rate limits; the Accessibility service can only take screenshots (CAP-26). |
+| An agent takes screenshots without Rahul noticing | Every capture posts a Bridgit notification and a log entry (CAP-25a); master switch; rate limits; the Accessibility service can only take screenshots (CAP-26). |
 | Malicious HTML in an interaction | HTML cards run with no network, no storage and a bridge that can only submit an answer (8.13). |
-| Spoofed agent in the UI | Bridget always draws the agent name itself; agent content can't style the header (8.13). |
-| Prompt injection through data an agent reads (screenshots, shared files) | Out of Bridget's control; the setup prompt tells agents that phone content is data, not instructions (Appendix B). |
+| Spoofed agent in the UI | Bridgit always draws the agent name itself; agent content can't style the header (8.13). |
+| Prompt injection through data an agent reads (screenshots, shared files) | Out of Bridgit's control; the setup prompt tells agents that phone content is data, not instructions (Appendix B). |
 | Other processes on a shared agent host read the agent's key file | Accepted risk (Grok's box: several bots share the `box` user). Key file mode 600; key written by a file tool, never a shell argument; rotate if the host is compromised. |
 
 ---
@@ -507,15 +507,15 @@ under a minute, with nothing typed except the name.
      Tailscale can't route normally, like Grok's box." Adds helper steps.
    - **Relay**: "The agent isn't on Tailscale." Only shown when relay mode
      is set up (4.4).
-3. **Self-check.** Before showing the key, Bridget checks: listener running,
+3. **Self-check.** Before showing the key, Bridgit checks: listener running,
    bound to the Tailscale address, port open (it connects to itself over the
    tailnet address; verified to work on the Pixel on 27 Oct 2026), and the
    relay reachable if chosen. Failures are shown with a fix button. If only
-   the self-connection fails while the listener is bound, Bridget warns
+   the self-connection fails while the listener is bound, Bridgit warns
    ("Couldn't confirm from the phone itself; it may still work from the
    agent") and lets Rahul continue. This keeps "immediate access" true on
    the first paste.
-4. **Setup prompt.** Bridget creates the key and shows the prompt (6.4).
+4. **Setup prompt.** Bridgit creates the key and shows the prompt (6.4).
 5. **Waiting for the first call.** The screen shows "Waiting for Muse's first
    call…" with a live indicator. When any request with the new key arrives,
    it switches to "Muse connected: GET /v1/health, 140 ms, from
@@ -532,7 +532,7 @@ under a minute, with nothing typed except the name.
 - **AGT-05a [P1] Don't lose the key to a crash.** Until Rahul taps **Copy**,
   **Done** or **Leave**, the new key is kept encrypted with an Android
   Keystore key (never in plain storage), for at most 30 minutes. If the app is
-  killed meanwhile, reopening Bridget returns to the setup prompt. After
+  killed meanwhile, reopening Bridgit returns to the setup prompt. After
   acknowledgement or 30 minutes, the encrypted copy is wiped; after that the
   only way forward is Rotate key.
 
@@ -541,7 +541,7 @@ under a minute, with nothing typed except the name.
 - **AGT-06 [Decided]** The screen shows the prompt in a monospace card, with
   actions:
   - **Copy prompt** (primary). Sensitive clip (SEC-11). Snackbar: "Copied.
-    Paste it into Muse. Bridget clears it the next time you open the app."
+    Paste it into Muse. Bridgit clears it the next time you open the app."
   - **Share…**: Android share sheet, for sending to an agent's app on the
     phone. A one-line warning above: "Anyone who gets this text can use your
     phone until you rotate the key."
@@ -556,13 +556,13 @@ under a minute, with nothing typed except the name.
   always-current reference.
 - **AGT-08 [Proposed]** The setup prompt screen and the Pair with code
   screen set `FLAG_SECURE`, so the key or code can't be captured by
-  screenshots (including Bridget's own Accessibility screenshots), screen
+  screenshots (including Bridgit's own Accessibility screenshots), screen
   recording or Recents thumbnails.
 
 ### 6.4 Setup prompt contents
 
 - **AGT-09 [Decided]** The prompt MUST contain, in this order:
-  1. One sentence on what Bridget is, and the agent's name in Bridget.
+  1. One sentence on what Bridgit is, and the agent's name in Bridgit.
   2. Connection: base URL (MagicDNS name), IP fallback, the note that it's
      reachable only from Rahul's tailnet (or the relay URL in relay mode).
   3. The key, and the instruction to store it in the agent's secret or
@@ -636,7 +636,7 @@ under a minute, with nothing typed except the name.
   `X-Request-Id` header). The same id is in the log entry.
 - **API-04 [Decided]** JSON bodies, UTF-8. Media in JSON is base64 in
   `data_base64`. Media endpoints also accept `raw=1` and return the bytes
-  with metadata in `X-Bridget-*` headers.
+  with metadata in `X-Bridgit-*` headers.
 - **API-05 [Decided]** Errors: HTTP status plus
   `{"error": "<code>", "message": "<plain next step>", "request_id": "…"}`
   and optional fields (`setting`, `permission`, `photo_id`, `retry_after_s`,
@@ -787,15 +787,15 @@ every request is logged (section 10).
   JPEG). Needs READ_MEDIA_VIDEO, a separate grant from images:
   `/v1/capabilities` reports `access_mode` per media type
   (`images`, `videos`: `full` | `selected` | `none`).
-- **CAP-13 [P3, spike first]** Downloads. Scoped storage means Bridget,
+- **CAP-13 [P3, spike first]** Downloads. Scoped storage means Bridgit,
   without MANAGE_EXTERNAL_STORAGE (never requested), can't list or open other
-  apps' files in Downloads; `MediaStore.Downloads` returns only Bridget's own.
+  apps' files in Downloads; `MediaStore.Downloads` returns only Bridgit's own.
   So the endpoint is replaced by a **pick** flow: `POST /v1/downloads/pick`
   sends Rahul a question "**<Agent> wants a file from your phone**" [Choose
   file] [Deny]; **Choose file** opens Android's file picker, and the chosen
-  file is copied into Bridget and returned (or `consent_pending`, API-12).
+  file is copied into Bridgit and returned (or `consent_pending`, API-12).
   A spike on the Pixel confirms this before P3 is committed.
-- Read-only always: Bridget never deletes or edits gallery items.
+- Read-only always: Bridgit never deletes or edits gallery items.
 
 ### 8.6 Last image
 
@@ -821,7 +821,7 @@ every request is logged (section 10).
   - `sound`: ringer_mode (normal | vibrate | silent), dnd (off | priority |
     alarms | none), volumes {ring, media, alarm, call} (0-100),
     headphones_connected;
-  - `network`: type (wifi | cellular | none), wifi_ssid (only when Bridget
+  - `network`: type (wifi | cellular | none), wifi_ssid (only when Bridgit
     has location permission **and** the phone's Location setting is on;
     otherwise null with `ssid_blocked_reason`), signal_level (0-4),
     data_saver, roaming, tailscale_ip;
@@ -859,17 +859,17 @@ every request is logged (section 10).
   The v1 exclusion was the owner's own design rule, not an Android or legal
   limit: tracking your own phone with your own agents is allowed (Android:
   "Allow all the time" background location). If turned on:
-  - Bridget records a fix every 5-15 minutes while moving (fused provider,
+  - Bridgit records a fix every 5-15 minutes while moving (fused provider,
     balanced power), stored **only on the phone**, kept 30 days (setting).
   - `GET /v1/location/history?since=&until=` (points, simplified),
     `GET /v1/places` / `POST /v1/places {"name":"Home","lat","lon","radius_m"}`,
     and events `place.entered` / `place.left` (9.1), for example "tell Grok
     when I get home".
   - Needs ACCESS_BACKGROUND_LOCATION; Android shows periodic reminders that
-    Bridget uses location in the background.
+    Bridgit uses location in the background.
   - Privacy trade-off to state in the UI: an agent hosted by a company
     (for example Grok) stores whatever history it reads on that company's
-    servers. Bridget never sends history anywhere on its own.
+    servers. Bridgit never sends history anywhere on its own.
   - Tracking anyone else's phone is out of scope (single owner, single
     device; consent law varies).
 
@@ -887,7 +887,7 @@ every request is logged (section 10).
   Needs Do Not Disturb access (special access, 12.12). `none` (total
   silence) also mutes alarms; the response says so.
 - **CAP-22a [P3] Restore what was there.** Before any timed change (DND,
-  ringer, volumes, brightness), Bridget saves the previous value and restores
+  ringer, volumes, brightness), Bridgit saves the previous value and restores
   it when the time ends, when Rahul taps **Undo** in the notification, or at
   the next service start if the process died meanwhile. Untimed changes
   stay until changed.
@@ -903,42 +903,42 @@ every request is logged (section 10).
 
 ### 8.10 Screenshot
 
-Decision D17: screenshots go through a Bridget **Accessibility service**, so
+Decision D17: screenshots go through a Bridgit **Accessibility service**, so
 agents get them on request with no approval each time, like `shotpix` over
-ADB. Rahul turns the service on once (**Settings → Accessibility → Bridget →
+ADB. Rahul turns the service on once (**Settings → Accessibility → Bridgit →
 On**, one tap from the Access screen).
 
 - **CAP-25 [P2]** `POST /v1/screen/capture` with sizing (API-10; default
   `size=agent`, 1568 px, q85) and `raw=1`. Optional
   `"mode": "private" | "system"`; default from Settings (**private**):
   - **private**: `AccessibilityService.takeScreenshot(displayId, …)`
-    (Android 11+) returns the frame in memory. Bridget encodes it, returns it
+    (Android 11+) returns the frame in memory. Bridgit encodes it, returns it
     and discards it. Nothing is saved, and there's no shutter flash.
   - **system**: `performGlobalAction(GLOBAL_ACTION_TAKE_SCREENSHOT)` takes
     a normal Android screenshot (flash, preview thumbnail, saved to
-    `Pictures/Screenshots`). Bridget waits up to 5 s for the new MediaStore
+    `Pictures/Screenshots`). Bridgit waits up to 5 s for the new MediaStore
     item and returns it exactly as `GET /v1/image/last?type=screenshot`
-    would, plus `gallery_id`. These stay in Rahul's gallery: Bridget can't
+    would, plus `gallery_id`. These stay in Rahul's gallery: Bridgit can't
     delete them without his confirmation.
   - Response: `captured_at, width_px, height_px, format, size_bytes, mode,
-    data_base64` (or raw bytes with `X-Bridget-*` headers), and `gallery_id`
+    data_base64` (or raw bytes with `X-Bridgit-*` headers), and `gallery_id`
     in system mode.
 - **CAP-25a [P2] Visibility.** Accessibility captures show no Android
-  indicator, so every capture posts a Bridget notification on the `capture`
+  indicator, so every capture posts a Bridgit notification on the `capture`
   channel: "**Grok took a screenshot**" (auto-dismissed after 10 s, kept in
   the log). While the service is enabled, the ongoing listener notification
   says "Screenshots on". Every capture is logged with agent, mode and size.
 - **CAP-25b [P2] Limits.** Android throttles `takeScreenshot` (about one
-  per second, [Verify] the exact interval on API 37); Bridget allows 1
+  per second, [Verify] the exact interval on API 37); Bridgit allows 1
   capture per 2 s per agent and 60 per hour per agent, then `rate_limited`.
   No capture while the phone is locked (`device_locked`: the lock screen is
   all there is to see).
 - **CAP-25c [P2] Secure windows.** Apps that block screenshots (banking,
-  password managers, Bridget's own setup prompt) come out black or are
-  refused by Android. Bridget returns what Android gives and never works
+  password managers, Bridgit's own setup prompt) come out black or are
+  refused by Android. Bridgit returns what Android gives and never works
   around it; the response says `"secure_content": true` when Android
   reports it ([Verify] how `takeScreenshot` signals secure layers).
-- **CAP-26 [P2] The service does only this.** Bridget's Accessibility
+- **CAP-26 [P2] The service does only this.** Bridgit's Accessibility
   service declares `canTakeScreenshot="true"` and **no** event types, no
   window-content retrieval, no gesture dispatch, and no key filtering. It
   can't read or tap the screen. Any later use (for example reading screen
@@ -957,12 +957,12 @@ On**, one tap from the Access screen).
   `GET /v1/screen/grants/{id}?wait=55` report the grant. Grants cover only
   the asking agent; the status-bar screen-share chip shows throughout.
   Platform rules from the review:
-  - Android's dialog defaults to sharing a **single app**; Bridget can
+  - Android's dialog defaults to sharing a **single app**; Bridgit can
     pre-select Entire screen but can't force it. The grant reports
     `capture_scope` (`screen` | `app`); with `app`, frames are black
     whenever that app isn't visible.
   - The dialog can only open from Rahul's tap (the question's button opens
-    a Bridget activity, which starts it). Background activity starts are
+    a Bridgit activity, which starts it). Background activity starts are
     blocked.
   - The grant ends, with `grant.ended`, on **Stop now**, the status-bar
     Stop, `MediaProjection.Callback.onStop`, screen lock, removing or
@@ -971,20 +971,20 @@ On**, one tap from the Access screen).
     the one exception to PRD-09, which is why it's the fallback only.
 - **CAP-26c [Decided] Restricted settings.** For an APK installed from a
   downloaded file, Android 13+ blocks enabling Accessibility until Rahul
-  allows restricted settings (UI-27). Bridget installed over ADB isn't
+  allows restricted settings (UI-27). Bridgit installed over ADB isn't
   affected.
 
 ### 8.11 Files to the phone
 
 - **CAP-27 [P4]** `POST /v1/files {"name","mime","data_base64","note","save_to_downloads":false}`
   or a raw body with `?name=&mime=`. Max 25 MB. Allowed: PDF, images, text,
-  CSV, JSON, audio, video, ZIP. Bridget checks the file's actual bytes
+  CSV, JSON, audio, video, ZIP. Bridgit checks the file's actual bytes
   ("magic numbers"), not the declared MIME type, and refuses APKs, other
   executables and ZIPs containing them (`invalid_parameter`).
 - Storage quota for agent files: 1 GB in total; over it, `quota_exceeded`.
   Files not saved to Downloads are deleted after 30 days.
 - Files land in the Inbox (12.6), stored privately. Rahul can open, share, or
-  **Save to Downloads** (`Downloads/Bridget/<Agent>/`). With
+  **Save to Downloads** (`Downloads/Bridgit/<Agent>/`). With
   `save_to_downloads: true` the copy is made immediately.
 - **CAP-28 [P4]** `GET /v1/files/{id}` → `{opened_at, saved_at, deleted}`;
   `GET /v1/files?mine=true` lists what this agent sent.
@@ -992,13 +992,13 @@ On**, one tap from the Access screen).
 
 ### 8.12 Share to an agent
 
-- **CAP-29 [P4]** Bridget is a share target for images, PDFs, text and
+- **CAP-29 [P4]** Bridgit is a share target for images, PDFs, text and
   links. Android Sharing Shortcuts list agents directly ("Grok",
-  "Claude"…), so sharing is two taps; plain "Bridget" asks which agent. Rahul
-  can add a note. Android shows only a few direct targets, so Bridget
+  "Claude"…), so sharing is two taps; plain "Bridgit" asks which agent. Rahul
+  can add a note. Android shows only a few direct targets, so Bridgit
   publishes the 4 most recently used agents, refreshed when agents change.
 - **CAP-29a [P4] Copy on receipt.** The sending app's permission to read a
-  shared item ends when Bridget's share screen closes, so Bridget copies the
+  shared item ends when Bridgit's share screen closes, so Bridgit copies the
   bytes into private storage **before** finishing that screen, and stores
   the copy (max 50 MB per share).
 - **CAP-30 [P4]** Agents collect shares with `GET /v1/shares?wait=55`
@@ -1043,7 +1043,7 @@ On**, one tap from the Access screen).
     `{"package": "<id>"}` (launches that app via its launch intent).
     `intent:`, `file:`, `content:`, `javascript:` and explicit component
     intents are refused (`invalid_parameter`). The card shows the host or
-    package name under the button, drawn by Bridget.
+    package name under the button, drawn by Bridgit.
   - `speak: true` reads "<Agent> says: <title>. <text>" with Android
     text-to-speech; skipped in silent mode, DND or a call unless `urgent` and
     allowed in Settings.
@@ -1059,7 +1059,7 @@ On**, one tap from the Access screen).
 - **CAP-34 [P5] HTML cards** (after the fast template ships in P2).
   `"html": "<…>"` instead of text/controls. The WebView is configured in
   code, never by the page, and the page is treated as untrusted:
-  - Content Security Policy forced by Bridget:
+  - Content Security Policy forced by Bridgit:
     `default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'`
     (page scripts run, but can't load anything).
   - `shouldInterceptRequest` fails closed for every URL; navigation and
@@ -1071,8 +1071,8 @@ On**, one tap from the Access screen).
   - One `@JavascriptInterface` method, `Bridget.respond(json)`, accepted
     once per card (answer up to 16 KB, returned as `answer.data`).
   - 256 KB of raw HTML before parsing; larger is refused.
-  - Bridget's own chrome around the card can't be covered: header "From
-    <Agent> - custom card", and the Bridget toolbar with **Dismiss**.
+  - Bridgit's own chrome around the card can't be covered: header "From
+    <Agent> - custom card", and the Bridgit toolbar with **Dismiss**.
 - Limits: 5 open questions and 30 notices per hour per agent
   (`too_many_open`).
 
@@ -1084,7 +1084,7 @@ On**, one tap from the Access screen).
   silence; the response says so.
   - Full-screen alert needs the **full-screen notifications** permission,
     which Android doesn't grant a sideloaded non-alarm app by default; it's
-    an Access row (Appendix E). Without it, Bridget uses a high-priority
+    an Access row (Appendix E). Without it, Bridgit uses a high-priority
     heads-up notification with sound. 1 per minute.
 
 ### 8.15 On-device text recognition
@@ -1114,13 +1114,13 @@ On**, one tap from the Access screen).
   distance, active calories, sleep sessions (start, end, stages if present),
   resting and average heart rate, exercise sessions. Read-only.
 - Android: Health Connect permissions per record type, granted on Health
-  Connect's own screen. Bridget must declare:
+  Connect's own screen. Bridgit must declare:
   - an activity for `androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE`
     (the privacy explanation), and an exported activity alias for
     `android.intent.action.VIEW_PERMISSION_USAGE` with category
     `android.intent.category.HEALTH_PERMISSIONS`;
   - `READ_HEALTH_DATA_IN_BACKGROUND`, because requests are answered by the
-    background service; without it, reads work only while Bridget is on
+    background service; without it, reads work only while Bridgit is on
     screen and the endpoint returns `access_needed`;
   - `READ_HEALTH_DATA_HISTORY` for dates more than 30 days back.
   `/v1/capabilities` reports both grants. [Verify] all of this for a
@@ -1133,7 +1133,7 @@ On**, one tap from the Access screen).
   Needs notification listener access, which for a downloaded APK may be a
   "restricted setting" (12.12). Hidden by default because the Muse app
   already reads notifications. Exposes every app's notification text
-  (PRD-10), and the Access row says so. When the switch is off, Bridget
+  (PRD-10), and the Access row says so. When the switch is off, Bridgit
   unbinds its listener (`requestUnbind`), so it receives nothing.
 
 ### 8.19 Clipboard write
@@ -1152,7 +1152,7 @@ On**, one tap from the Access screen).
 - **CAP-41 [P2]** Android blocks apps from opening screens from the
   background, so "open" is always Rahul's tap on an interaction `link`
   control (8.13), using its scheme allowlist. Android 12+ blocks
-  notification "trampolines", so a notification button opens a Bridget
+  notification "trampolines", so a notification button opens a Bridgit
   activity directly, which then starts the link from that tap.
 
 ### 8.21 Sensor snapshot
@@ -1160,14 +1160,14 @@ On**, one tap from the Access screen).
 - **CAP-42 [P3]** `GET /v1/sensors?which=light,pressure,proximity,steps,orientation,motion`
   returns one reading each with `as_of` (motion: 1 s average of
   accelerometer and gyroscope). Light and proximity may not update while the
-  screen is off; Bridget waits up to 1 s for a fresh event and otherwise
+  screen is off; Bridgit waits up to 1 s for a fresh event and otherwise
   returns the last value with its age. Steps are the count since the last
   reboot. No permissions except ACTIVITY_RECOGNITION for steps.
 
 ### 8.22 Communications (not scheduled)
 
 - **CAP-43 [Open]** SMS read/send, contacts, calendar, call log. v1 excluded
-  these because the Muse app covers them. If Bridget is to replace Muse's
+  these because the Muse app covers them. If Bridgit is to replace Muse's
   device access, these could come later, with every **send** (SMS, calendar
   invite) requiring a question interaction that Rahul approves on the phone.
   Owner decision: Open Q1.
@@ -1210,13 +1210,13 @@ opened) is delivered **both** ways below.
   tailnet targets are allowed: `100.64.0.0/10`, `fd7a:115c:a1e0::/48`, or a
   name under the tailnet's own `ts.net` domain. A public HTTPS URL needs the
   extra switch **Allow internet callbacks** (off).
-- **EVT-05a [P2] No request forgery.** For every attempt Bridget resolves
+- **EVT-05a [P2] No request forgery.** For every attempt Bridgit resolves
   the host, checks the **resolved** address against the rules (tailnet
   ranges for tailnet callbacks; for public callbacks, a publicly routable
   address only: never loopback, private, link-local, CGNAT or ULA), then
   connects to that exact address. Redirects are never followed. Ports are
   limited to 80/443 and the agent's registered port.
-- **EVT-06 [P2]** When an event for that agent occurs, Bridget POSTs
+- **EVT-06 [P2]** When an event for that agent occurs, Bridgit POSTs
   `{"event": {...}, "agent": "<name>"}` to the URL with headers
   `X-Bridget-Timestamp: <unix seconds>`, `X-Bridget-Event-Id: <id>` and
   `X-Bridget-Signature: sha256=<hex HMAC-SHA256 of "<timestamp>.<raw body>">`
@@ -1249,8 +1249,8 @@ developer agents (AGT-15) always see all entries.
 
 | Channel | Contains | Written by |
 |---|---|---|
-| `audit` | Every API request (success or failure), every setting, switch, agent, grant and pairing change | Bridget |
-| `diagnostic` | Service starts/stops, bind changes, Tailscale up/down, FGS type changes, crashes (stack trace hash + first frame), slow requests, battery-optimisation state | Bridget |
+| `audit` | Every API request (success or failure), every setting, switch, agent, grant and pairing change | Bridgit |
+| `diagnostic` | Service starts/stops, bind changes, Tailscale up/down, FGS type changes, crashes (stack trace hash + first frame), slow requests, battery-optimisation state | Bridgit |
 | `agent` | Notes agents choose to write ("checked fridge photo, milk low") | Agents, via `POST /v1/log` |
 
 ### 10.2 Entry schema
@@ -1264,7 +1264,7 @@ developer agents (AGT-15) always see all entries.
   "channel": "audit" | "diagnostic" | "agent",
   "level": "debug" | "info" | "warn" | "error",
   "kind": "request" | "setting" | "agent" | "grant" | "pairing" | "interaction" | "share" | "file" | "service" | "crash" | "note" | "feedback",
-  "agent": "Grok", "agent_id": "a1b2c3d4e5f6",     // null for Bridget's own entries
+  "agent": "Grok", "agent_id": "a1b2c3d4e5f6",     // null for Bridgit's own entries
   "source_ip": "100.110.68.46",
   "method": "POST", "endpoint": "/v1/camera/snapshot",
   "params": {"camera": "rear", "max_width_px": 1024},   // redacted, strings ≤200 chars
@@ -1328,8 +1328,8 @@ updates and export.
 
 Copied from the Spotka apps' reporter (sponic repo: Android
 `ReportBugScreen.kt`, `BugReportClient.kt`, edge function `bug-report`,
-pattern doc `docs/dev/mobileappbugreporter.html`), adapted for Bridget: there
-is no Bridget backend or user account, so reports are **stored on the phone
+pattern doc `docs/dev/mobileappbugreporter.html`), adapted for Bridgit: there
+is no Bridgit backend or user account, so reports are **stored on the phone
 first** and are readable by developer agents through the API. Uploading
 somewhere is optional (11.6).
 
@@ -1338,7 +1338,7 @@ somewhere is optional (11.6).
 - **FBK-01 [P1]** **More → Report a bug** and **More → Request a feature**;
   also the overflow menu (⋮) on every screen, and **Settings → Help &
   feedback**. No shake gesture (Spotka has none).
-- **FBK-02 [P1] Auto "last screen".** Before the form opens, Bridget
+- **FBK-02 [P1] Auto "last screen".** Before the form opens, Bridgit
   captures the screen Rahul was on, from inside the app (`PixelCopy` of the
   Activity window, no MediaProjection needed). It waits for the menu to close,
   retries once, and rejects a blank image (Spotka `LastScreenCapture`). If
@@ -1354,7 +1354,7 @@ somewhere is optional (11.6).
 - **FBK-04 [P1]** Fields, in order:
   1. Error banner (form scrolls to it when shown).
   2. Intro. Bug: "Describe what went wrong. A screenshot helps if you have
-     one." Feature: "What would make Bridget more useful? Sketches and
+     one." Feature: "What would make Bridgit more useful? Sketches and
      screenshots welcome."
   3. Label "What happened?" / "What would you like to see?", with a
      **Don't auto-fix** checkbox (default off; hint when ticked: "Leave this
@@ -1368,7 +1368,7 @@ somewhere is optional (11.6).
   6. **Add screenshot / Add another**: Android photo picker, multi-select,
      up to 5 images in total ("Up to 5 screenshots per report.").
      Thumbnails with remove buttons.
-  7. **Include recent log** (Bridget addition; default on): the last 50
+  7. **Include recent log** (Bridgit addition; default on): the last 50
      audit and diagnostic entries, redacted per LOG-02, shown as "50 log
      entries" with a **Preview** link.
   8. **Type**: Bug | Feature. Switching keeps a separate draft per type.
@@ -1394,7 +1394,7 @@ somewhere is optional (11.6).
 ### 11.4 After submitting
 
 - **FBK-08 [P1]** Dialog "Report saved" (or "Report sent" if uploaded):
-  "Thanks. It's report #0007. Developer agents can pick it up from Bridget's
+  "Thanks. It's report #0007. Developer agents can pick it up from Bridgit's
   API." In debug builds, the dialog links to the report in the Feedback list.
 - **FBK-09 [P1]** **More → My reports** lists every report with kind, first
   line, date, status (`new`, `seen by agent`, `in progress`, `fixed`,
@@ -1426,23 +1426,23 @@ somewhere is optional (11.6).
   such reports (they may still read them). Feature requests always carry
   `no_autofix: true`.
 - **FBK-12 [P1]** `POST /v1/feedback {"kind":"bug","description":"…"}`
-  lets any agent file a report (for example when it hits a Bridget error),
+  lets any agent file a report (for example when it hits a Bridgit error),
   with `capture_source: "agent"`. Only developer agents may attach images;
-  the attached log is generated by Bridget, never supplied by the agent.
+  the attached log is generated by Bridgit, never supplied by the agent.
 - **FBK-13 [P1]** Limits: 10 reports per hour per kind from the form
   (Spotka's limit), 5 per hour per agent from the API.
 
 ### 11.6 Optional upload
 
 - **FBK-14 [Open]** **Settings → Feedback → Also send reports to:** Off
-  (default) | finleg intranet tasks | GitHub issue in `sponicgarden/bridget`.
+  (default) | finleg intranet tasks | GitHub issue in `sponicgarden/bridgit`.
   Proposed default target if turned on: a new finleg Supabase edge function
   `bridget-feedback` that writes a `tasks` row labelled `bridget bug report`
   or `bridget feature request`, with screenshots in storage, authenticated by
   a per-install feedback key (not an agent key). Uploads queue offline and
   retry. Open Q6 decides the target. Spotka's server-side extras (AI clarity
   check, duplicate folding, acknowledgement email, Slack post) are
-  explicitly **out of scope** for Bridget unless the target already does them.
+  explicitly **out of scope** for Bridgit unless the target already does them.
 
 ---
 
@@ -1460,7 +1460,7 @@ somewhere is optional (11.6).
   `ExtendedFloatingActionButton`, `RecyclerView`. No Compose, no WebView UI
   (except HTML interaction cards, 8.13).
 - **UI-02 [Proposed] Colour.** Brand colours from the icon. Dynamic colour
-  (Material You) **off**, so Bridget looks the same everywhere and status
+  (Material You) **off**, so Bridgit looks the same everywhere and status
   colours stay meaningful.
 
 | Token | Light | Dark | Use |
@@ -1514,11 +1514,11 @@ somewhere is optional (11.6).
 
 - **UI-08 [P1]** Three short pages (`ViewPager2` with page indicator), then
   Home:
-  1. "**Meet Bridget.** Let your AI agents use this phone's camera, mic,
+  1. "**Meet Bridgit.** Let your AI agents use this phone's camera, mic,
      photos and more, only when they ask, always visibly."
-  2. "**Private by design.** Bridget only answers over your Tailscale
+  2. "**Private by design.** Bridgit only answers over your Tailscale
      network. Each agent gets its own key. Everything is logged here."
-     Then the notifications permission request, with the line "Bridget uses
+     Then the notifications permission request, with the line "Bridgit uses
      notifications to show you every time an agent uses your phone. Without
      them, camera, mic and screenshots stay off." (PRD-05)
      Shows a live Tailscale check: "Tailscale: connected (100.94.27.79)" or
@@ -1531,7 +1531,7 @@ somewhere is optional (11.6).
 
 ```
 ┌──────────────────────────────────────────────┐
-│ Bridget                                   ⋮  │
+│ Bridgit                                   ⋮  │
 ├──────────────────────────────────────────────┤
 │ ┌──────────────────────────────────────────┐ │
 │ │ ● Listening                    [Pause]   │ │  hero card, primaryContainer
@@ -1611,7 +1611,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 ```
 
 - **UI-16 [P2]** Interaction detail: full card with the agent header (drawn
-  by Bridget), image, text, all controls, **Play aloud**, and status; for
+  by Bridgit), image, text, all controls, **Play aloud**, and status; for
   answered ones, the answer and time. File detail: in-app image and PDF
   viewer (`PdfRenderer`), **Open with**, **Save to Downloads**, **Delete**.
   Share detail: content preview and pickup status.
@@ -1632,7 +1632,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
   - Overflow: **Export…** (JSONL or CSV via the system file picker),
     **Clear log** (confirm), **Diagnostics** (switch to the diagnostic
     channel).
-  - Empty state: "Nothing yet. When an agent uses Bridget, it shows up here."
+  - Empty state: "Nothing yet. When an agent uses Bridgit, it shows up here."
 
 ### 12.8 Features (master switches)
 
@@ -1666,7 +1666,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
     Show question text on the lock screen (off); Log precise locations (off);
     Address lookup (off).
   - **Log**: retention entries/days; Export; Clear.
-  - **Notifications**: links to Bridget's Android notification channels
+  - **Notifications**: links to Bridgit's Android notification channels
     (Listener, Captures, Questions, Notices, Files, Feedback).
   - **Feedback**: Also send reports to (11.6).
   - **Appearance**: System / Light / Dark.
@@ -1689,7 +1689,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 - **UI-22 [P1]** The ongoing listener notification shows state and the last
   request ("Grok · image/last · 2 min ago") with actions **Pause** and
   **Open**.
-- **UI-23 [P2]** Quick Settings tile **Bridget**: tap to pause/resume the
+- **UI-23 [P2]** Quick Settings tile **Bridgit**: tap to pause/resume the
   listener; long-press opens Home.
 - **UI-24 [P3]** Home-screen widget (optional): listener state and the last
   three requests.
@@ -1697,7 +1697,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 ### 12.12 Access (Android settings, one tap each)
 
 - **UI-25 [P1]** A list of every Android permission and special access
-  Bridget can use, with status (**On**, **Off**, **Partly**, **Blocked**), a
+  Bridgit can use, with status (**On**, **Off**, **Partly**, **Blocked**), a
   one-line "what this unlocks", and one button that opens the exact page.
   Rows re-check on resume. Rows for unbuilt features are hidden. Links were
   checked on the Pixel (Android 17) with `cmd package resolve-activity`;
@@ -1713,7 +1713,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
   restricted settings**; confirm; come back and tap **Turn on**. Builds
   installed over ADB aren't affected (install source "shell").
 - **UI-28 [P2]** When an agent's call fails for a missing setting
-  (`access_needed`), Bridget sends Rahul a notice "**Grok wanted your app
+  (`access_needed`), Bridgit sends Rahul a notice "**Grok wanted your app
   usage.** Turn on App usage?" [Turn on] [Not now], at most once per setting
   per day. **Turn on** opens the exact page.
 
@@ -1772,7 +1772,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
   stays on the owner's Mac (the keystore never goes to CI).
 - **TST-05 [Decided]** Release: `./gradlew assembleRelease` with the
   keystore in Bitwarden ("Almusca Device Bridge — Android release
-  keystore"). **That keystore is Bridget's signing key, despite the old
+  keystore"). **That keystore is Bridgit's signing key, despite the old
   name: never create a second one**, or updates stop installing (MIG-01).
   APK attached to a private GitHub release `bridget-vX.Y.Z`; installed over
   ADB (`adb install -r`). versionCode increments every release.
@@ -1827,7 +1827,7 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 
 | # | Question | Default if not answered |
 |---|---|---|
-| Q1 | Should Bridget take over communications (SMS, contacts, calendar, calls) from the Muse app (8.22)? | No; not scheduled |
+| Q1 | Should Bridgit take over communications (SMS, contacts, calendar, calls) from the Muse app (8.22)? | No; not scheduled |
 | Q2 | Keep "Read all notifications" (8.18) at all? It exposes every app's notification text (PRD-10). | Not built; if built, hidden behind **Show** |
 | Q3 | Should urgent interactions be allowed to override Do Not Disturb and speak aloud during it? | No |
 | Q4 | Keep answered interactions 30 days, or longer? | 30 days |
@@ -1844,13 +1844,13 @@ i Claude: Backup finished, 3 files                 [Got it]  20 min
 | Q15 | Log visibility default: every agent sees all agents' entries (D12 as written), or each agent sees only its own unless Rahul switches it (review recommendation)? | All entries (D12) until the owner decides |
 | Q16 | Add the per-agent **Developer** switch (AGT-15) now, so only chosen agents read bug reports with screenshots? It's one small exception to "per-agent permissions later" (D11). | Yes (Proposed); off for every agent until Rahul turns it on |
 | Q17 | Clipboard writes by agents: ask Rahul every time (CAP-40, proposed default), or allow silently with a notification? | Ask every time |
-| Q18 | Distribute Bridget through Google Play (section 18), accepting the feature changes Play policy forces, or stay sideloaded? | Stay sideloaded; revisit after P2 |
+| Q18 | Distribute Bridgit through Google Play (section 18), accepting the feature changes Play policy forces, or stay sideloaded? | Stay sideloaded; revisit after P2 |
 
 ---
 
 ## 18. Play Store distribution (proposed)
 
-The owner asked (27 Oct 2026) whether people should install Bridget from
+The owner asked (27 Oct 2026) whether people should install Bridgit from
 Google Play. This section lists what that would change. Nothing here is
 decided; Q18 holds the decision. Play policy statements are marked
 [Verify]: policies change, and the final word is the Play Console review.
@@ -1862,13 +1862,13 @@ decided; Q18 holds the decision. Play policy statements are marked
 - **PLY-02 [Proposed]** Play installs aren't subject to Android's
   "restricted settings" block (UI-27), so notification access and
   Accessibility can be turned on without the extra unlock step.
-- **PLY-03 [Proposed]** Other people could use Bridget with their own
+- **PLY-03 [Proposed]** Other people could use Bridgit with their own
   agents, which turns it from a personal tool into a product (changes
   PRD-02).
 
 ### 18.2 What Play policy would force us to change
 
-| Area | Play rule (summary) [Verify] | Effect on Bridget |
+| Area | Play rule (summary) [Verify] | Effect on Bridgit |
 |---|---|---|
 | Accessibility screenshots (D17, 8.10) | The Accessibility API is for apps that help people with disabilities; other uses need an approved declaration and are usually rejected | Likely **not allowed**. Screenshots fall back to the screen-share grants (CAP-26b), or to a separate sideloaded build |
 | Always-on service, `specialUse` type (ARC-02) | Each foreground-service type must be declared and justified in the Play Console, with a demo video for some types | Needs a written justification; `specialUse` is reviewed case by case |
@@ -1877,7 +1877,7 @@ decided; Q18 holds the decision. Play policy statements are marked
 | Usage access (8.16), notification access (8.18) | Restricted permissions with a declaration; only for apps whose core purpose needs them | Likely cut from the Play build, or reviewed as a stretch |
 | Health Connect (8.17) | Health apps need a Play declaration, a privacy policy and a review of each data type | Possible, with a public privacy policy page |
 | Package visibility (launching other apps, 8.20) | Seeing all installed apps needs justification | Use explicit `<queries>` for common apps instead |
-| Data safety form | Must describe every data type collected or shared | Bridget sends data only to the user's own agents; the form must still list camera, audio, photos, location and so on as "shared with the user's chosen apps" |
+| Data safety form | Must describe every data type collected or shared | Bridgit sends data only to the user's own agents; the form must still list camera, audio, photos, location and so on as "shared with the user's chosen apps" |
 | Privacy policy | Required, public URL | New page, for example on finleg.net |
 
 ### 18.3 Signing and moving over
@@ -1909,7 +1909,7 @@ decided; Q18 holds the decision. Play policy statements are marked
 
 ### 18.5 Recommendation
 
-- **PLY-08 [Proposed]** Stay sideloaded while Bridget is a personal tool
+- **PLY-08 [Proposed]** Stay sideloaded while Bridgit is a personal tool
   (Q18 default). If Play becomes a goal, ship the **play** flavour first to
   the internal testing track after P2, with Accessibility screenshots,
   usage access and notification access left out.
@@ -1970,7 +1970,7 @@ decided; Q18 holds the decision. Play policy statements are marked
 
 ## Appendix B. Setup prompt template
 
-This is the **2.0** template. `{…}` fields are filled by Bridget. Sections in
+This is the **2.0** template. `{…}` fields are filled by Bridgit. Sections in
 `[[ ]]` appear only for that connection type. The prompts generated by hand
 for Muse and Grok on 26-27 Oct 2026 (against 1.2.0) point to
 `README.md` instead of `/v1/guide`, which doesn't exist until P1.
@@ -1985,8 +1985,8 @@ The sections follow AGT-09's order. `{if …}` lines appear only when that
 switch is on (AGT-07).
 
 ```text
-You now have access to Bridget, an Android app on Rahul's phone ({device_model}) that lets AI agents use
-the phone when Rahul asks. Your agent name in Bridget is "{agent_name}".
+You now have access to Bridgit, an Android app on Rahul's phone ({device_model}) that lets AI agents use
+the phone when Rahul asks. Your agent name in Bridgit is "{agent_name}".
 
 CONNECTION
 - Base URL: http://{magicdns_name}:{port}/v1   (IP fallback: http://{tailscale_ip}:{port}/v1)
@@ -2010,14 +2010,14 @@ HOW TO CALL
              ----- BEGIN ~/bin/bridget -----
              {helper_source}
              ----- END ~/bin/bridget -----
-[[relay]]    Base URL: {relay_url}/v1 . Use the bridget helper with BRIDGET_RELAY={relay_url} and the phone
+[[relay]]    Base URL: {relay_url}/v1 . Use the bridget helper with BRIDGIT_RELAY={relay_url} and the phone
              public key {phone_public_key}; it seals every request (ARC-15).
 
 START HERE
 - GET /v1/guide - what's switched on right now, every endpoint, every error code.
 
 MOST USEFUL CALLS
-- GET  /v1/health                                   is Bridget up, which agent you are
+- GET  /v1/health                                   is Bridgit up, which agent you are
 {if gallery on}- GET  /v1/image/last?type=any|screenshot|photo   newest image, sized for you (add &raw=1 for JPEG bytes)
 {if camera on}- POST /v1/camera/snapshot {"camera":"rear"}
 {if screenshot on}- POST /v1/screen/capture                       what's on Rahul's screen now
@@ -2033,7 +2033,7 @@ RULES
 3. Errors are JSON {"error","message"}. Act on the code (see /v1/guide); don't retry blindly. A 202 with
    "pending": true means "not done yet": poll its poll_url.
 4. Timeouts: 30 s; 60 s for anything with wait=; mic: duration + 30 s.
-{if callback set}5. Bridget POSTs events to your callback URL. Verify X-Bridget-Signature = HMAC-SHA256 of
+{if callback set}5. Bridgit POSTs events to your callback URL. Verify X-Bridget-Signature = HMAC-SHA256 of
    "<X-Bridget-Timestamp>.<raw body>" with your callback secret {callback_secret}; reject timestamps more
    than 5 minutes off and repeated X-Bridget-Event-Id values.
 
@@ -2046,11 +2046,11 @@ Call /v1/health, then tell Rahul you're connected and which features are on.
 | HTTP | Code | Meaning | Agent should |
 |---|---|---|---|
 | 400 | `bad_request` | Malformed HTTP or JSON | Fix the request |
-| 401 | `unauthorized` | Key missing or wrong; `reason` = `key_rotated` or `agent_removed` when Bridget knows | Stop; tell Rahul the key needs replacing |
+| 401 | `unauthorized` | Key missing or wrong; `reason` = `key_rotated` or `agent_removed` when Bridgit knows | Stop; tell Rahul the key needs replacing |
 | 403 | `forbidden_source` | Caller is not on the tailnet | Check Tailscale |
 | 403 | `capability_disabled` | Master switch off | Tell Rahul which switch (`setting` field) |
 | 403 | `permission_denied` | Android permission not granted (`permission` field) | Tell Rahul; the Access screen fixes it |
-| 403 | `access_needed` | Android special access off (`setting` field) | Tell Rahul; Bridget also notifies him |
+| 403 | `access_needed` | Android special access off (`setting` field) | Tell Rahul; Bridgit also notifies him |
 | 403 | `pairing_closed` | No pairing window open | Ask Rahul to open one |
 | 403 | `screen_denied` | Rahul denied screen access | Don't ask again soon |
 | 403 | `agent_not_allowed` | (Reserved for section 15) | — |
@@ -2064,13 +2064,13 @@ Call /v1/health, then tell Rahul you're connected and which features are on.
 | 429 | `rate_limited` | Over a limit (`retry_after_s`) | Wait |
 | 429 | `too_many_open` | Too many open questions/notices | Wait for answers or cancel some |
 | 202 | (pending, not an error) `consent_pending`, `job_queued` | Accepted, not done (API-12 schema with `poll_url`) | Poll `poll_url` |
-| 403 | `notifications_required` | Bridget's notifications are off, so captures are refused (PRD-05) | Tell Rahul to turn notifications on |
+| 403 | `notifications_required` | Bridgit's notifications are off, so captures are refused (PRD-05) | Tell Rahul to turn notifications on |
 | 403 | `forbidden` | Not allowed for this agent (`reason`, for example `developer_only`) | Don't retry |
 | 409 | `in_progress` | Same `Idempotency-Key` still running | Wait, then retry with the same key |
 | 429 | `quota_exceeded` | Daily data, file storage or relay job quota used up (`limit`) | Wait until tomorrow |
 | 429 | `too_many_waits` | Too many open `wait` requests (SEC-08a) | Close some waits |
-| 500 | `internal_error` | Bridget bug | Report via `POST /v1/feedback` |
-| 503 | `service_start_blocked` | Android hasn't given the service this sensor | Ask Rahul to open Bridget once |
+| 500 | `internal_error` | Bridgit bug | Report via `POST /v1/feedback` |
+| 503 | `service_start_blocked` | Android hasn't given the service this sensor | Ask Rahul to open Bridgit once |
 | 504 | `capture_timeout` | Sensor didn't answer in time | Retry once |
 | 504 | `phone_unreachable` | (Relay) phone didn't pick up the job | Retry later |
 
@@ -2106,16 +2106,16 @@ Call /v1/health, then tell Rahul you're connected and which features are on.
 
 | Access | Intent | Lands on |
 |---|---|---|
-| Usage access | `android.settings.USAGE_ACCESS_SETTINGS` + `package:net.finleg.bridget` | Bridget's own switch (`AppUsageAccessSettingsActivity`) |
-| Do Not Disturb access | `android.settings.NOTIFICATION_POLICY_ACCESS_DETAIL_SETTINGS` + package | Bridget's own switch (`ZenAccessDetailSettingsActivity`); fallback `NOTIFICATION_POLICY_ACCESS_SETTINGS` (list) |
-| Modify system settings | `android.settings.action.MANAGE_WRITE_SETTINGS` + package | Bridget's own switch (`AppWriteSettingsActivity`) |
-| Notification access | `android.settings.NOTIFICATION_LISTENER_DETAIL_SETTINGS` + component extra | Bridget's own switch (`NotificationAccessDetailsActivity`) |
-| Accessibility (screenshots) | `android.settings.ACCESSIBILITY_DETAILS_SETTINGS` + `android.intent.extra.COMPONENT_NAME` = Bridget's service | Bridget's own Accessibility page (`AccessibilityDetailsSettingsActivity`); fallback `ACCESSIBILITY_SETTINGS` (list) |
+| Usage access | `android.settings.USAGE_ACCESS_SETTINGS` + `package:net.finleg.bridget` | Bridgit's own switch (`AppUsageAccessSettingsActivity`) |
+| Do Not Disturb access | `android.settings.NOTIFICATION_POLICY_ACCESS_DETAIL_SETTINGS` + package | Bridgit's own switch (`ZenAccessDetailSettingsActivity`); fallback `NOTIFICATION_POLICY_ACCESS_SETTINGS` (list) |
+| Modify system settings | `android.settings.action.MANAGE_WRITE_SETTINGS` + package | Bridgit's own switch (`AppWriteSettingsActivity`) |
+| Notification access | `android.settings.NOTIFICATION_LISTENER_DETAIL_SETTINGS` + component extra | Bridgit's own switch (`NotificationAccessDetailsActivity`) |
+| Accessibility (screenshots) | `android.settings.ACCESSIBILITY_DETAILS_SETTINGS` + `android.intent.extra.COMPONENT_NAME` = Bridgit's service | Bridgit's own Accessibility page (`AccessibilityDetailsSettingsActivity`); fallback `ACCESSIBILITY_SETTINGS` (list) |
 | Battery exemption | `android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` + package | Allow/Deny pop-up |
-| App info (restricted settings, permissions) | `android.settings.APPLICATION_DETAILS_SETTINGS` + package | Bridget's App info |
-| Notification channels | `android.settings.APP_NOTIFICATION_SETTINGS` + `EXTRA_APP_PACKAGE` | Bridget's notification settings |
-| Full-screen notifications | `android.settings.MANAGE_APP_USE_FULL_SCREEN_INTENT` + package | Bridget's own switch (`AppManageFullScreenIntent`), verified 27 Oct 2026 |
-| Location all the time | request ACCESS_BACKGROUND_LOCATION | Bridget's Location permission page |
+| App info (restricted settings, permissions) | `android.settings.APPLICATION_DETAILS_SETTINGS` + package | Bridgit's App info |
+| Notification channels | `android.settings.APP_NOTIFICATION_SETTINGS` + `EXTRA_APP_PACKAGE` | Bridgit's notification settings |
+| Full-screen notifications | `android.settings.MANAGE_APP_USE_FULL_SCREEN_INTENT` + package | Bridgit's own switch (`AppManageFullScreenIntent`), verified 27 Oct 2026 |
+| Location all the time | request ACCESS_BACKGROUND_LOCATION | Bridgit's Location permission page |
 
 The package-only form of `APP_NOTIFICATION_SETTINGS` and the plain
 `NOTIFICATION_LISTENER_SETTINGS` action did **not** resolve on this Pixel.
@@ -2133,4 +2133,4 @@ re-checked (`cmd package resolve-activity`) after each major OS update.
 - **MIG-04** `/v1/audit` keeps working (LOG-12). Every 1.2 endpoint keeps
   its request and response shape; new fields are additive.
 - **MIG-05** First launch after the upgrade shows a one-screen "What's new
-  in Bridget 2.0" instead of first-run onboarding.
+  in Bridgit 2.0" instead of first-run onboarding.

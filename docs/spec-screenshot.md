@@ -1,6 +1,6 @@
-# Spec: screenshot on request, with time-limited approval (Bridget 1.5)
+# Spec: screenshot on request, with time-limited approval (Bridgit 1.5)
 
-> **Superseded by [bridget-spec-v2.md](bridget-spec-v2.md)** (27 Oct 2026). Kept for history; v2 is the source of truth.
+> **Superseded by [bridgit-spec-v2.md](bridgit-spec-v2.md)** (27 Oct 2026). Kept for history; v2 is the source of truth.
 
 Status: proposed, 26 Oct 2026. Not built. Feature idea #8.
 
@@ -17,23 +17,23 @@ When an agent wants to see the screen, the phone asks:
 - **Deny:** nothing is captured, and Grok is told no.
 
 While access is on, Android's screen-sharing icon stays in the status bar and
-Bridget's notification reads "**Screen visible to Grok until 21:14**" with a
+Bridgit's notification reads "**Screen visible to Grok until 21:14**" with a
 **Stop now** button. Every screenshot is audit-logged.
 
 ## Android rules this design follows
 
 - Android won't let an app keep permission to see the screen. Each approval
-  goes through Android's own dialog ("Start sharing with Bridget?"), and Rahul
+  goes through Android's own dialog ("Start sharing with Bridgit?"), and Rahul
   must pick **Entire screen** there, not a single app.
-- "Allow for 1 hour" therefore means: Rahul approves once, and Bridget keeps
+- "Allow for 1 hour" therefore means: Rahul approves once, and Bridgit keeps
   that screen-capture session open for an hour, taking a frame each time an
-  agent asks. When the time is up, Bridget ends the session. Android ends it
+  agent asks. When the time is up, Bridgit ends the session. Android ends it
   too if Rahul taps the status-bar icon, and may end it when the phone locks
   (to be checked on the Pixel). After that, the next request asks again.
 - Apps that block screenshots (banking apps, password managers, anything using
   Android's secure flag) come out black. That's expected and is never worked
   around.
-- The capture session runs inside Bridget's foreground service with the
+- The capture session runs inside Bridgit's foreground service with the
   `mediaProjection` type added. Keeping a session open costs some battery,
   which is why the longest option is 16 hours, not "always".
 
@@ -41,9 +41,9 @@ Bridget's notification reads "**Screen visible to Grok until 21:14**" with a
 
 1. Agent: `POST /v1/screen/capture` (optional `max_edge_px`, `quality`,
    `raw=1`, same sizing as `image/last`: 1568 px long edge, JPEG q85).
-2. If this agent has an active approval: Bridget grabs the current frame and
+2. If this agent has an active approval: Bridgit grabs the current frame and
    returns it right away (target under 1 s).
-3. If not: Bridget shows an urgent **question** interaction (see
+3. If not: Bridgit shows an urgent **question** interaction (see
    `spec-agent-inbox.md`) with the four buttons. The agent's request waits up
    to 55 s:
    - **Allow…** opens Android's screen-share dialog. Once Rahul confirms, the

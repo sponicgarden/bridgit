@@ -1,12 +1,12 @@
-# Spec: per-agent permissions (Bridget 1.3)
+# Spec: per-agent permissions (Bridgit 1.3)
 
-> **Superseded by [bridget-spec-v2.md](bridget-spec-v2.md)** (27 Oct 2026). Kept for history; v2 is the source of truth.
+> **Superseded by [bridgit-spec-v2.md](bridgit-spec-v2.md)** (27 Oct 2026). Kept for history; v2 is the source of truth.
 
 Status: proposed, 26 Oct 2026. Not built.
 
 ## Why
 
-Bridget now has four agents (Muse, Grok, Claude, Codex) sharing one set of
+Bridgit now has four agents (Muse, Grok, Claude, Codex) sharing one set of
 switches. Turning the camera on for one turns it on for all. Each agent should
 get only what it needs. For example, Codex reads screenshots but never uses
 the microphone.
