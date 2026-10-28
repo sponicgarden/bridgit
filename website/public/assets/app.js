@@ -22,7 +22,9 @@ if (track) {
   next.addEventListener('click',()=>move(1));
   track.addEventListener('keydown',event=>{
     if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
-    event.preventDefault(); move(event.key === 'ArrowRight' ? 1 : -1);
+    event.preventDefault(); if (event.key === 'Home' || event.key === 'End') {
+      track.scrollTo({left:event.key === 'Home' ? 0 : track.scrollWidth,behavior:reducedMotion.matches ? 'instant' : 'smooth'});
+    } else move(event.key === 'ArrowRight' ? 1 : -1);
   });
   track.addEventListener('scroll',()=>{if (!frame) frame=requestAnimationFrame(updateCarousel);},{passive:true});
   new ResizeObserver(updateCarousel).observe(track);
