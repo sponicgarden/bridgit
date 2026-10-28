@@ -23,7 +23,7 @@
             android:textColor="?attr/colorOnSurface" />
 
         <TextView
-            style="@style/Widget.Bridget.SectionHeader"
+            style="@style/Widget.Bridgit.SectionHeader"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/tour_kinds_header" />
@@ -42,7 +42,7 @@
             android:layout_marginTop="4dp" />
 
         <TextView
-            style="@style/Widget.Bridget.SectionHeader"
+            style="@style/Widget.Bridgit.SectionHeader"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/tour_agent_header" />
@@ -73,7 +73,7 @@
             app:icon="@drawable/ic_add" />
 
         <TextView
-            style="@style/Widget.Bridget.SectionHeader"
+            style="@style/Widget.Bridgit.SectionHeader"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/tour_interval_header" />
@@ -86,7 +86,7 @@
             app:singleSelection="true" />
 
         <TextView
-            style="@style/Widget.Bridget.SectionHeader"
+            style="@style/Widget.Bridgit.SectionHeader"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/tour_needed_header" />

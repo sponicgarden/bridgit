@@ -110,7 +110,7 @@ class BridgeApp : Application() {
         net.finleg.bridget.update.UpdateInstaller.cleanStale(this) // UPD-05: downloads older than an hour go
     }
 
-    /** PRD-05: captures need Bridget's notifications on, including the capture channel. */
+    /** PRD-05: captures need Bridgit's notifications on, including the capture channel. */
     fun captureNotificationsOn(): Boolean {
         val nm = getSystemService(NotificationManager::class.java)
         if (!nm.areNotificationsEnabled()) return false

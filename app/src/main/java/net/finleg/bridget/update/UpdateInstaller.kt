@@ -245,7 +245,7 @@ object UpdateInstaller {
 
     fun canRequestInstalls(ctx: Context): Boolean = ctx.packageManager.canRequestPackageInstalls()
 
-    /** Android's "Install unknown apps" page for Bridget. */
+    /** Android's "Install unknown apps" page for Bridgit. */
     fun unknownSourcesIntent(ctx: Context): Intent =
         Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${ctx.packageName}"))
 
@@ -263,7 +263,7 @@ object UpdateInstaller {
         log(app, "Update handed to Android's installer: ${m.versionName} (${m.versionCode})")
 
     fun logInstallBlocked(app: BridgeApp) =
-        log(app, "Update waiting: Install unknown apps is off for Bridget; opened Android's page", "warn")
+        log(app, "Update waiting: Install unknown apps is off for Bridgit; opened Android's page", "warn")
 
     // ---- Housekeeping ----
 

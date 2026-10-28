@@ -327,7 +327,7 @@ class AgentDetailFragment : Fragment() {
                 app.log.system("audit", "agent", getString(R.string.agents_removed_log, removed.name))
                 if (app.agents.count == 0) {
                     app.settings.listenerEnabled = false
-                    app.log.system("audit", "setting", "Bridget stopped listening: no agents left")
+                    app.log.system("audit", "setting", "Bridgit stopped listening: no agents left")
                     runCatching { BridgeService.pauseSilently(requireContext()) }
                 }
                 findNavController().popBackStack()

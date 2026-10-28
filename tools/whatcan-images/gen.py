@@ -1,4 +1,4 @@
-"""Generate What can Bridget do? card images via sponic's Azure gpt-image deployment."""
+"""Generate What can Bridgit do? card images via sponic's Azure gpt-image deployment."""
 import base64, json, os, re, subprocess, sys, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 

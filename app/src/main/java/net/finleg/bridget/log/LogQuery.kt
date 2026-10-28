@@ -12,7 +12,7 @@ class QueryError(message: String) : Exception(message)
  */
 data class LogQuery(
     val channels: List<String> = emptyList(),
-    val agentIds: List<String>? = null,      // null = any agent; a list may include "" for Bridget's own entries
+    val agentIds: List<String>? = null,      // null = any agent; a list may include "" for Bridgit's own entries
     val kinds: List<String> = emptyList(),
     val endpointPrefix: String? = null,
     val result: String? = null,              // ok | error | <code>

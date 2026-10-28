@@ -1,4 +1,4 @@
-# What can Bridget do? card pictures
+# What can Bridgit do? card pictures
 
 `docs/whatcan-image-prompts.md` holds the shared style and one content line per card; file names follow the card title
 (lower case, runs of other characters become one hyphen).

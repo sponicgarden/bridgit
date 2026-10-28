@@ -16,7 +16,7 @@ enum class ReportStatus(val id: String) {
     companion object { fun of(id: String?) = values().firstOrNull { it.id == id } }
 }
 
-/** Who moves a report: Bridget itself (first developer read), a developer agent, or Rahul on the phone. */
+/** Who moves a report: Bridgit itself (first developer read), a developer agent, or Rahul on the phone. */
 enum class Actor { AUTO, DEVELOPER, OWNER }
 
 /**

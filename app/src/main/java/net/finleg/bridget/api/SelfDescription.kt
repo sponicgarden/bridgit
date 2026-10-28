@@ -30,8 +30,8 @@ object SetupPrompt {
               caps: List<CapInfo>, helperSource: String?, callbackSecret: String? = null): String {
         val on = caps.filter { it.enabled }.map { it.id }.toSet()
         val sb = StringBuilder()
-        sb.appendLine("You now have access to Bridget, an Android app on Rahul's phone ($deviceModel) that lets AI agents use")
-        sb.appendLine("the phone when Rahul asks. Your agent name in Bridget is \"$agentName\".")
+        sb.appendLine("You now have access to Bridgit, an Android app on Rahul's phone ($deviceModel) that lets AI agents use")
+        sb.appendLine("the phone when Rahul asks. Your agent name in Bridgit is \"$agentName\".")
         sb.appendLine()
         sb.appendLine("CONNECTION")
         sb.append("- Base URL: ${addr.baseUrl}")
@@ -72,7 +72,7 @@ object SetupPrompt {
         sb.appendLine("- No callback URL set? Loop on GET /v1/events?since=<id>&wait=55 for answers.")
         sb.appendLine()
         sb.appendLine("MOST USEFUL CALLS")
-        sb.appendLine("- GET  /v1/health                                   is Bridget up, which agent you are")
+        sb.appendLine("- GET  /v1/health                                   is Bridgit up, which agent you are")
         if ("gallery" in on) sb.appendLine("- GET  /v1/image/last?type=any|screenshot|photo   newest image, sized for you (add &raw=1 for JPEG bytes)")
         if ("camera" in on) sb.appendLine("- POST /v1/camera/snapshot {\"camera\":\"rear\"}       take a photo")
         else if ("mic" in on) sb.appendLine("- POST /v1/mic/record {\"duration_seconds\":5}       record a short clip")
@@ -112,16 +112,16 @@ object Guide {
     fun build(agentName: String, appVersion: String, addr: Address, caps: List<CapInfo>, logVisibility: String,
               developer: Boolean): String {
         val sb = StringBuilder()
-        sb.appendLine("# Bridget guide for $agentName")
+        sb.appendLine("# Bridgit guide for $agentName")
         sb.appendLine()
-        sb.appendLine("Bridget $appVersion on Rahul's phone. Base URL: `${addr.baseUrl}`" +
+        sb.appendLine("Bridgit $appVersion on Rahul's phone. Base URL: `${addr.baseUrl}`" +
             (addr.ipBaseUrl?.takeIf { addr.magicDns != null }?.let { " (IP fallback `$it`)" } ?: "") + ".")
         sb.appendLine("Send `Authorization: Bearer <your key>` on every call except `GET /v1/tools/bridget` and `POST /v1/pair`.")
         sb.appendLine("Every response has a `request_id` (also the `X-Request-Id` header) that matches a log entry.")
         sb.appendLine("MCP clients can use `${addr.baseUrl}/mcp` (Streamable HTTP, JSON replies, same Bearer key): every endpoint below is a tool, " +
             "e.g. `camera_snapshot`, `image_last`, `interactions_send`; side-effecting tools take an `idempotency_key` argument.")
         sb.appendLine()
-        sb.appendLine("API revision ${ApiChanges.CURRENT} (app $appVersion). Every reply carries `X-Bridget-API-Revision`; after Bridget is updated,")
+        sb.appendLine("API revision ${ApiChanges.CURRENT} (app $appVersion). Every reply carries `X-Bridget-API-Revision`; after Bridgit is updated,")
         sb.appendLine("replies carry `X-Bridget-Whats-New` until you read this guide or `GET /v1/changes?since=<your revision>`.")
         sb.appendLine()
         sb.appendLine("## New in revision ${ApiChanges.CURRENT}")
@@ -156,7 +156,7 @@ object Guide {
         }
         sb.appendLine()
         sb.appendLine("## Hearing from the phone")
-        sb.appendLine("Bridget never calls you: it queues events for you. Loop on `GET /v1/events?since=<last id>&wait=55` with a 60 s timeout.")
+        sb.appendLine("Bridgit never calls you: it queues events for you. Loop on `GET /v1/events?since=<last id>&wait=55` with a 60 s timeout.")
         sb.appendLine("If your harness only acts during a turn (for example a Claude Code chat session), run the wait as a background command so each event wakes you, answer, and start the next wait.")
         sb.appendLine("Each event costs you one turn; keep answers short.")
         sb.appendLine()

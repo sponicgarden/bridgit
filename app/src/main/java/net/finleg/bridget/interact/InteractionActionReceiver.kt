@@ -8,7 +8,7 @@ import net.finleg.bridget.BridgeApp
 
 /**
  * Answers a question from its notification (CAP-33): a button action, or the inline reply of a text
- * control. Not exported: only Bridget's own PendingIntents reach it. Never logs the reply text.
+ * control. Not exported: only Bridgit's own PendingIntents reach it. Never logs the reply text.
  */
 class InteractionActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {

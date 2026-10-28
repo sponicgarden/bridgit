@@ -52,7 +52,7 @@
         <!-- Page 2: Tailscale check (live region) -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/tsCard"
-            style="@style/Widget.Bridget.Card"
+            style="@style/Widget.Bridgit.Card"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"

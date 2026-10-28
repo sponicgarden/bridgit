@@ -89,13 +89,13 @@ class EntrySheet : BottomSheetDialogFragment() {
             contentDescription = "$key: $text"
         }
         row.addView(TextView(ctx).apply {
-            setTextAppearance(R.style.TextAppearance_Bridget_Mono)
+            setTextAppearance(R.style.TextAppearance_Bridgit_Mono)
             setTextColor(ctx.themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant))
             this.text = key
             importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
         }, LinearLayout.LayoutParams(ctx.dp(96), ViewGroup.LayoutParams.WRAP_CONTENT))
         row.addView(TextView(ctx).apply {
-            setTextAppearance(R.style.TextAppearance_Bridget_Mono_Prompt)
+            setTextAppearance(R.style.TextAppearance_Bridgit_Mono_Prompt)
             setTextColor(ctx.themeColor(com.google.android.material.R.attr.colorOnSurface))
             this.text = text
             setTextIsSelectable(true)

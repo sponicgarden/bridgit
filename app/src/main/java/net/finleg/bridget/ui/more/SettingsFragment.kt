@@ -121,7 +121,7 @@ class SettingsFragment : Fragment() {
         val cert = certificateSha256()
         row(b.cert, R.string.settings_cert, mono = true) {
             if (cert != null) {
-                UiActions.copy(requireContext(), "Bridget certificate", cert)
+                UiActions.copy(requireContext(), "Bridgit certificate", cert)
                 Snackbar.make(b.root, R.string.settings_cert_copied, Snackbar.LENGTH_SHORT).show()
             }
         }
@@ -142,7 +142,7 @@ class SettingsFragment : Fragment() {
     private fun row(r: SettingsRowBinding, title: Int, mono: Boolean = false, onClick: (() -> Unit)?) {
         r.title.setText(title)
         if (mono) {
-            r.value.setTextAppearance(R.style.TextAppearance_Bridget_Mono)
+            r.value.setTextAppearance(R.style.TextAppearance_Bridgit_Mono)
             r.value.setTextColor(requireContext().themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant))
         }
         if (onClick == null) { r.root.isClickable = false; r.root.isFocusable = true; r.root.background = null }

@@ -49,12 +49,12 @@ abstract class Capability(protected val app: BridgeApp) {
         val b = blockedReason() ?: return
         when {
             b.startsWith("permission:") -> throw ErrorCatalog.error("permission_denied",
-                "Bridget doesn't have the ${b.removePrefix("permission:")} permission. Rahul can grant it on the Access screen.",
+                "Bridgit doesn't have the ${b.removePrefix("permission:")} permission. Rahul can grant it on the Access screen.",
                 mapOf("permission" to "android.permission." + b.removePrefix("permission:")))
             b == "notifications_off" -> throw ErrorCatalog.error("notifications_required",
-                "Bridget's notifications are off, so captures are refused. Ask Rahul to turn them on.")
+                "Bridgit's notifications are off, so captures are refused. Ask Rahul to turn them on.")
             b == "open_app_once" -> throw ErrorCatalog.error("service_start_blocked",
-                "Android hasn't given Bridget's listener the $title yet. Ask Rahul to open Bridget once.")
+                "Android hasn't given Bridgit's listener the $title yet. Ask Rahul to open Bridgit once.")
             else -> throw ErrorCatalog.error("service_start_blocked", "$title isn't ready: $b")
         }
     }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bridget device acceptance checks (spec TST-03). Run through tools/acceptance.sh.
+"""Bridgit device acceptance checks (spec TST-03). Run through tools/acceptance.sh.
 
 Runs from the Mac against the debug build on the Pixel, over Tailscale (HTTP)
 and ADB (setup hook). It creates its own test agents through the debug-only
@@ -152,7 +152,7 @@ def main():
     T, P = f"Accept{c.suffix}", f"Peer{c.suffix}"
     started = datetime.datetime.now().astimezone()
 
-    print(f"Bridget acceptance: {c.base} via adb {c.serial}")
+    print(f"Bridgit acceptance: {c.base} via adb {c.serial}")
     # Launching the activity once takes a fresh install out of Android's "stopped" state,
     # so the debug hook's broadcast is delivered.
     c.adb("shell", "am", "start", "-n", f"{c.pkg}/net.finleg.bridget.ui.MainActivity")
@@ -209,7 +209,7 @@ def main():
         r = c.call("GET", "/guide", T); expect(r, 200)
         t = r.body.decode()
         assert r.headers["content-type"].startswith("text/markdown")
-        assert f"# Bridget guide for {T}" in t and "/v1/image/last" in t and "capability_disabled" in t
+        assert f"# Bridgit guide for {T}" in t and "/v1/image/last" in t and "capability_disabled" in t
         return f"{len(t)} chars"
 
     @c.check("A06", "openapi.json is OpenAPI 3.1 with every endpoint")
@@ -338,7 +338,7 @@ def main():
             others = [e for e in es if e.get("agent_id") and e["agent"] != P]
             assert not others, f"{len(others)} entries of other agents visible"
             sys_entries = [e for e in es if e.get("agent_id") is None]
-            assert not sys_entries, "Bridget's own entries visible"
+            assert not sys_entries, "Bridgit's own entries visible"
             tid = c.call("GET", "/log?agent=me&limit=1", T).json()["entries"][0]["id"]
             expect(c.call("GET", f"/log/{tid}", P), 404, "not_found")
             ex = c.call("GET", "/log/export", P).body.decode()
@@ -486,7 +486,7 @@ def main():
         c.hook(speaker=True, speaker_ceiling="30"); time.sleep(0.5)
         for bad in ("http://example.com/a.mp3", "https://192.168.1.1/a.mp3", "https://user:pw@example.com/a.mp3", "https://localhost/a.mp3"):
             expect(c.call("POST", "/speaker/play", T, {"url": bad}, timeout=40), 422, "invalid_parameter")
-        r = c.call("POST", "/speaker/say", T, {"text": "Bridget test."}, timeout=40)
+        r = c.call("POST", "/speaker/say", T, {"text": "Bridgit test."}, timeout=40)
         expect(r, 200)
         st = c.call("GET", "/speaker", T); expect(st, 200)
         expect(c.call("DELETE", "/speaker", T), 200)
@@ -538,7 +538,7 @@ def main():
         expect(c.call("POST", "/feedback", T, {"kind": "bug", "description": "  "}), 422, "invalid_parameter")
         return f"report {r.json()['number']}"
 
-    @c.check("F02", "a developer agent lists and reads a report; the first read marks it seen; Bridget attaches context and log")
+    @c.check("F02", "a developer agent lists and reads a report; the first read marks it seen; Bridgit attaches context and log")
     def _():
         c.hook(developer=f"{P}=true"); time.sleep(0.5)
         lst = c.call("GET", "/feedback?status=new", P); expect(lst, 200)
@@ -733,7 +733,7 @@ def main():
                                 f"{started:%Y-%m-%d-%H%M}-{version}-{c.pkg.rsplit('.', 1)[-1]}.md")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     with open(out, "w") as f:
-        f.write(f"# Bridget acceptance run, {started:%Y-%m-%d %H:%M %Z}\n\n")
+        f.write(f"# Bridgit acceptance run, {started:%Y-%m-%d %H:%M %Z}\n\n")
         f.write("| | |\n|---|---|\n")
         f.write(f"| Build | `{c.pkg}` {version} |\n| Repo commit | `{commit}` |\n| Device | `{c.serial}` |\n")
         f.write(f"| API | `{c.base}` |\n| Script | `tools/acceptance.sh` |\n| Duration | {(ended - started).seconds} s |\n")

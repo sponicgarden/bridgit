@@ -75,7 +75,7 @@
                 <!-- Hero card -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/hero"
-                    style="@style/Widget.Bridget.Card"
+                    style="@style/Widget.Bridgit.Card"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     app:cardBackgroundColor="?attr/colorPrimaryContainer"
@@ -151,7 +151,7 @@
                             android:minHeight="32dp"
                             android:gravity="center_vertical"
                             android:maxLines="1"
-                            android:textAppearance="@style/TextAppearance.Bridget.Mono"
+                            android:textAppearance="@style/TextAppearance.Bridgit.Mono"
                             android:textColor="?attr/colorOnPrimaryContainer"
                             app:autoSizeMaxTextSize="16sp"
                             app:autoSizeMinTextSize="9sp"
@@ -212,7 +212,7 @@
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/noAgents"
-                    style="@style/Widget.Bridget.Card"
+                    style="@style/Widget.Bridgit.Card"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:visibility="gone">
@@ -242,7 +242,7 @@
                 <!-- Today -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/today"
-                    style="@style/Widget.Bridget.Card"
+                    style="@style/Widget.Bridgit.Card"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"

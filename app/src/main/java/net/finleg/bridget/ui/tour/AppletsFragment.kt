@@ -49,7 +49,7 @@ class AppletsFragment : Fragment() {
         }
         b.buildAppletShare.setOnClickListener {
             val send = Intent(Intent.ACTION_SEND).setType("text/plain")
-                .putExtra(Intent.EXTRA_SUBJECT, "Bridget: ${getString(R.string.applets_build_title)}")
+                .putExtra(Intent.EXTRA_SUBJECT, "Bridgit: ${getString(R.string.applets_build_title)}")
                 .putExtra(Intent.EXTRA_TEXT, getString(R.string.applets_build_share_text, guide))
             startActivity(Intent.createChooser(send, getString(R.string.applets_build_share_title)))
         }

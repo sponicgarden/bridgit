@@ -114,7 +114,7 @@ class ApiLogicTest {
     }
 
     @Test fun errorCatalogMatchesSpecAppendixC() {
-        val spec = File("../docs/bridget-spec-v2.md").takeIf { it.exists() } ?: File("docs/bridget-spec-v2.md")
+        val spec = File("../docs/bridgit-spec-v2.md").takeIf { it.exists() } ?: File("docs/bridgit-spec-v2.md")
         val text = spec.readText()
         val appendix = text.substringAfter("## Appendix C. Error catalog").substringBefore("## Appendix D")
         val rows = Regex("^\\| (\\d{3}) \\| (?:\\(pending[^|]*|`([a-z_]+)`)", RegexOption.MULTILINE).findAll(appendix)
@@ -137,7 +137,7 @@ class ApiLogicTest {
         assertEquals("key exactly once", 1, Regex(Regex.escape(key)).findAll(p).count())
         assertTrue(p.contains("http://pixel-10-pro-xl.tail9c9221.ts.net:8735/v1"))
         assertTrue(p.contains("IP fallback: http://100.94.27.79:8735/v1"))
-        assertTrue(p.contains("Your agent name in Bridget is \"Muse\""))
+        assertTrue(p.contains("Your agent name in Bridgit is \"Muse\""))
         assertTrue(p.contains("curl -s -m 30 -H @\$HOME/.config/bridget/header"))
         assertTrue(p.contains("/v1/camera/snapshot") && p.contains("/v1/image/last"))
         assertTrue(p.contains("GET /v1/guide"))

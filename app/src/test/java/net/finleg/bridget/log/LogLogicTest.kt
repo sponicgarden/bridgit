@@ -14,7 +14,7 @@ import org.junit.Test
  * Ways the log query and redaction logic can fail:
  * Query: user text pasted into SQL (injection); LIKE wildcards in a search not escaped; unknown channel,
  *   kind, level or agent silently ignored (returns everything); "since" treating an id as a time or the
- *   other way round; cursor going the wrong direction for asc/desc; limit not capped; the "Bridget's own
+ *   other way round; cursor going the wrong direction for asc/desc; limit not capped; the "Bridgit's own
  *   entries" filter (null agent_id) lost when combined with real agents.
  * Redaction: a key in a value or a nested value survives; a field named key/token/secret/code survives;
  *   base64 media stored; long strings not truncated; data over 4 KB stored.
@@ -58,7 +58,7 @@ class LogLogicTest {
         assertEquals("id ASC", parse("order" to "asc").orderBy)
     }
 
-    @Test fun agentFilterWithBridgetOwn() {
+    @Test fun agentFilterWithBridgitOwn() {
         val (w, a) = parse("agent" to "Grok,bridget").where()
         assertTrue(w.contains("agent_id IN (?)") && w.contains("agent_id IS NULL"))
         assertTrue(a.contains("a1"))

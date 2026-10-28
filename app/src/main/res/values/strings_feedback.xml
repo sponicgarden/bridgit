@@ -12,7 +12,7 @@
     <string name="feedback_submit">Submit</string>
     <string name="feedback_sending">Sending…</string>
     <string name="feedback_intro_bug">Describe what went wrong. A screenshot helps if you have one.</string>
-    <string name="feedback_intro_feature">What would make Bridget more useful? Sketches and screenshots welcome.</string>
+    <string name="feedback_intro_feature">What would make Bridgit more useful? Sketches and screenshots welcome.</string>
     <string name="feedback_label_bug">What happened?</string>
     <string name="feedback_label_feature">What would you like to see?</string>
     <string name="feedback_no_autofix">Don\'t auto-fix</string>
@@ -53,7 +53,7 @@
 
     <!-- After submitting (FBK-08) -->
     <string name="feedback_saved_title">Report saved</string>
-    <string name="feedback_saved_body">Thanks. It\'s report %1$s. Developer agents can pick it up from Bridget\'s API.</string>
+    <string name="feedback_saved_body">Thanks. It\'s report %1$s. Developer agents can pick it up from Bridgit\'s API.</string>
     <string name="feedback_view_report">View report</string>
     <string name="feedback_filed_log">You filed report %1$s</string>
 

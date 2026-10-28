@@ -78,10 +78,10 @@ android {
     }
 }
 
-// GET /v1/tools/bridget serves the helper script. tools/bridget is the single
+// GET /v1/tools/bridget serves the helper script. tools/bridgit is the single
 // source of truth; this copies it into the APK's assets at build time.
 val copyHelper by tasks.registering(Copy::class) {
-    from(rootProject.file("tools/bridget"))
+    from(rootProject.file("tools/bridgit"))
     into(layout.buildDirectory.dir("generated/helperAssets"))
     rename { "bridget-helper.py" }
 }

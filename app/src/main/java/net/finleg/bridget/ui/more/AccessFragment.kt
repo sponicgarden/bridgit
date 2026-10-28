@@ -36,7 +36,7 @@ import net.finleg.bridget.update.UpdateInstaller
 
 /**
  * Access (UI-25 … UI-27, ui-spec 5.9, Appendix E): every Android permission or special access
- * Bridget uses in this release, with its status and one button to the exact page.
+ * Bridgit uses in this release, with its status and one button to the exact page.
  * Rows re-check in onResume. Rows for features that aren't built yet are not listed.
  */
 class AccessFragment : Fragment() {
@@ -158,7 +158,7 @@ class AccessFragment : Fragment() {
                 open(Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:${ctx.packageName}")))
             },
         ) + listOfNotNull(
-            // UPD-04: Android asks for this the first time Bridget installs its own update.
+            // UPD-04: Android asks for this the first time Bridgit installs its own update.
             // Debug builds never update themselves (UPD-06), so they don't show the row.
             if (net.finleg.bridget.BuildConfig.DEBUG) null else
             Item("installs", R.string.access_installs, R.string.access_installs_unlocks, installs,
@@ -251,7 +251,7 @@ class AccessFragment : Fragment() {
         permLauncher.launch(perms)
     }
 
-    /** Bridget's own page in Accessibility settings, else the Accessibility list. */
+    /** Bridgit's own page in Accessibility settings, else the Accessibility list. */
     private fun openScreenshotService() {
         val ctx = requireContext()
         val cn = android.content.ComponentName(ctx, net.finleg.bridget.capability.ScreenshotService::class.java)

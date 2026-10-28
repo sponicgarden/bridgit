@@ -36,10 +36,10 @@
     <string name="tour_fix_allow">Allow</string>
     <string name="tour_fix_open_settings">Open settings</string>
     <string name="tour_need_location_switch">Location switch is off</string>
-    <string name="tour_need_location_permission">Bridget can\'t use your location yet</string>
+    <string name="tour_need_location_permission">Bridgit can\'t use your location yet</string>
     <string name="tour_need_location_setting">Android\'s Location is off</string>
     <string name="tour_need_speaker_switch">Speaker switch is off</string>
-    <string name="tour_need_listener">Bridget is paused, so your agent can\'t hear from it</string>
+    <string name="tour_need_listener">Bridgit is paused, so your agent can\'t hear from it</string>
     <string name="tour_fix_resume">Resume</string>
     <string name="tour_resumed_audit">You resumed the listener from City tour</string>
     <string name="tour_need_notifications">Notifications are off</string>
@@ -103,11 +103,11 @@
     <string name="applets_intro">Ready-made things to do with an agent.</string>
     <string name="applets_city_tour_desc">A guided walk: your agent tells you about what\'s around you, and you can ask it questions out loud.</string>
     <string name="applets_build_title">How to build a ready-made applet</string>
-    <string name="applets_build_desc">Instructions for an AI agent: run your own applet with what Bridget has today, or add one to the app like City tour.</string>
+    <string name="applets_build_desc">Instructions for an AI agent: run your own applet with what Bridgit has today, or add one to the app like City tour.</string>
     <string name="applets_build_open">Open instructions</string>
     <string name="applets_build_share">Share</string>
     <string name="applets_build_share_title">Send the applet instructions to</string>
-    <string name="applets_build_share_text">Instructions for building a Bridget applet: %1$s</string>
+    <string name="applets_build_share_text">Instructions for building a Bridgit applet: %1$s</string>
     <string name="applets_running_with">Running with %1$s</string>
     <string name="applets_paused_with">Paused with %1$s</string>
     <string name="more_agents">Agents</string>

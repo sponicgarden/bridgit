@@ -55,7 +55,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:textAppearance="@style/TextAppearance.Bridget.Mono.Prompt"
+            android:textAppearance="@style/TextAppearance.Bridgit.Mono.Prompt"
             android:textColor="?attr/colorOnSurface"
             android:textIsSelectable="true" />
     </LinearLayout>

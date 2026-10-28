@@ -74,12 +74,12 @@ object UpdateLogic {
     }
 
     /**
-     * Sent on every request. Cloudflare answers 403 to some default user agents, so Bridget
+     * Sent on every request. Cloudflare answers 403 to some default user agents, so Bridgit
      * names itself. Only printable ASCII, so an odd version string can't break the header.
      */
     fun userAgent(versionName: String, androidRelease: String): String {
         fun clean(s: String) = s.filter { it in ' '..'~' && it != '(' && it != ')' }.trim().take(32).ifEmpty { "?" }
-        return "Bridget/${clean(versionName)} (Android ${clean(androidRelease)})"
+        return "Bridgit/${clean(versionName)} (Android ${clean(androidRelease)})"
     }
 
     fun isSafeApkUrl(url: String?): Boolean = isSafeUrl(url, ".apk")

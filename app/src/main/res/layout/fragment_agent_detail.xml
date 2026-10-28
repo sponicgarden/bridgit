@@ -68,7 +68,7 @@
 
                         <TextView
                             android:id="@+id/connection"
-                            style="@style/Widget.Bridget.MonoChip"
+                            style="@style/Widget.Bridgit.MonoChip"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center_vertical"
@@ -94,7 +94,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_gravity="center_vertical"
-                            android:textAppearance="@style/TextAppearance.Bridget.Mono"
+                            android:textAppearance="@style/TextAppearance.Bridgit.Mono"
                             android:textColor="?attr/colorOnSurfaceVariant" />
                     </LinearLayout>
                 </LinearLayout>
@@ -108,7 +108,7 @@
                 android:baselineAligned="false"
                 android:orientation="horizontal">
 
-                <com.google.android.material.card.MaterialCardView android:id="@+id/tile_requests" style="@style/Widget.Bridget.Card"
+                <com.google.android.material.card.MaterialCardView android:id="@+id/tile_requests" style="@style/Widget.Bridgit.Card"
                     android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
                     android:focusable="true" app:contentPadding="12dp">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -121,7 +121,7 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <com.google.android.material.card.MaterialCardView android:id="@+id/tile_errors" style="@style/Widget.Bridget.Card"
+                <com.google.android.material.card.MaterialCardView android:id="@+id/tile_errors" style="@style/Widget.Bridgit.Card"
                     android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="8dp"
                     android:focusable="true" app:contentPadding="12dp">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -134,7 +134,7 @@
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 
-                <com.google.android.material.card.MaterialCardView android:id="@+id/tile_sent" style="@style/Widget.Bridget.Card"
+                <com.google.android.material.card.MaterialCardView android:id="@+id/tile_sent" style="@style/Widget.Bridgit.Card"
                     android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:layout_marginStart="8dp"
                     android:focusable="true" app:contentPadding="12dp">
                     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
@@ -149,7 +149,7 @@
             </LinearLayout>
 
             <!-- Key -->
-            <TextView style="@style/Widget.Bridget.SectionHeader" android:layout_width="wrap_content"
+            <TextView style="@style/Widget.Bridgit.SectionHeader" android:layout_width="wrap_content"
                 android:layout_height="wrap_content" android:text="@string/agents_section_key" />
 
             <LinearLayout
@@ -163,7 +163,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:textAppearance="@style/TextAppearance.Bridget.Mono"
+                    android:textAppearance="@style/TextAppearance.Bridgit.Mono"
                     android:textSize="14sp" />
 
                 <com.google.android.material.button.MaterialButton
@@ -175,7 +175,7 @@
             </LinearLayout>
 
             <!-- Developer (AGT-15) -->
-            <TextView style="@style/Widget.Bridget.SectionHeader" android:layout_width="wrap_content"
+            <TextView style="@style/Widget.Bridgit.SectionHeader" android:layout_width="wrap_content"
                 android:layout_height="wrap_content" android:text="@string/agents_section_developer" />
 
             <com.google.android.material.materialswitch.MaterialSwitch
@@ -194,7 +194,7 @@
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <!-- Callback URL (EVT-05) -->
-            <TextView style="@style/Widget.Bridget.SectionHeader" android:layout_width="wrap_content"
+            <TextView style="@style/Widget.Bridgit.SectionHeader" android:layout_width="wrap_content"
                 android:layout_height="wrap_content" android:text="@string/callback_section" />
 
             <LinearLayout
@@ -233,7 +233,7 @@
                 android:textColor="?attr/colorOnSurfaceVariant" />
 
             <!-- Notes -->
-            <TextView style="@style/Widget.Bridget.SectionHeader" android:layout_width="wrap_content"
+            <TextView style="@style/Widget.Bridgit.SectionHeader" android:layout_width="wrap_content"
                 android:layout_height="wrap_content" android:text="@string/agents_section_notes" />
 
             <com.google.android.material.textfield.TextInputLayout
@@ -263,7 +263,7 @@
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
-                <TextView style="@style/Widget.Bridget.SectionHeader" android:layout_width="0dp"
+                <TextView style="@style/Widget.Bridgit.SectionHeader" android:layout_width="0dp"
                     android:layout_height="wrap_content" android:layout_weight="1"
                     android:text="@string/agents_section_activity" />
 
@@ -295,11 +295,11 @@
                 android:nestedScrollingEnabled="false" />
 
             <!-- Permissions (section 15): greyed until per-agent permissions exist -->
-            <TextView style="@style/Widget.Bridget.SectionHeader" android:layout_width="wrap_content"
+            <TextView style="@style/Widget.Bridgit.SectionHeader" android:layout_width="wrap_content"
                 android:layout_height="wrap_content" android:text="@string/agents_section_permissions" />
 
             <com.google.android.material.card.MaterialCardView
-                style="@style/Widget.Bridget.Card"
+                style="@style/Widget.Bridgit.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:alpha="0.6"

@@ -38,7 +38,7 @@
             <!-- How to build an applet (owner, 27 Oct 2026): links to agent instructions on the public API page. -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/build_applet"
-                style="@style/Widget.Bridget.Card"
+                style="@style/Widget.Bridgit.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp">
@@ -94,7 +94,7 @@
             <!-- City tour (8.25, D30). Later applets (Museum guide, Run coach; TOUR-05) get their own cards here. -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/city_tour"
-                style="@style/Widget.Bridget.Card"
+                style="@style/Widget.Bridgit.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:clickable="true"

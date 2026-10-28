@@ -1,6 +1,6 @@
-# Image prompts for "What can Bridget do?" cards
+# Image prompts for "What can Bridgit do?" cards
 
-One image per card on the More › What can Bridget do? screen.
+One image per card on the More › What can Bridgit do? screen.
 To make an image, paste the **Style** section, then that card's **Content** line, into the image tool.
 Save each image under the file name given (it matches the card's share-link anchor), for example `take-a-photo.png`.
 
@@ -96,7 +96,7 @@ Do not include: any words, letters, numbers, logos, brand marks, UI text, real a
 | File | Card | Content prompt |
 |---|---|---|
 | `per-agent-permissions.png` | Per-agent permissions | Two agents stand before the phone, each wearing a lanyard badge with different small icons (one has a photo icon, the other a camera icon crossed out); the phone checks the badges like a friendly doorkeeper. |
-| `reach-bridget-without-tailscale-relay.png` | Reach Bridget without Tailscale (relay) | An agent far away on a cloud drops a locked envelope (amber padlock) into a mailbox on a pole; a small push wave wakes the phone, which reaches out to collect the envelope itself. |
+| `reach-bridget-without-tailscale-relay.png` | Reach Bridgit without Tailscale (relay) | An agent far away on a cloud drops a locked envelope (amber padlock) into a mailbox on a pole; a small push wave wakes the phone, which reaches out to collect the envelope itself. |
 | `listen-for-a-word-on-the-phone.png` | Listen for a word on the phone | The phone sits calmly with closed "ears"; one single word-shaped sound bubble (amber) lights it up and opens a short window through which only the following sentence travels to an agent. A visible on/off switch beside it shows the owner chose this. |
 | `messages-contacts-calendar-calls.png` | Messages, contacts, calendar, calls | Around the phone: a chat bubble, an address-card, a calendar page and a phone receiver; an agent drafts a message bubble, but it waits on the phone behind a big approve button the owner is about to tap. |
 | `location-history-and-places.png` | Location history and places | A dotted trail of footsteps across a simple map ends at a house; a small watering can and plant by the door; the phone on the doorstep gives a gentle chime as the owner arrives, with the trail stored in a little vault on the phone. |

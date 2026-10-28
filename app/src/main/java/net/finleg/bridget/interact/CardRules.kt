@@ -16,7 +16,7 @@ object CardRules {
     const val RESPOND_MAX_DEPTH = 64
 
     /**
-     * Forced by Bridget (CAP-34): page scripts and styles run inline, images only from data:, nothing else
+     * Forced by Bridgit (CAP-34): page scripts and styles run inline, images only from data:, nothing else
      * loads. base-uri, form-action, frame-src and object-src are extra hardening (base-uri and form-action do
      * not fall back to default-src).
      */
@@ -79,7 +79,7 @@ object CardRules {
     }
 
     /**
-     * The document the WebView loads: Bridget's head with the CSP meta first, then the agent's HTML with every
+     * The document the WebView loads: Bridgit's head with the CSP meta first, then the agent's HTML with every
      * `http-equiv` attribute renamed so no meta in the page can set a policy, refresh or redirect. Attribute
      * names can't be escaped in HTML, so renaming every case-insensitive occurrence catches all of them.
      */

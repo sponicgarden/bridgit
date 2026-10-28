@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Top-level part of "What can Bridget do?": what agents can do / how Bridget works. A blue banner like Home's status card. -->
+<!-- Top-level part of "What can Bridgit do?": what agents can do / how Bridgit works. A blue banner like Home's status card. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"

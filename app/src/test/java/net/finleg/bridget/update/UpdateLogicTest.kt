@@ -200,13 +200,13 @@ class UpdateLogicTest {
     }
 
     @Test fun userAgent_named() {
-        assertEquals("Bridget/1.4.0 (Android 17)", UpdateLogic.userAgent("1.4.0", "17"))
+        assertEquals("Bridgit/1.4.0 (Android 17)", UpdateLogic.userAgent("1.4.0", "17"))
     }
 
     @Test fun userAgent_sanitised() {
         val ua = UpdateLogic.userAgent("1.4.0\r\nX-Evil: 1", "")
         assertFalse(ua.contains('\r') || ua.contains('\n'))
-        assertTrue(ua.startsWith("Bridget/1.4.0"))
+        assertTrue(ua.startsWith("Bridgit/1.4.0"))
         assertTrue(ua.endsWith("(Android ?)"))
     }
 

@@ -12,7 +12,7 @@ import javax.crypto.spec.GCMParameterSpec
 
 /**
  * Each agent's callback URL and secret (EVT-05, EVT-06), in their own prefs file (`callbacks`), never in
- * the agents JSON. Bridget must keep the secret to sign deliveries, so it is stored sealed with a
+ * the agents JSON. Bridgit must keep the secret to sign deliveries, so it is stored sealed with a
  * non-exportable Android Keystore AES-GCM key (the PendingKeyVault pattern). The plaintext secret
  * leaves this class only for signing and for the one-time dialog or a refreshed setup prompt.
  * App-private and excluded from backup like the other prefs (SEC-15).

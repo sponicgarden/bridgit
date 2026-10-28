@@ -66,7 +66,7 @@
 
                     <TextView
                         android:id="@+id/no_autofix"
-                        style="@style/Widget.Bridget.MonoChip"
+                        style="@style/Widget.Bridgit.MonoChip"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
@@ -85,7 +85,7 @@
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
                 <TextView
-                    style="@style/Widget.Bridget.SectionHeader"
+                    style="@style/Widget.Bridgit.SectionHeader"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/feedback_section_description" />
@@ -106,7 +106,7 @@
                     android:orientation="vertical">
 
                     <TextView
-                        style="@style/Widget.Bridget.SectionHeader"
+                        style="@style/Widget.Bridgit.SectionHeader"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="@string/feedback_section_images" />
@@ -132,7 +132,7 @@
                     android:orientation="horizontal">
 
                     <TextView
-                        style="@style/Widget.Bridget.SectionHeader"
+                        style="@style/Widget.Bridgit.SectionHeader"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -168,7 +168,7 @@
 
                 <!-- Context summary (FBK-06) -->
                 <TextView
-                    style="@style/Widget.Bridget.SectionHeader"
+                    style="@style/Widget.Bridgit.SectionHeader"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/feedback_section_context" />
@@ -181,7 +181,7 @@
 
                 <!-- Status history -->
                 <TextView
-                    style="@style/Widget.Bridget.SectionHeader"
+                    style="@style/Widget.Bridgit.SectionHeader"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/feedback_section_history" />

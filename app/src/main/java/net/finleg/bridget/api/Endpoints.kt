@@ -41,7 +41,7 @@ object Endpoints {
         Param("raw", "integer", "1 = return the image bytes, details in X-Bridget-* headers"),
     )
 
-    val HEALTH = EndpointSpec("GET", "/health", "status", "Is Bridget up, and which agent you are",
+    val HEALTH = EndpointSpec("GET", "/health", "status", "Is Bridgit up, and which agent you are",
         example = "GET /v1/health", returns = "status, app, app_version, agent, listener_uptime_seconds, battery_level, charging, bind_address, port")
     val ME = EndpointSpec("POST", "/me", "status", "Tell Rahul which model you are and what runs you; shown on your agent card (AGT-16)",
         body = listOf(Param("model", "string", "Your model, as exact as you know it, e.g. claude-opus-5-5 or gpt-6.1 (1-60 chars)", required = true),
@@ -101,7 +101,7 @@ object Endpoints {
 
     private val logFilters = listOf(
         Param("channel", "string", "Comma list of audit, diagnostic, agent"),
-        Param("agent", "string", "Agent name or id; `me` for you; `bridget` for Bridget's own entries"),
+        Param("agent", "string", "Agent name or id; `me` for you; `bridget` for Bridgit's own entries"),
         Param("kind", "string", "request, setting, agent, pairing, service, note, …"),
         Param("endpoint", "string", "Endpoint prefix, e.g. /v1/camera"),
         Param("result", "string", "ok, error, or an error code"),

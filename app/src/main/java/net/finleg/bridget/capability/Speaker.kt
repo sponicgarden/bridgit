@@ -561,7 +561,7 @@ class SpeakerModule(app: BridgeApp) : Capability(app) {
     private suspend fun fetchPublic(url: String, out: File) = withContext(Dispatchers.IO) {
         val r = try {
             SafeHttp.get(url, SafeHttp.Policy.PUBLIC, SpeakerRules.FETCH_DEADLINE_MS, SpeakerRules.MAX_BYTES,
-                headers = mapOf("User-Agent" to "Bridget/${app.appVersion()} (Android)"), maxRedirects = SafeHttp.MAX_REDIRECTS, out = out)
+                headers = mapOf("User-Agent" to "Bridgit/${app.appVersion()} (Android)"), maxRedirects = SafeHttp.MAX_REDIRECTS, out = out)
         } catch (e: SafeHttp.Failure) {
             out.delete()
             throw when (e.reason) {

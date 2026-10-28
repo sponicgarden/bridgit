@@ -217,7 +217,7 @@ object InteractionUi {
             val l = InteractionsControlLinkBinding.inflate(inflater, container, false)
             l.button.text = c.label
             l.shownAs.text = c.shownAs
-            // The real destination is read out too, so TalkBack users see what Bridget drew (CAP-41).
+            // The real destination is read out too, so TalkBack users see what Bridgit drew (CAP-41).
             l.button.contentDescription = c.label + ". " + ctx.getString(R.string.interactions_link_hint, c.shownAs)
             l.button.setOnClickListener { onLink(c, it) }
             container.addView(l.root)

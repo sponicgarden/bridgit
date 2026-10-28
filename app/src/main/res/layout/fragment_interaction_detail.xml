@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Interaction detail (UI-16): Bridget-drawn header, title, image, text, controls, answer. -->
+<!-- Interaction detail (UI-16): Bridgit-drawn header, title, image, text, controls, answer. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -31,7 +31,7 @@
             android:paddingHorizontal="16dp"
             android:paddingBottom="24dp">
 
-            <!-- Header drawn by Bridget, not by the agent. -->
+            <!-- Header drawn by Bridgit, not by the agent. -->
             <LinearLayout
                 android:id="@+id/header"
                 android:layout_width="match_parent"
@@ -138,7 +138,7 @@
                 android:visibility="gone" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
-<!-- CAP-34 HTML card: Bridget's header, the agent's page in a bounded frame, Bridget's toolbar with Dismiss.
+<!-- CAP-34 HTML card: Bridgit's header, the agent's page in a bounded frame, Bridgit's toolbar with Dismiss.
          Shown instead of the scroll above for kind html. The page can never cover these. -->
     <LinearLayout
         android:id="@+id/card_box"
@@ -219,7 +219,7 @@
             android:textAppearance="?attr/textAppearanceBodyMedium"
             android:visibility="gone" />
 
-        <!-- Bridget's toolbar under the card. -->
+        <!-- Bridgit's toolbar under the card. -->
         <LinearLayout
             android:id="@+id/card_bar"
             android:layout_width="match_parent"

@@ -198,7 +198,7 @@ class MainActivity : AppCompatActivity() {
         if (hasFocus) { clearOurClip(); leftApp = false }
     }
 
-    /** True once Bridget went to the background; a copied callback secret is cleared only after that. */
+    /** True once Bridgit went to the background; a copied callback secret is cleared only after that. */
     private var leftApp = false
 
     override fun onStop() {
@@ -218,7 +218,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * SEC-11: a copied prompt or key is cleared the next time Bridget is in the
+     * SEC-11: a copied prompt or key is cleared the next time Bridgit is in the
      * foreground. Only the clip's label is read, which doesn't show Android's paste toast.
      */
     private fun clearOurClip() {
@@ -232,8 +232,8 @@ class MainActivity : AppCompatActivity() {
     fun showBottomBar(show: Boolean) { b.bottomNav.visibility = if (show) View.VISIBLE else View.GONE }
 
     companion object {
-        const val CLIP_LABEL = "Bridget setup prompt"
-        const val CLIP_LABEL_SECRET = "Bridget callback secret"
+        const val CLIP_LABEL = "Bridgit setup prompt"
+        const val CLIP_LABEL_SECRET = "Bridgit callback secret"
         /** Long extra: open this report (from the feedback notification). */
         const val EXTRA_REPORT_ID = "report_id"
         /** Long extra: open this interaction (from a question or notice notification). */

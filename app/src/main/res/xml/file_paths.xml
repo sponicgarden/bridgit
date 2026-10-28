@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- UPD-04: the only files Bridget shares through its FileProvider are verified update APKs. -->
+<!-- UPD-04: the only files Bridgit shares through its FileProvider are verified update APKs. -->
 <paths>
     <cache-path name="updates" path="updates/" />
 </paths>

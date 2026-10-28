@@ -54,7 +54,7 @@ import net.finleg.bridget.ui.feedback.handleFeedbackMenu
 import java.util.Calendar
 
 /**
- * Home (UI-09 … UI-11, ui-spec 5.2): is Bridget listening, does anything need
+ * Home (UI-09 … UI-11, ui-spec 5.2): is Bridgit listening, does anything need
  * me, who used the phone today, and the quick switches.
  */
 class HomeFragment : Fragment() {
@@ -263,7 +263,7 @@ class HomeFragment : Fragment() {
 
     private fun copyAddress() {
         val addr = addressText() ?: return
-        UiActions.copy(requireContext(), "Bridget address", addr)
+        UiActions.copy(requireContext(), "Bridgit address", addr)
         Snackbar.make(b.root, R.string.home_address_copied, Snackbar.LENGTH_SHORT).show()
     }
 

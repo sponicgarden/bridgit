@@ -59,7 +59,7 @@ class ActivityFragment : Fragment() {
 
     // Filter state. Plain fields, saved in onSaveInstanceState.
     private var q = ""
-    private var agentFilter: String? = null       // null = all agents, "" = Bridget (system), else an agent id
+    private var agentFilter: String? = null       // null = all agents, "" = Bridgit (system), else an agent id
     private val types = linkedSetOf<String>()     // keys of TYPES
     private var errorsOnly = false
     private var diagnostics = false
@@ -383,7 +383,7 @@ class ActivityFragment : Fragment() {
         reload()
     }
 
-    /** Called by the entry sheet's "<Agent>'s activity". [agentId] "" = Bridget's own entries. */
+    /** Called by the entry sheet's "<Agent>'s activity". [agentId] "" = Bridgit's own entries. */
     /** FBK-06 screen_context: the filters in use, in words ("Filters: Grok, Requests, errors only"). */
     private fun feedbackContext(): String {
         val parts = if (diagnostics) listOfNotNull(

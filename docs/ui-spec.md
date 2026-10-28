@@ -6,7 +6,7 @@ Version 0.1 · 27 Oct 2026 · Status: **draft for design review**
   Home, Add agent → setup prompt, Activity (with the entry sheet open), Inbox,
   Access, Report a bug, each in light and dark (12 frames, 390 × 844 dp). The
   link opens only for its owner until it is shared from the canvas's Share menu.
-- **Source of truth:** `docs/bridget-spec-v2.md` (2.1). This document expands
+- **Source of truth:** `docs/bridgit-spec-v2.md` (2.1). This document expands
   section 12 into screen-by-screen design detail; it does not change any
   requirement. Where it proposes something section 12 doesn't say, it's
   marked **Proposal** and repeated in the open questions (section 9).
@@ -39,7 +39,7 @@ Contents: 1 Principles · 2 Tokens · 3 Shared components · 4 Navigation ·
 
 ## 2. Tokens
 
-Implemented as a `Theme.Bridget` (parent `Theme.Material3.DayNight.NoActionBar`)
+Implemented as a `Theme.Bridgit` (parent `Theme.Material3.DayNight.NoActionBar`)
 with `values/` and `values-night/` colour resources. **Dynamic colour off**
 (UI-02).
 
@@ -61,7 +61,7 @@ hues and are proposals (Q-D1).
 | `colorOnSecondaryContainer` | `#261900` | `#FFDEA6` | derived | Text on secondary container |
 | `colorSurface` / background | `#F6FAF8` | `#0E1513` | UI-02 | Screen background |
 | `colorSurfaceContainer` | `#EAF0EE` | `#1A2120` | UI-02 | Cards, nav bar, bottom sheets, search field |
-| `colorSurfaceContainerHigh` | `#E1E8E5` | `#252B2A` | derived | Mono chips, "Off" chip, switch track off, avatar for Bridget's own entries |
+| `colorSurfaceContainerHigh` | `#E1E8E5` | `#252B2A` | derived | Mono chips, "Off" chip, switch track off, avatar for Bridgit's own entries |
 | `colorOnSurface` | `#171D1B` | `#DDE4E1` | UI-02 | Body text |
 | `colorOnSurfaceVariant` | `#3F4947` | `#BEC9C6` | derived | Secondary text, inactive nav icons, timestamps |
 | `colorOutline` | `#6F7977` | `#899391` | UI-02 | Outlined buttons, chip borders, switch outline off |
@@ -111,8 +111,8 @@ Roboto (system) with the M3 type scale; JetBrains Mono bundled (Q7) as
 | `textAppearanceLabelLarge` | 14 / 20 | 500 | Buttons, chips |
 | `textAppearanceLabelMedium` | 12 / 16 | 500 | Nav labels, day headers, status chips |
 | `textAppearanceBodySmall` | 12 / 16 | 400 | Captions, timestamps |
-| `TextAppearance.Bridget.Mono` | 12 / 16 | 400 | Mono chips, address, IDs |
-| `TextAppearance.Bridget.Mono.Prompt` | 12 / 18 | 400 | Setup prompt card, entry sheet JSON |
+| `TextAppearance.Bridgit.Mono` | 12 / 16 | 400 | Mono chips, address, IDs |
+| `TextAppearance.Bridgit.Mono.Prompt` | 12 / 18 | 400 | Setup prompt card, entry sheet JSON |
 
 All sizes in `sp`, so they follow the system font scale.
 
@@ -159,7 +159,7 @@ Top app bar 64 dp; navigation bar 80 dp.
 | Switch | `MaterialSwitch` | Label is the row text; whole row toggles |
 | Filter chips | `Chip` style `Widget.Material3.Chip.Filter` in a `ChipGroup` | Single-select (Inbox) or multi (Activity) |
 | Dropdown chip | `Chip` with trailing ▾ icon, opens a `ListPopupWindow` | Agent ▾, Type ▾ |
-| Mono chip | `TextView` with `TextAppearance.Bridget.Mono`, 4 dp corners, `surfaceContainerHigh` | Not clickable; endpoint, code, size, duration |
+| Mono chip | `TextView` with `TextAppearance.Bridgit.Mono`, 4 dp corners, `surfaceContainerHigh` | Not clickable; endpoint, code, size, duration |
 | Status chip | `Chip` (assist, non-clickable) with leading check for **On** | On / Off / Partly / Blocked always as text |
 | Buttons | `MaterialButton` filled / tonal / outlined / text | One filled button per view max |
 | Text field | `TextInputLayout` outlined | Error text below the field |
@@ -204,7 +204,7 @@ quotes are proposals.
 
 ### 5.1 First run (UI-08)
 
-**Purpose:** explain Bridget in three pages, get the notifications permission,
+**Purpose:** explain Bridgit in three pages, get the notifications permission,
 confirm Tailscale, then hand off to Add agent.
 
 **Layout:** full screen, no toolbar. `ViewPager2` with a page indicator
@@ -214,8 +214,8 @@ Bottom row: **Skip** (text, left) on pages 1–2; **Next** (filled, right).
 
 | Page | Headline | Body | Extra |
 |---|---|---|---|
-| 1 | **"Meet Bridget."** | **"Let your AI agents use this phone's camera, mic, photos and more, only when they ask, always visibly."** | — |
-| 2 | **"Private by design."** | **"Bridget only answers over your Tailscale network. Each agent gets its own key. Everything is logged here."** | Tailscale check row; notifications explainer + system permission request |
+| 1 | **"Meet Bridgit."** | **"Let your AI agents use this phone's camera, mic, photos and more, only when they ask, always visibly."** | — |
+| 2 | **"Private by design."** | **"Bridgit only answers over your Tailscale network. Each agent gets its own key. Everything is logged here."** | Tailscale check row; notifications explainer + system permission request |
 | 3 | **"You're in control."** | **"Every feature starts off. Turn on what you want, and switch anything off in one tap."** | **Add your first agent** (filled), **Later** (text) |
 
 Page 2 detail:
@@ -224,7 +224,7 @@ Page 2 detail:
   success check, IP in mono; failure "Tailscale isn't connected" with
   **Open Tailscale** (tonal; opens the Tailscale app, or its Play page if
   missing).
-- Notifications line (above the button): **"Bridget uses notifications to
+- Notifications line (above the button): **"Bridgit uses notifications to
   show you every time an agent uses your phone. Without them, camera, mic and
   screenshots stay off."** Button "Allow notifications" triggers the
   `POST_NOTIFICATIONS` request. If denied: the line turns into a warning
@@ -238,11 +238,11 @@ not focusable; the Tailscale row is a live region.
 
 ### 5.2 Home (UI-09 … UI-11) — mockup frame "Home"
 
-**Purpose:** at a glance: is Bridget listening, does anything need me, who
+**Purpose:** at a glance: is Bridgit listening, does anything need me, who
 used the phone, what's on.
 
 **Layout** (scrolls; `NestedScrollView` with vertical `LinearLayout`):
-1. Toolbar: app icon (28 dp) + **Bridget**; ⋮ (Report a bug, Request a
+1. Toolbar: app icon (28 dp) + **Bridgit**; ⋮ (Report a bug, Request a
    feature, Settings).
 2. **Hero card** (`primaryContainer`): beacon dot + state ("Listening" /
    "Paused" / "Capturing" / "Tailscale is down"), **Pause** outlined button
@@ -255,8 +255,8 @@ used the phone, what's on.
 |---|---|---|
 | ARC-03 camera/mic not active | "Camera and mic need the app opened once" | **Fix now** → **Enable camera and mic** action |
 | Notifications off (PRD-05) | "Notifications are off. Camera, mic and screenshots stay off until they're on." | "Turn on" |
-| Tailscale down | "Tailscale isn't connected. Agents can't reach Bridget." (error style) | "Open Tailscale" |
-| Battery optimised | "Android may stop Bridget when the screen is off." | "Fix" |
+| Tailscale down | "Tailscale isn't connected. Agents can't reach Bridgit." (error style) | "Open Tailscale" |
+| Battery optimised | "Android may stop Bridgit when the screen is off." | "Fix" |
 | Permission revoked | "Camera permission was removed." | "Grant" |
 | Feedback status changed | "Report #0007 is marked fixed." | "Check it" |
 
@@ -280,12 +280,12 @@ used the phone, what's on.
   yet. Add one to let it use this phone." + **Add agent** (tonal).
 - *Paused:* grey dot, "Paused", address greyed, Today still shown.
 - *Capturing:* gold pulsing dot, "Grok is taking a photo" for the duration.
-- *Listener error:* hero card switches to `errorContainer`: "Bridget can't
+- *Listener error:* hero card switches to `errorContainer`: "Bridgit can't
   listen on port 8734" + "Details" (opens the diagnostic log entry).
 - *Loading:* hero card shows "Starting…" with the dot grey; never blocks.
 
 **A11y:** hero card is one focus stop with a combined description
-("Bridget is listening. Address pixel-10-pro-xl…, up 3 hours 12 minutes,
+("Bridgit is listening. Address pixel-10-pro-xl…, up 3 hours 12 minutes,
 Tailscale connected, battery 64 percent") and an `accessibilityLiveRegion`
 of polite so state changes are announced; Pause is a separate stop. Status
 dots have content descriptions ("Active", "Idle").
@@ -307,7 +307,7 @@ agents get a small "Developer" label chip (AGT-15).
 - *Empty:* icon `group`, "No agents yet", "Each AI agent gets its own key.
   Add one and paste the setup prompt into it.", **Add agent** (filled; the
   FAB is hidden while empty).
-- *16 agents:* FAB disabled; tapping shows Snackbar "Bridget holds up to 16
+- *16 agents:* FAB disabled; tapping shows Snackbar "Bridgit holds up to 16
   agents. Remove one to add another."
 - *Key-rotated within 7 days:* row line 2 reads "Key rotated · waiting for
   new prompt" in `secondary`.
@@ -379,14 +379,14 @@ Bottom bar on steps 1–3: **Back** (text, left; hidden on step 1) and
 2. Warning line with lock icon: **"Anyone who gets this text can use your
    phone until you rotate the key."**
 3. **Prompt card**: `MaterialCardView` (surfaceContainer, 1 dp
-   outlineVariant), `TextAppearance.Bridget.Mono.Prompt`, selectable text,
+   outlineVariant), `TextAppearance.Bridgit.Mono.Prompt`, selectable text,
    scrolls inside the card (max ~45 % of screen height, fade at the bottom
    edge). The key line is highlighted with a `secondaryContainer` span
    (UI-13). Content = Appendix B template.
 4. Actions row: **Copy prompt** (filled, full width), **Share** (tonal),
    **QR** (outlined icon button, hidden for userspace prompts, AGT-10);
    ⋮ menu (the toolbar overflow) adds **Copy key only**.
-   - Copy → Snackbar **"Copied. Paste it into Muse. Bridget clears it the
+   - Copy → Snackbar **"Copied. Paste it into Muse. Bridgit clears it the
      next time you open the app."**
    - QR → bottom sheet with the QR (≥ 240 dp, black on white in both
      themes, quiet zone 4 modules), caption "Scan with the agent's phone
@@ -406,7 +406,7 @@ Bottom bar on steps 1–3: **Back** (text, left; hidden on step 1) and
 **Leaving without copying** (✕, back, Done before any copy) — dialog
 (AGT-05): title "You won't see this key again", body **"Copied it?"**,
 buttons **Copy and leave** · **Stay** · **Leave**.
-**Crash/kill return** (AGT-05a): reopening Bridget within 30 min lands back
+**Crash/kill return** (AGT-05a): reopening Bridgit within 30 min lands back
 on this step with a Snackbar "Picked up where you left off. The key is
 still here for 28 more minutes."
 
@@ -444,7 +444,7 @@ Scrolling content:
 9. **Remove agent** (outlined button in `error` colour, full width). Confirm:
    "Remove Grok? Its key stops working. Grok will be told the agent was
    removed." [Remove] (error text button) [Cancel]. Removing the last agent
-   adds "Bridget will stop listening until you add another agent."
+   adds "Bridgit will stop listening until you add another agent."
 
 ### 5.6 Inbox (UI-15, UI-16, P2) — mockup frame "Inbox"
 
@@ -473,7 +473,7 @@ images to your phone." Shared — "Share a photo or text to an agent from any
 app's Share menu."
 
 #### Interaction detail (UI-16, CAP-31 … CAP-34)
-Full-screen. Header drawn by Bridget (can't be covered): avatar + "From
+Full-screen. Header drawn by Bridgit (can't be covered): avatar + "From
 Grok" + time + status chip (Waiting / Seen / Answered / Expired / Cancelled).
 Body: title (`TitleLarge`), image (fit width, tap to zoom), text
 (`BodyLarge`, links not auto-linked). Controls rendered in order:
@@ -482,18 +482,18 @@ Body: title (`TitleLarge`), image (fit width, tap to zoom), text
 - text → `TextInputLayout` with the given label/placeholder;
 - choice → `ChipGroup` single-select;
 - link → text button with external icon and, beneath it, the host or
-  package drawn by Bridget in mono (`hostinger.com`, `com.whatsapp`).
+  package drawn by Bridgit in mono (`hostinger.com`, `com.whatsapp`).
 Toolbar actions: **Play aloud** (icon `volume_up`), ⋮ Dismiss.
 Answered: controls replaced by "You answered **Pay** · 14:03" and the typed
 values. Expired: banner "This question expired. Grok was told."
-**HTML card** (P5): WebView inside a `MaterialCardView`; Bridget header
+**HTML card** (P5): WebView inside a `MaterialCardView`; Bridgit header
 "From Grok · custom card" above and the toolbar with **Dismiss** stay
 outside the WebView.
 
 #### File detail
 Image → `PhotoView`-style zoomable `ImageView`; PDF → `PdfRenderer` pages in
 a `RecyclerView`. Bottom app bar: **Open with**, **Save to Downloads**,
-**Delete** (confirm "Delete this file from Bridget?"). Header: "From Codex ·
+**Delete** (confirm "Delete this file from Bridgit?"). Header: "From Codex ·
 184 KB · 1 h ago". Error: "Can't show this file. Try Open with."
 
 #### Share detail
@@ -513,14 +513,14 @@ Preview (image thumbnail or first 10 lines of text), target agent, status
 - Chip row (horizontal scroll): **Agent ▾**, **Type ▾**, **Errors only**
   (filter chip), and the **Live** toggle chip at the end (selected =
   `secondaryContainer` with pulsing gold dot).
-  - Agent ▾ menu: All agents, each agent, "Bridget (system)".
+  - Agent ▾ menu: All agents, each agent, "Bridgit (system)".
   - Type ▾ menu (multi-select with checkboxes): Requests, Settings, Agents,
     Grants, Interactions, Diagnostics.
   - Active filters show as selected chips with the chosen value ("Grok ▾").
 - List grouped by day with sticky headers ("Today", "Yesterday", "Mon 26
   Oct") in `primary` `LabelMedium`.
 
-**Row:** time (right, `BodySmall`), avatar 28 dp (Bridget's own entries use
+**Row:** time (right, `BodySmall`), avatar 28 dp (Bridgit's own entries use
 a gear icon on `surfaceContainerHigh`), sentence (`BodyMedium`), optional
 second line (reason or note text), then mono chips: method + endpoint,
 HTTP code (2xx → successContainer, 4xx/5xx → errorContainer with the error
@@ -531,7 +531,7 @@ a **3 dp `error` left stripe** (UI-17).
 last screenshot", "Grok took a screenshot", "Claude took a photo", "Claude
 couldn't use the camera" + reason "Camera is switched off in Features.",
 "You turned Microphone on", "Muse wrote a note" + the note in quotes,
-"Bridget started listening", "Tailscale disconnected".
+"Bridgit started listening", "Tailscale disconnected".
 
 **Entry sheet** (`BottomSheetDialogFragment`): title = the sentence; every
 LOG-01 field as a two-column key/value list in mono (id, ts, channel, level,
@@ -550,7 +550,7 @@ Diagnostics are kept." [Clear] [Cancel] (LOG-05).
 filter; ⋮ shows "Back to activity".
 
 **States:**
-- *Empty:* **"Nothing yet. When an agent uses Bridget, it shows up here."**
+- *Empty:* **"Nothing yet. When an agent uses Bridgit, it shows up here."**
 - *No results for filters:* "No entries match" + **Clear filters**.
 - *Loading more:* small circular progress row at the list end.
 - *Live on:* new rows animate in at the top; if scrolled down, a
@@ -602,7 +602,7 @@ Unbuilt capabilities are hidden. Toggling shows no dialog; it's logged.
 **Purpose:** every Android permission/special access with one tap to the
 exact settings page.
 
-**Layout:** toolbar back + **Access**; intro "Android settings Bridget can
+**Layout:** toolbar back + **Access**; intro "Android settings Bridgit can
 use. Each button opens the exact page."; two groups: **Needs you** (Off,
 Partly, Blocked, sorted Blocked first) and **All set** (On). Footer link
 **Show me how**.
@@ -669,7 +669,7 @@ everything below (Q-D6). If rejected, it goes back to item 8 unchanged.
    per type, FBK-05).
 2. Error banner (errorContainer; form scrolls to it).
 3. Intro (`BodyMedium`, onSurfaceVariant): **"Describe what went wrong. A
-   screenshot helps if you have one."** / **"What would make Bridget more
+   screenshot helps if you have one."** / **"What would make Bridgit more
    useful? Sketches and screenshots welcome."**
 4. Label **"What happened?"** / **"What would you like to see?"**
 5. **Description** — outlined `TextInputLayout`, 5–12 lines, placeholder
@@ -693,7 +693,7 @@ everything below (Q-D6). If rejected, it goes back to item 8 unchanged.
 
 **After submit (FBK-08):** dialog title **"Report saved"** (or "Report
 sent"), body **"Thanks. It's report #0007. Developer agents can pick it up
-from Bridget's API."** [OK] (+ "View report" in debug builds).
+from Bridgit's API."** [OK] (+ "View report" in debug builds).
 **Rate limit:** banner "That's 10 reports this hour. Try again later."
 **Cancel with text:** dialog "Keep this draft?" [Keep] [Discard].
 
@@ -748,7 +748,7 @@ All use the monochrome bridge icon `ic_notif` as small icon and the brand
 `primary` as accent colour.
 
 ### 6.2 Ongoing listener notification (UI-22)
-Title "Bridget is listening" (or "Paused"); text "Grok · image/last · 2 min
+Title "Bridgit is listening" (or "Paused"); text "Grok · image/last · 2 min
 ago"; when Accessibility is on, second line "Screenshots on" (CAP-25a).
 Actions **Pause** / **Resume** and **Open**. Tap opens Home.
 
@@ -768,10 +768,10 @@ Notice: "**Claude:** Backup finished".
 at most once per setting per day.
 
 ### 6.6 Quick Settings tile (UI-23)
-Label **Bridget**; subtitle "Listening" / "Paused" / "No agents"; icon =
+Label **Bridgit**; subtitle "Listening" / "Paused" / "No agents"; icon =
 monochrome bridge. Active state = listening, inactive = paused, unavailable
 = no agents. Tap toggles; long-press opens Home. Content description
-"Bridget, listening. Double-tap to pause."
+"Bridgit, listening. Double-tap to pause."
 
 ### 6.7 Home-screen widget (UI-24, P3)
 2 × 2: beacon dot + state, last three requests ("Grok · image/last · 2 m").

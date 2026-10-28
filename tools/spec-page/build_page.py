@@ -1,4 +1,4 @@
-"""Builds bridget-spec.html from docs/bridget-spec-v2.md.
+"""Builds bridget-spec.html from docs/bridgit-spec-v2.md.
 
 The front section (capabilities, roadmap, open questions) is generated from
 the spec's own tables, so the page never drifts from the spec.

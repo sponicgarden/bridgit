@@ -495,7 +495,7 @@ class AddAgentFragment : Fragment() {
                 if (e != null) {
                     b.waitSub.text = listOfNotNull("${e.method ?: ""} ${e.endpoint ?: ""}".trim().ifEmpty { null },
                         e.durationMs?.let { "$it ms" }, e.sourceIp).joinToString(" · ")
-                    b.waitSub.setTextAppearance(R.style.TextAppearance_Bridget_Mono)
+                    b.waitSub.setTextAppearance(R.style.TextAppearance_Bridgit_Mono)
                     b.waitSub.setTextColor(on)
                 }
                 b.pulseDot.isVisible = false; b.pulseRing.isVisible = false

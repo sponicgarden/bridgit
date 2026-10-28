@@ -36,9 +36,9 @@ import java.io.ByteArrayInputStream
  *   network loads blocked.
  * - No new windows (setSupportMultipleWindows(false), onCreateWindow false); every navigation blocked;
  *   every request answered with an empty 403 (the card itself comes from loadDataWithBaseURL, so it is never
- *   fetched); Bridget's forced CSP is the first thing in the page ([CardRules.prepare]).
+ *   fetched); Bridgit's forced CSP is the first thing in the page ([CardRules.prepare]).
  * - No JavaScript dialogs, no fullscreen, no file chooser, no downloads, no autofill, no console logging
- *   (LOG-02): nothing the page does can draw over Bridget's own chrome around the card.
+ *   (LOG-02): nothing the page does can draw over Bridgit's own chrome around the card.
  * - One @JavascriptInterface method, Bridget.respond(json), accepted once ([RespondGate]); the answer is
  *   handed to [onRespond] on the main thread.
  *
@@ -52,7 +52,7 @@ class CardWebView(context: Context, private val onRespond: (Any) -> Unit, privat
 
     init {
         configure(settings)
-        // Process-wide: Bridget has no other WebView, and a card must never get or set cookies.
+        // Process-wide: Bridgit has no other WebView, and a card must never get or set cookies.
         CookieManager.getInstance().setAcceptCookie(false)
         CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
         webViewClient = Client()
@@ -70,7 +70,7 @@ class CardWebView(context: Context, private val onRespond: (Any) -> Unit, privat
     @Volatile private var page: ByteArray? = null
 
     /**
-     * Loads the agent's HTML with Bridget's head (CSP) in front. The page is answered from memory by
+     * Loads the agent's HTML with Bridgit's head (CSP) in front. The page is answered from memory by
      * shouldInterceptRequest for [CARD_URL] (an .invalid name, so it can never be a real host), once,
      * with the CSP also sent as a response header. Every other request still gets the empty 403.
      * (A data: URL load is itself intercepted on current WebViews, which showed every card blank.)
@@ -122,7 +122,7 @@ class CardWebView(context: Context, private val onRespond: (Any) -> Unit, privat
         override fun onFormResubmission(view: WebView, dontResend: Message, resend: Message) { dontResend.sendToTarget() }
         override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {}
         override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
-            // Never take Bridget down with a card; the screen drops the view and shows a note.
+            // Never take Bridgit down with a card; the screen drops the view and shows a note.
             (view as? CardWebView)?.onCrash?.invoke()
             return true
         }
@@ -176,6 +176,6 @@ class CardWebView(context: Context, private val onRespond: (Any) -> Unit, privat
          * Cache Storage shared between cards, and frames can't reach unguarded WebRTC constructors (Codex review).
          */
         val HEADER_CSP = CardRules.CSP.trimEnd().trimEnd(';') + "; sandbox allow-scripts"
-        fun blocked() = WebResourceResponse("text/plain", "utf-8", 403, "Blocked by Bridget", emptyMap(), ByteArrayInputStream(ByteArray(0)))
+        fun blocked() = WebResourceResponse("text/plain", "utf-8", 403, "Blocked by Bridgit", emptyMap(), ByteArrayInputStream(ByteArray(0)))
     }
 }

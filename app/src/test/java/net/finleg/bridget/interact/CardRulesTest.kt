@@ -29,7 +29,7 @@ class CardRulesTest {
         assertTrue(csp in 0 until out.indexOf("<p>hi"))
         assertTrue(out.startsWith("<!DOCTYPE html><html><head><meta http-equiv=\"Content-Security-Policy\""))
         assertTrue(out.contains("content=\"${CardRules.CSP}\""))
-        // Exactly one real http-equiv remains: Bridget's own.
+        // Exactly one real http-equiv remains: Bridgit's own.
         assertEquals(1, Regex("http-equiv", RegexOption.IGNORE_CASE).findAll(out).count())
     }
 

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="more_what_can">What can Bridget do?</string>
-    <string name="whatcan_title">What can Bridget do?</string>
+    <string name="more_what_can">What can Bridgit do?</string>
+    <string name="whatcan_title">What can Bridgit do?</string>
     <string name="whatcan_subtitle">%1$d of %2$d things available now</string>
     <string name="whatcan_back">Back</string>
     <string name="whatcan_group_now">Available now</string>
@@ -12,11 +12,11 @@
     <string name="whatcan_options">Options</string>
     <string name="whatcan_section_abilities">Supported Agent Requests:</string>
     <string name="whatcan_section_abilities_intro">Everything an agent can ask of this phone, with an example of each. Each one works only while its switch is on.</string>
-    <string name="whatcan_section_mechanics">How Bridget works (the technical part)</string>
+    <string name="whatcan_section_mechanics">How Bridgit works (the technical part)</string>
     <string name="whatcan_section_mechanics_intro">How agents connect, and how you stay in control.</string>
     <string name="whatcan_ref">Spec %1$s</string>
     <string name="whatcan_share">Share the API details for %1$s</string>
     <string name="whatcan_share_title">Share %1$s</string>
-    <string name="whatcan_share_text">Bridget: %1$s. What an agent can ask for, and the exact API calls: %2$s</string>
+    <string name="whatcan_share_text">Bridgit: %1$s. What an agent can ask for, and the exact API calls: %2$s</string>
     <dimen name="whatcan_gap">12dp</dimen>
 </resources>

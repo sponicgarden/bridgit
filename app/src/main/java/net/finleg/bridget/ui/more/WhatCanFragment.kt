@@ -25,7 +25,7 @@ import net.finleg.bridget.databinding.WhatcanSectionBinding
 import net.finleg.bridget.ui.common.themeColor
 import com.google.android.material.R as M
 
-/** More → What can Bridget do? One card per feature with a use case, grouped by when it arrives. */
+/** More → What can Bridgit do? One card per feature with a use case, grouped by when it arrives. */
 class WhatCanFragment : Fragment() {
     private var _b: FragmentWhatCanBinding? = null
     private val b get() = _b!!
@@ -46,7 +46,7 @@ class WhatCanFragment : Fragment() {
         b.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         val abilities = WhatCanData.all.filter { it.kind == WhatCanData.Kind.ABILITY }
         b.toolbar.subtitle = getString(R.string.whatcan_subtitle, abilities.count { it.stage == WhatCanData.Stage.NOW }, abilities.size)
-        // Two parts: what agents can do with the phone, then how Bridget works (owner request).
+        // Two parts: what agents can do with the phone, then how Bridgit works (owner request).
         val rows = mutableListOf<Any>()
         for ((kind, title, intro) in listOf(
             Triple(WhatCanData.Kind.ABILITY, R.string.whatcan_section_abilities, R.string.whatcan_section_abilities_intro),
@@ -120,7 +120,7 @@ class WhatCanFragment : Fragment() {
             b.share.contentDescription = ctx.getString(R.string.whatcan_share, f.title)
             b.share.setOnClickListener {
                 val send = Intent(Intent.ACTION_SEND).setType("text/plain")
-                    .putExtra(Intent.EXTRA_SUBJECT, "Bridget: ${f.title}")
+                    .putExtra(Intent.EXTRA_SUBJECT, "Bridgit: ${f.title}")
                     .putExtra(Intent.EXTRA_TEXT, ctx.getString(R.string.whatcan_share_text, f.title, ApiDocs.link(f.title)))
                 ctx.startActivity(Intent.createChooser(send, ctx.getString(R.string.whatcan_share_title, f.title)))
             }

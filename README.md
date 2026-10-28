@@ -1,4 +1,4 @@
-# Bridget (Android)
+# Bridgit (Android)
 
 Copyright 2026 Sponic Garden, Inc. Licensed under the [Apache License 2.0](LICENSE).
 
@@ -8,21 +8,21 @@ or fetch a gallery photo. It answers only over Tailscale, each agent has its
 own key, and every request is logged on the phone with the agent's name.
 
 Package `net.finleg.bridget`. Version **1.3.0** (phase P1a of
-[`docs/bridget-spec-v2.md`](docs/bridget-spec-v2.md), the source of truth).
+[`docs/bridgit-spec-v2.md`](docs/bridgit-spec-v2.md), the source of truth).
 1.3.0 is not compatible with 1.2: keys, the log and `/v1/audit` changed, and
 nothing is migrated (spec decision D20). Uninstall 1.2.0, install 1.3.0, and
 add each agent again.
 
 **For agents:** call `GET /v1/guide` (written for you, generated live) and
 `GET /v1/openapi.json`. [`docs/scenarios.md`](docs/scenarios.md) lists what
-you can do with Bridget.
+you can do with Bridgit.
 
 ## Install
 
-1. Get the APK from the private GitHub release (`sponicgarden/bridget`, tag
+1. Get the APK from the private GitHub release (`sponicgarden/bridgit`, tag
    `bridget-v1.3.0`), or build it (below). Install it with
    `adb install -r app-release.apk`, or open it on the Pixel.
-2. Open **Bridget**. First run explains the app, asks for notifications and
+2. Open **Bridgit**. First run explains the app, asks for notifications and
    checks Tailscale. Every feature starts **off**.
 
 Updates from 1.3.0 on install over the top, as long as they are signed with
@@ -34,7 +34,7 @@ the same key.
 2. Type a name or tap a suggestion (Muse, Grok, Claude, Codex, ...).
 3. Pick how it connects: **Tailscale (direct)** or **Tailscale, userspace
    host** (like Grok's box; that prompt includes the `bridget` helper).
-4. Bridget checks itself (listener, Tailscale address, port), then shows the
+4. Bridgit checks itself (listener, Tailscale address, port), then shows the
    **setup prompt**. Tap **Copy prompt** and paste it into the agent. The key
    is in the prompt and is shown only once (screenshots of this screen are
    blocked). **Share**, **QR** and **Copy key only** are there too.
@@ -55,7 +55,7 @@ Agent page: **Rotate key** (old key stops at once and gets
 Keys are stored in Bitwarden as **"Bridget — <Name> agent key"** (login
 username = agent name, password = key, URL = base URL).
 
-**After a reboot**, Bridget starts listening at the first unlock (Android
+**After a reboot**, Bridgit starts listening at the first unlock (Android
 sends its boot signal only then), with camera and mic off until you open
 the app once. Home shows a **Fix now** banner for that.
 
@@ -78,7 +78,7 @@ needs `Authorization: Bearer brg_...`. Every response has a `request_id`
 | `GET /gallery/recent?limit=20` | Newest images, metadata only |
 | `GET /gallery/photo/{id}` | One image; `size=`, `raw=1` |
 | `GET /image/last?type=any\|screenshot\|photo` | Newest image, sized for AI vision (1568 px, q85); `since=&wait=55` waits for the next one |
-| `POST /screen/capture` | What's on screen now, same sizing, nothing saved. Needs More > Access > Screenshots (Android Accessibility, "Bridget screenshots") and the Screenshots switch in Features |
+| `POST /screen/capture` | What's on screen now, same sizing, nothing saved. Needs More > Access > Screenshots (Android Accessibility, "Bridgit screenshots") and the Screenshots switch in Features |
 | `GET /log` | The log, with filters; `order=asc&since=<id>&wait=55` follows it live |
 | `GET /log/{id}`, `/log/stats`, `/log/export?format=jsonl\|csv` | One entry, stats, export |
 | `POST /log` | `{"message":"..."}`: a note in the agent channel |
@@ -93,7 +93,7 @@ per agent and 30 per address, 4 open `wait` requests per agent.
 The log setting **Agents can read: all entries / only their own** (Settings
 → Privacy) applies to every log endpoint. Developer agents always see all.
 
-### Use Bridget from Claude Code over MCP
+### Use Bridgit from Claude Code over MCP
 
 `POST /v1/mcp` speaks MCP (Streamable HTTP, JSON replies, no SSE, no
 session id) with the agent's normal key. Put this in the project's
@@ -133,7 +133,7 @@ capped at 2 MB, so base64 images sent with `interactions_send` or
 
 Rahul can give an agent a **Callback URL** in its agent screen (tailnet
 addresses only, unless Settings > Allow internet callbacks is on; then a public
-`https://` URL works too). Bridget then POSTs every event for that agent as
+`https://` URL works too). Bridgit then POSTs every event for that agent as
 `{"event": {id, type, at, data}, "agent": "<name>"}`, retrying at 10 s, 60 s and
 5 min (`GET /v1/events` always has them). The callback secret (`cbs_…`) is shown
 once when the URL is saved. Check the signature like this:
@@ -160,7 +160,7 @@ receiver didn't answer 2xx).
   stored only as salted SHA-256 hashes. The prefix lets secret scanners
   catch leaked keys.
 - Switches can only be changed on the phone. All start off.
-- Captures need Bridget's notifications on. Each capture names the agent in
+- Captures need Bridgit's notifications on. Each capture names the agent in
   a notification and Android's indicator shows. Agent photos never go into
   the gallery.
 - The log (SQLite on the phone) never stores keys, request headers, media or
@@ -199,7 +199,7 @@ Signing certificate SHA-256:
 `6bbd482d18efdc58ca28de8358405602ebb0405b479cabd36b37ff8242042f61`.
 Backup: Bitwarden item **"Almusca Device Bridge — Android release keystore"**
 (password in the notes, `release.jks` attached; verified 26 Oct 2026). That
-key signs Bridget; the folder and item keep the original name. Without it, an
+key signs Bridgit; the folder and item keep the original name. Without it, an
 update means uninstalling, which wipes the agents and the audit log.
 
 Icon (1.4.0): a phone outline with a mint "B" ribbon and cursor, as an adaptive icon
@@ -225,14 +225,14 @@ tapping the screen. Release builds don't contain it.
 
 ## Next (specs, not built)
 
-**Master spec: [`docs/bridget-spec-v2.md`](docs/bridget-spec-v2.md)** (27 Oct 2026) covers everything below and more, with requirement IDs, API shapes, screens, roadmap and open questions. The files below are kept for history.
+**Master spec: [`docs/bridgit-spec-v2.md`](docs/bridgit-spec-v2.md)** (27 Oct 2026) covers everything below and more, with requirement IDs, API shapes, screens, roadmap and open questions. The files below are kept for history.
 
 - `docs/spec-per-agent-permissions.md`: separate switches per agent.
 - `docs/spec-flashlight.md`: agents can turn the flashlight on (auto-off).
 - `docs/spec-screenshot.md`: screenshot on request, approved on the phone
   once, for 1 hour or for 16 hours.
 - `docs/spec-access-screen.md`: an Access tab listing every Android setting
-  Bridget needs, with one-tap links straight to each switch.
+  Bridgit needs, with one-tap links straight to each switch.
 - `docs/spec-agent-inbox.md`: interactions (one-way notices and questions,
   optionally spoken aloud), files sent to the phone, and things Rahul shares
   to an agent, all in a new Inbox screen. Works for
@@ -254,3 +254,11 @@ governing permissions and limitations under the License.
 Third-party components keep their own licences: Ktor (Apache 2.0), CameraX
 and AndroidX (Apache 2.0), Material Components (Apache 2.0), ZXing (Apache
 2.0), Kotlin coroutines (Apache 2.0).
+
+## Bridgit naming and compatibility
+
+The repository is https://github.com/sponicgarden/bridgit and the selected website domain is https://bridgit.cc. The public product name is **BRIDGIT Device Manager for Android**.
+
+Android package `net.finleg.bridget`, stored device preferences, `X-Bridget-*` headers, the `Bridget.respond` JavaScript bridge, pairing identifiers, existing vault item names, updater object paths and historical release tags remain stable so installed apps and paired agents keep working. Use `tools/bridgit`; `tools/bridget` remains a compatibility entry point. Existing `BRIDGET_*` variables and `~/.config/bridget` configuration remain supported.
+
+New CLI configuration uses `~/.config/bridgit/env` and `BRIDGIT_KEY`, `BRIDGIT_HOST`, `BRIDGIT_PORT` (or `BRIDGIT_ENV` for an explicit config path). The old names remain accepted; new names take precedence.
