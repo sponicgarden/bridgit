@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Shared strings. Each screen keeps its own strings in strings_<screen>.xml. -->
 <resources>
-    <string name="app_name">Bridgit</string>
+    <string name="app_name">bridgit</string>
     <!-- Full name (owner, 27 Oct 2026): shown on first run, under the Home title and in About. -->
-    <string name="app_tagline">Agentic Android Device Bridge</string>
-    <string name="app_full_name">Bridgit: Agentic Android Device Bridge</string>
+    <string name="app_tagline">Device Manager for Android</string>
+    <string name="app_full_name">bridgit: Device Manager for Android</string>
 
     <!-- Notification channels (UI-21) -->
     <string name="channel_listener">Listener</string>

@@ -29,7 +29,7 @@
 #   7. Creates the GitHub release bridget-v<version> with the APK attached (unless --no-github).
 #
 # The Cloudflare R2 token comes from Bitwarden item 0a573694-8b9d-44f1-9600-b43f011a48cf (login
-# password, or a field whose name contains "token"), unlocked with ~/bin/bw-unlock. The token is
+# password, or a field whose name contains "token"), using an active bwaccesser grant or BW_SESSION. The token is
 # written straight from Bitwarden's JSON into a 0600 header file that curl reads with -H @file; it
 # is never printed, never in a shell variable and never on a command line. The file is deleted on exit.
 # --dry-run doesn't touch Bitwarden at all.
@@ -177,13 +177,18 @@ if [[ ${DRY_RUN} -eq 1 ]]; then
 fi
 
 # ---- 5. Upload ----
-[[ -x "${HOME}/bin/bw-unlock" ]] || die "~/bin/bw-unlock not found"
-command -v bw >/dev/null || die "bw (Bitwarden CLI) not found"
-BW_SESSION="$("${HOME}/bin/bw-unlock")"
-export BW_SESSION
+# Reuse existing authorization; publishing must never read the master password or renew a grant.
+if [[ -x "${HOME}/bin/bwaccesser" ]]; then
+  "${HOME}/bin/bwaccesser" status >/dev/null || die "An active bwaccesser grant is required"
+  BW_READ=("${HOME}/bin/bwaccesser" bw)
+else
+  command -v bw >/dev/null || die "bw (Bitwarden CLI) not found"
+  [[ -n ${BW_SESSION:-} ]] || die "Provide an already-unlocked BW_SESSION"
+  BW_READ=(bw)
+fi
 HDR="$(mktemp "${WORK}/hdr.XXXXXX")"
 chmod 600 "${HDR}"
-bw get item "${BW_ITEM}" | python3 -c '
+"${BW_READ[@]}" get item "${BW_ITEM}" | python3 -c '
 import json, sys
 d = json.loads(sys.stdin.read(), strict=False)
 tok = (d.get("login") or {}).get("password") or next(
@@ -193,7 +198,6 @@ if not tok:
 with open(sys.argv[1], "w") as f:
     f.write("Authorization: Bearer " + tok.strip() + "\n")
 ' "${HDR}"
-unset BW_SESSION
 
 upload() { # key, file, content-type
   local resp="${WORK}/resp.json"

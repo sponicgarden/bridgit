@@ -4,3 +4,9 @@ dist/
 preview.png
 
 .wrangler/
+
+carousel-preview.png
+
+.dev.vars
+.env
+.env.*

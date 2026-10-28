@@ -1,4 +1,4 @@
 App artwork: app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png
 SHA256: 46b8617065456c5fdde21661b6b78e779dfe1159accead7bda947261cd2cc339
 Adaptive background: #2B1834
-Typography: Bricolage Grotesque Bold, Instrument Sans Bold, Outfit Bold (SIL OFL). Original font files unchanged; review SVGs contain outlines.
+Typography: Bricolage Grotesque Bold (SIL Open Font License), outlined with optical spacing. Font file unchanged.

@@ -24,5 +24,18 @@
   "build": {
     "command": "npm run build"
   },
-  "main": "worker.mjs"
+  "main": "worker.mjs",
+  "d1_databases": [
+    {
+      "binding": "SIGNUPS",
+      "database_name": "bridgit-website",
+      "database_id": "181e13d5-f52e-446e-b899-39ce34d44217",
+      "migrations_dir": "./migrations"
+    }
+  ],
+  "triggers": {
+    "crons": [
+      "17 3 * * *"
+    ]
+  }
 }
