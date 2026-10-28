@@ -1,0 +1,25 @@
+{
+  "name": "bridgit",
+  "account_id": "9cd3a280a54ce2a5b382602f0247b577",
+  "compatibility_date": "2026-10-28",
+  "workers_dev": false,
+  "preview_urls": false,
+  "assets": {
+    "directory": "./dist",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "routes": [
+    {
+      "pattern": "bridgit.cc",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.bridgit.cc",
+      "custom_domain": true
+    }
+  ],
+  "build": {
+    "command": "npm run build"
+  }
+}
