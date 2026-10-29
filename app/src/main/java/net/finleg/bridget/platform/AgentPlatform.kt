@@ -29,12 +29,13 @@ class AgentPlatform(val app: BridgeApp) {
         app.policy.agents().forEach { credentialEpochs[it.id]=it.hash }
         // Preserve only existing authority; new capabilities and newly paired agents start denied.
         if (store.setting("legacy_migrated") != "true") {
-            app.policy.agents().forEach { a -> listOf("camera.snapshot","microphone.clip","gallery.read","audit.read").forEach { store.grant(a.id,it,Long.MAX_VALUE) } }
+            app.policy.agents().filter { app.agents.get(it.id)?.connection!=net.finleg.bridget.core.Connection.RELAY }.forEach { a -> listOf("camera.snapshot","microphone.clip","gallery.read","audit.read").forEach { store.grant(a.id,it,Long.MAX_VALUE) } }
             store.setting("legacy_migrated","true",true)
         }
         store.list(kind="operation",limit=1000).filter { it.optString("status") in setOf("running","accepted") }.forEach {
             store.save(it.getString("agent_id"),"operation",it.put("status","unknown_outcome").put("error","interrupted_reconcile_before_retry"))
         }
+        store.list(kind="operation",limit=1000).filter { it.optBoolean("relay") && it.optString("status")=="awaiting_owner" }.forEach { store.save(it.getString("agent_id"),"operation",it.put("status","cancelled").put("error","relay_restarted")) }
         store.list(kind="session").filter { it.optString("status") == "active" }.forEach { store.save(it.getString("agent_id"),"session",it.put("status","interrupted")) }
         store.list(kind="stream").filter { it.optString("status") == "active" }.forEach { store.save(it.getString("agent_id"),"stream",it.put("status","interrupted")) }
         scope.launch {
@@ -150,8 +151,9 @@ class AgentPlatform(val app: BridgeApp) {
         finally { watchdog.cancel(); activeSensorAgent=null; activeSensorScope=null; if(captureToken!=null) service.captureEnded(captureToken); sensorLock.unlock() }
     }
     private fun sensitive(command: String,args: JSONObject): Boolean = command in setOf("ui.action","ui.sequence","device.action","notification.reply","peripheral.action","translation.download","speech.transcribe","stream.start","alert.trigger")
-    fun mutate(agent: String, command: String,args: JSONObject,key: String,credential: String? = null): JSONObject {
+    fun mutate(agent: String, command: String,args: JSONObject,key: String,credential: String? = null,relayDeadline: Long? = null,relayJob: String? = null): JSONObject {
         if(credential!=null && getAgent(agent).hash!=credential) throw ApiError(401,"unauthorized","Key was rotated")
+        if(relayDeadline!=null && relayDeadline<=System.currentTimeMillis()) throw ApiError(409,"deadline_expired","Relay deadline expired")
         val scopeId = commandScope(command,args)
         authorize(agent,scopeId)
         val (op,fresh) = store.reserve(agent,key,command,args)
@@ -162,7 +164,7 @@ class AgentPlatform(val app: BridgeApp) {
         if(command=="notification.reply") op.put("review_context",NotificationBridge.instance?.review(agent,args) ?: throw ApiError(409,"notification_access_required","Enable notification access"))
         if(command=="alert.trigger") op.put("review_context",JSONObject().put("recipients",JSONArray(args.strings("destinations",3).map { id -> store.require(id,"owner","destination").let { JSONObject().put("name",it.getString("name")).put("url",it.getString("url")) } })))
         } catch(e:ApiError) { store.save(agent,"operation",op.put("status","failed").put("error",e.code)); throw e }
-        op.put("credential_hash",getAgent(agent).hash).put("expires_at",System.currentTimeMillis()+5*60_000).put("identity",AgentBranding.json(getAgent(agent)))
+        op.put("credential_hash",getAgent(agent).hash).put("expires_at",minOf(System.currentTimeMillis()+5*60_000,relayDeadline ?: Long.MAX_VALUE)).put("relay",relayDeadline!=null).put("relay_job",relayJob).put("identity",AgentBranding.json(getAgent(agent)))
         val pending = sensitive(command,args)
         store.save(agent,"operation",op.put("status",if(pending) "awaiting_owner" else "accepted"))
         if (!pending) launchOperation(op) else { PlatformNotifications.show(app,op); store.emit(agent,"operation.awaiting_owner",op.getString("id")); changed() }
@@ -180,6 +182,13 @@ class AgentPlatform(val app: BridgeApp) {
         }
         launchOperation(op)
     }
+    fun cancelRelayOperation(agent:String,id:String) {
+        val op=store.find(id,agent,"operation") ?: return
+        if(!op.optBoolean("relay"))return
+        val result=op.optJSONObject("result")
+        if(op.optString("command")=="session.request" && result?.optString("kind")=="session")store.find(result.optString("id"),agent,"session")?.let { closeSession(it,"cancelled") }
+        cancelOperation(agent,id)
+    }
     fun cancelOperation(agent: String,id: String): JSONObject {
         val op = store.require(id,agent,"operation")
         jobs["$agent:$id"]?.cancel()
@@ -192,10 +201,12 @@ class AgentPlatform(val app: BridgeApp) {
             var op = store.require(id,agent,"operation")
             try {
                 if(op.optString("credential_hash")!=getAgent(agent).hash) throw ApiError(401,"unauthorized","Key was rotated")
+                if(op.optLong("expires_at")<=System.currentTimeMillis()) throw ApiError(409,"deadline_expired","Execution deadline expired")
                 authorize(agent,commandScope(op.getString("command"),op.getJSONObject("input")))
                 if (op.optString("status") != "accepted") return@launch
                 op = store.save(agent,"operation",op.put("status","running"))
-                val result = withTimeout(150_000) { execute(agent,op.getString("command"),op.getJSONObject("input")) }
+                val budget=if(op.optBoolean("relay")) minOf(150_000L,op.getLong("expires_at")-System.currentTimeMillis()) else 150_000L
+                val result = withTimeout(budget.coerceAtLeast(1)) { execute(agent,op.getString("command"),op.getJSONObject("input"),if(op.optBoolean("relay"))op.getLong("expires_at") else null,op.optString("relay_job").ifEmpty { null }) }
                 // Revocation cannot be overwritten with a late success.
                 if (store.require(id,agent).optString("status") == "running") store.save(agent,"operation",op.put("status","completed").put("result",result).put("finished_at",System.currentTimeMillis()))
             } catch(e: CancellationException) {
@@ -253,14 +264,14 @@ class AgentPlatform(val app: BridgeApp) {
         return result
         } finally { if(waiting) app.requests.waits.exit(agent) }
     }
-    private suspend fun execute(agent: String,command: String,args: JSONObject): JSONObject = when(command) {
+    private suspend fun execute(agent: String,command: String,args: JSONObject,relayDeadline:Long?=null,relayJob:String?=null): JSONObject = when(command) {
         "interaction.create" -> interaction(agent,args)
         "interaction.cancel" -> store.require(args.text("id"),agent,"interaction").also { store.save(agent,"interaction",it.put("status","cancelled")); store.emit(agent,"interaction.cancelled",it.getString("id")) }
         "session.request" -> {
             args.only("apps","duration_seconds","purpose")
             val apps=args.strings("apps",10)
             if(apps.isEmpty() || apps.any { !it.matches(Regex("[a-zA-Z][a-zA-Z0-9_.]+")) || (it==app.packageName && !BuildConfig.DEBUG) }) throw ApiError(422,"invalid_parameter","Choose at least one external app")
-            store.save(agent,"session",JSONObject().put("apps",JSONArray(apps)).put("duration_seconds",args.whole("duration_seconds",300,30,1800)).put("purpose",args.text("purpose",256)).put("status","awaiting_owner").put("request_expires_at",System.currentTimeMillis()+300_000).put("identity",AgentBranding.json(getAgent(agent)))).also { store.emit(agent,"session.requested",it.getString("id")); PlatformNotifications.show(app,it); changed() }
+            store.save(agent,"session",JSONObject().put("apps",JSONArray(apps)).put("duration_seconds",args.whole("duration_seconds",300,30,1800)).put("purpose",args.text("purpose",256)).put("status","awaiting_owner").put("request_expires_at",minOf(System.currentTimeMillis()+300_000,relayDeadline ?: Long.MAX_VALUE)).put("relay_job",relayJob).put("identity",AgentBranding.json(getAgent(agent)))).also { store.emit(agent,"session.requested",it.getString("id")); PlatformNotifications.show(app,it); changed() }
         }
         "session.heartbeat" -> session(agent,args.text("id")).let { store.save(agent,"session",it.put("heartbeat_until",minOf(it.getLong("expires_at"),System.currentTimeMillis()+60_000))) }
         "session.stop" -> store.require(args.text("id"),agent,"session").also { closeSession(it,"stopped") }

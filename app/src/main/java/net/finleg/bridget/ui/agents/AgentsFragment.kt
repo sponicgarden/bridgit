@@ -143,7 +143,11 @@ class AgentsFragment : Fragment() {
             val ctx = h.b.root.context
             h.b.avatar.setAgent(a.name)
             h.b.name.text = a.name
-            h.b.connection.text = a.modelText(ctx)
+            h.b.connection.text = if(a.connection==net.finleg.bridget.core.Connection.RELAY){
+                val app=ctx.applicationContext as net.finleg.bridget.BridgeApp
+                val mode=net.finleg.bridget.relay.RelayStore(app).agents().firstOrNull { it.optString("id")==a.id }?.optString("mode")
+                ctx.getString(if(mode=="connector") R.string.relay_connector_disclosure else if(mode=="sealed") R.string.relay_sealed_label else R.string.relay_setup_required)
+            }else a.modelText(ctx)
             h.b.developer.isVisible = a.developer
             val active = AgentStats.isActive(a, r.now)
             h.b.dot.setBackgroundResource(if (active) R.drawable.agents_dot_active else R.drawable.agents_dot_idle)

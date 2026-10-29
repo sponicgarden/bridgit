@@ -162,6 +162,8 @@ androidComponents {
 }
 
 dependencies {
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.86")
     testImplementation("org.robolectric:robolectric:4.14.1")
     implementation("com.google.mlkit:translate:17.0.3")
     val camerax = "1.4.1"

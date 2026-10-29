@@ -22,7 +22,7 @@ class Policy(context:Context) {
     fun addAgent(name:String):Pair<Agent,String> { val (a,key)=app.agents.add(name,Connection.DIRECT); return adapt(a) to key }
     fun rotate(id:String):Pair<Agent,String> { val (a,key)=app.agents.rotate(id); app.platform.invalidate(id); return adapt(a) to key }
     fun remove(id:String) { app.agents.remove(id); branding.edit().remove("icon:$id").remove("wordmark:$id").apply(); app.platform.invalidate(id) }
-    fun authenticate(key:String?):Agent?=(app.agents.authenticate(key) as? AuthResult.Ok)?.agent?.let(::adapt)
+    fun authenticate(key:String?):Agent?=(app.agents.authenticate(key) as? AuthResult.Ok)?.agent?.takeIf { it.connection != Connection.RELAY }?.let(::adapt)
     fun touch(id:String)=app.agents.recordUse(id,"private-platform")
     @Synchronized fun updateProfile(id:String,body:JSONObject):Agent {
         val old=app.agents.get(id) ?: throw net.finleg.bridget.api.ApiError(401,"unauthorized","Agent was removed")

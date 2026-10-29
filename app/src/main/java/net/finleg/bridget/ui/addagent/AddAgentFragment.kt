@@ -249,6 +249,10 @@ class AddAgentFragment : Fragment() {
     // ---- Step 2: Connection
 
     private fun setupConnection() {
+        b.stepConnection.addView(com.google.android.material.button.MaterialButton(requireContext()).apply {
+            setText(R.string.addagent_relay)
+            setOnClickListener { startActivity(android.content.Intent(requireContext(),net.finleg.bridget.relay.RelayActivity::class.java).putExtra("suggested_name",vm.name));findNavController().navigateUp() }
+        })
         val cards = listOf(b.cardDirect to Connection.DIRECT, b.cardUserspace to Connection.USERSPACE)
         cards.forEachIndexed { i, (card, conn) ->
             card.setOnClickListener { vm.connection = conn; renderConnection() }

@@ -47,6 +47,8 @@ class BridgeService : LifecycleService() {
     val locationReady get() = !app.listener.value.startedInBackground
     val bindAddress get() = app.listener.value.boundTo.firstOrNull()
     private var platformTick: Job? = null
+    val relay by lazy { net.finleg.bridget.relay.RelayClient(this) }
+    private var relayJob: Job? = null
     private var server: ApiServer? = null
     private var boundTo: List<String> = emptyList()
     private var watcher: Job? = null
@@ -80,6 +82,7 @@ class BridgeService : LifecycleService() {
             registerNetworkCallback()
         }
         if(platformTick==null) platformTick=lifecycleScope.launch(Dispatchers.IO) { while(isActive) { runCatching { app.platform.workflows.tick(); app.platform.delivery.tick() }; delay(1000) } }
+        if(relayJob==null) relayJob=lifecycleScope.launch(Dispatchers.IO) { relay.run() }
         running = this
         return START_STICKY
     }
@@ -209,12 +212,14 @@ class BridgeService : LifecycleService() {
         val s = app.listener.value
         val title = when {
             captureNote != null -> captureNote!!
+            relay.store.enabled -> "Bridgit relay: ${relay.status}"
             boundTo.isEmpty() -> getString(R.string.notif_waiting_tailscale)
             else -> getString(R.string.notif_listening)
         }
         val last = app.agents.all().maxByOrNull { it.lastUsedAt }?.takeIf { it.lastUsedAt > 0 }
         val text = when {
             captureNote != null -> getString(R.string.notif_capture_sub)
+            relay.store.enabled -> "Relay on · ${relay.status} · Pause stops all access"
             boundTo.isEmpty() -> getString(R.string.notif_not_reachable)
             last != null -> getString(R.string.notif_last_request, last.name,
                 android.text.format.DateUtils.getRelativeTimeSpanString(last.lastUsedAt).toString())
@@ -235,6 +240,7 @@ class BridgeService : LifecycleService() {
     }
 
     private fun stopEverything() {
+        relayJob?.cancel(); relayJob=null
         app.platform.stopAll(); platformTick?.cancel(); platformTick=null
         app.hardware.stop()
         watcher?.cancel(); watcher = null
@@ -248,6 +254,7 @@ class BridgeService : LifecycleService() {
     }
 
     override fun onDestroy() {
+        relayJob?.cancel(); relayJob=null
         app.platform.interrupt(); platformTick?.cancel(); platformTick=null
         app.hardware.stop()
         server?.stop(); server = null

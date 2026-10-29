@@ -11,3 +11,7 @@ captures/
 # Local compiler and Python test caches.
 .kotlin/
 __pycache__/
+
+relay/node_modules/
+relay/.wrangler/
+relay/.dry-run/

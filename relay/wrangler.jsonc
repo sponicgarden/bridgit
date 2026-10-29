@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bridgit-relay",
+  "main": "src/worker.mjs",
+  "compatibility_date": "2026-10-29",
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": {
+    "enabled": false,
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "PHONES",
+        "class_name": "PhoneRelay",
+      },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["PhoneRelay"],
+    },
+  ],
+  "vars": {
+    "PUBLIC_ORIGIN": "https://relay.invalid",
+    "ACCESS_TEAM": "",
+    "ACCESS_AUD": "",
+    "OAUTH_CLIENTS": "{}",
+    "ALLOWED_ORIGINS": "[]",
+  },
+  "account_id": "394b5de665bbfdea54cdd57be9094762",
+}

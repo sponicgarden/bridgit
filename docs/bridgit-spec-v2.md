@@ -1401,6 +1401,13 @@ camera video shows Android's green camera dot.
 
 ### 8.23a Review gates for 1.6 and 1.7 (Codex design review, 27 Oct 2026)
 
+**29 October relay implementation record:** [relay gates and acceptance](implementation/relay.md)
+and [exact relay contracts](../relay/README.md) refine the relay items below.
+Relay design decisions and local implementations are recorded there; Pixel Doze,
+USB installation and production/hosted-client acceptance remain explicit gates.
+The separate wake-word and media/player gates are not closed by relay work.
+
+
 Open design work, recorded so the 1.6/1.7 plans close it before code:
 - Connector mode gives the relay **control**, not just visibility: connector
   agents get narrow per-agent permissions (section 15) or phone approval for

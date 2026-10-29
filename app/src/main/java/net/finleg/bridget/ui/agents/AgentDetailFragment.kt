@@ -128,7 +128,10 @@ class AgentDetailFragment : Fragment() {
         b.toolbar.title = a.name
         b.avatar.setAgent(a.name)
         b.name.text = a.name
-        b.connection.text = getString(R.string.agents_model_via, a.modelText(requireContext()), a.connection.label)
+        b.connection.text = if(a.connection==net.finleg.bridget.core.Connection.RELAY) {
+            val mode=net.finleg.bridget.relay.RelayStore(app).agents().firstOrNull { it.optString("id")==a.id }?.optString("mode")
+            getString(if(mode=="connector") R.string.relay_connector_disclosure else if(mode=="sealed") R.string.relay_sealed_label else R.string.relay_setup_required)
+        } else getString(R.string.agents_model_via, a.modelText(requireContext()), a.connection.label)
         val added = SimpleDateFormat("d MMM", Locale.getDefault()).format(Date(a.createdAt))
         if (a.lastUsedAt > 0) {
             b.added.text = getString(R.string.agents_added_line, added, Fmt.ago(a.lastUsedAt))
@@ -328,6 +331,11 @@ class AgentDetailFragment : Fragment() {
             .setMessage(getString(R.string.agents_rotate_body, a.name))
             .setPositiveButton(R.string.agents_rotate_confirm) { _, _ ->
                 val (rotated, key) = app.agents.rotate(id)
+                if(rotated.connection==net.finleg.bridget.core.Connection.RELAY){
+                    net.finleg.bridget.relay.RelayStore(app).remove(id)
+                    startActivity(android.content.Intent(requireContext(),net.finleg.bridget.relay.RelayActivity::class.java).putExtra("relay_agent_id",id))
+                    return@setPositiveButton
+                }
                 app.vault.put(id, key, rotated = true)
                 app.log.system("audit", "agent", getString(R.string.agents_rotated_log, rotated.name))
                 // "fromRotate" isn't declared in nav_main.xml; Navigation passes extra bundle keys through.
