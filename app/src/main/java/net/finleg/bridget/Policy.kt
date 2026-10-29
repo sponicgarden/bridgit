@@ -16,6 +16,7 @@ class Policy(context: Context) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("policy", Context.MODE_PRIVATE)
     private val rnd = SecureRandom()
+    var credentialsChanged: (String) -> Unit = {}
 
     enum class Capability(val key: String) { CAMERA("camera"), MIC("mic"), GALLERY("gallery") }
 
@@ -75,11 +76,12 @@ class Policy(context: Context) {
         val (agent, token) = newCredential(id, old.name, old.createdAt)
         val branded = agent.copy(iconBase64 = old.iconBase64, wordmarkBase64 = old.wordmarkBase64)
         save(agents().map { if (it.id == id) branded else it })
+        credentialsChanged(id)
         return branded to token
     }
 
     @Synchronized
-    fun remove(id: String) = save(agents().filterNot { it.id == id })
+    fun remove(id: String) { save(agents().filterNot { it.id == id }); credentialsChanged(id) }
 
     /** Returns the agent whose token matches, or null. Checks every agent in constant time. */
     fun authenticate(candidate: String?): Agent? {

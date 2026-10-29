@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">BRIDGIT Device Manager for Android</string>
+    <string name="private_control_disclosure">Private agent control can read visible app content and perform actions you approve. Enable only for your own agents. Password fields and system permission controls are excluded. Use the visible Stop control at any time. This is not an accessibility tool.</string>
 </resources>

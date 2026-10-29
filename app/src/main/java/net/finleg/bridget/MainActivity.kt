@@ -323,12 +323,14 @@ class MainActivity : AppCompatActivity() {
         body("Lets your AI agents take a photo, record a short clip or fetch a gallery photo over Tailscale. " +
             "Every capture shows a notification and Android's green indicator, and is logged below.")
 
+        button("Device tools, approvals and agent access") { startActivity(Intent(this, net.finleg.bridget.platform.ControlCenterActivity::class.java)) }
+
         heading("Status")
         status = body()
         listenerSwitch = switch("Listener (always on)") { setListener(it) }
 
         heading("Capabilities")
-        body("Each starts off. Turning one off applies from the next request.")
+        body("Each starts off. Turning one off cancels its active capture. New device features and agent grants are managed in Device tools.")
         capSwitches[Policy.Capability.CAMERA] = switch("Camera snapshot") { setCapability(Policy.Capability.CAMERA, it) }
         capSwitches[Policy.Capability.MIC] = switch("Microphone clip (max 120 s)") { setCapability(Policy.Capability.MIC, it) }
         capSwitches[Policy.Capability.GALLERY] = switch("Gallery fetch (read-only)") { setCapability(Policy.Capability.GALLERY, it) }

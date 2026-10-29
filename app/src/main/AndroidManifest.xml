@@ -18,6 +18,22 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <queries>
+        <intent><action android:name="android.speech.RecognitionService" /></intent>
+        <intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent>
+        <intent><action android:name="android.intent.action.VIEW" /><data android:scheme="https" /></intent>
+        <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
+    </queries>
+
     <application
         android:name=".BridgeApp"
         android:allowBackup="false"
@@ -40,10 +56,18 @@
         <service
             android:name=".BridgeService"
             android:exported="false"
-            android:foregroundServiceType="camera|microphone|specialUse">
+            android:foregroundServiceType="camera|microphone|location|specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Private API listener on the owner's Tailscale network; answers camera, microphone and gallery requests from the owner's agent." />
         </service>
+        <activity android:name=".platform.ControlCenterActivity" android:exported="false" />
+        <activity android:name=".platform.ShareReceiveActivity" android:exported="true">
+            <intent-filter><action android:name="android.intent.action.SEND" /><category android:name="android.intent.category.DEFAULT" /><data android:mimeType="text/plain" /><data android:mimeType="image/*" /><data android:mimeType="application/pdf" /><data android:mimeType="audio/*" /></intent-filter>
+        </activity>
+        <service android:name=".platform.ProjectionService" android:exported="false" android:foregroundServiceType="mediaProjection" />
+        <service android:name=".platform.PauseTile" android:exported="true" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE" android:label="BRIDGIT" android:icon="@drawable/ic_notif"><intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter></service>
+        <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.files" android:exported="false" android:grantUriPermissions="true"><meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/agent_files" /></provider>
+        <service android:name=".platform.WorkflowJobService" android:exported="true" android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>
 </manifest>

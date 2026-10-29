@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+"""Serialize allocation against an authoritative checkout, carrying counters forward.
+Usage: tools/build-with-version-lock /absolute/authoritative/checkout [gradle tasks...]
+"""
+import fcntl, os, pathlib, subprocess, sys
+root=pathlib.Path(__file__).resolve().parent.parent
+source=pathlib.Path(sys.argv[1]).resolve()
+if source==root:
+    raise SystemExit('Use Gradle directly in the authoritative checkout; this wrapper is for isolated checkouts.')
+def counter(folder):
+    data=dict(line.split('=',1) for line in (folder/'apk-version.properties').read_text().splitlines() if '=' in line)
+    return int(data['versionCode']),tuple(map(int,data['versionName'].split('.'))),data
+lock=source/'.gradle/apk-version.lock'; lock.parent.mkdir(exist_ok=True)
+with lock.open('a+') as handle:
+    fcntl.lockf(handle,fcntl.LOCK_EX)
+    a,b=counter(source),counter(root)
+    if (a[0]>b[0] and a[1]<b[1]) or (a[0]<b[0] and a[1]>b[1]):
+        raise SystemExit('Conflicting version history: reconcile before building.')
+    highest=max((a,b),key=lambda item:item[0])
+    def write(folder,item):
+        data=item[2]; tmp=folder/'.apk-version-coordinated.tmp'
+        tmp.write_text('versionCode='+data['versionCode']+'\nversionName='+data['versionName']+'\n'); os.replace(tmp,folder/'apk-version.properties')
+    write(root,highest)
+    try:
+        result=subprocess.run([str(root/'gradlew'),*sys.argv[2:]],cwd=root)
+    finally:
+        latest=counter(root)
+        if latest[0]<highest[0] or latest[1]<highest[1]: raise SystemExit('Version counter regressed during build.')
+        write(source,latest)
+    raise SystemExit(result.returncode)

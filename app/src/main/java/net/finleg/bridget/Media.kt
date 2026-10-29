@@ -119,7 +119,7 @@ class CameraCapture(private val context: Context, private val owner: LifecycleOw
                     ?: throw ApiError(504, "capture_timeout", "Camera did not produce a photo in time")
                 outcome.exceptionOrNull()?.let { throw ApiError(409, "sensor_busy", "Capture failed: ${it.message}") }
             } finally {
-                withContext(Dispatchers.Main) { provider.unbind(capture) }
+                withContext(kotlinx.coroutines.NonCancellable + Dispatchers.Main) { provider.unbind(capture) }
             }
             return ImageUtil.prepare(file.readBytes(), "image/jpeg", maxWidth)
         } finally {
@@ -140,7 +140,7 @@ class CameraCapture(private val context: Context, private val owner: LifecycleOw
 
     private suspend fun <T> com.google.common.util.concurrent.ListenableFuture<T>.await(): T =
         suspendCancellableCoroutine { cont ->
-            addListener({ runCatching { get() }.fold({ cont.resume(it) }, { cont.cancel(it) }) },
+            addListener({ if (cont.isActive) runCatching { get() }.fold({ cont.resume(it) }, { cont.cancel(it) }) },
                 ContextCompat.getMainExecutor(context))
         }
 }

@@ -8,20 +8,31 @@ class BridgeApp : Application() {
     lateinit var policy: Policy
     lateinit var audit: AuditLog
     val pairing = Pairing()
+    val platform by lazy { net.finleg.bridget.platform.AgentPlatform(this) }
 
     override fun onCreate() {
         super.onCreate()
         policy = Policy(this)
         audit = AuditLog(this)
+        policy.credentialsChanged = { id -> platform.invalidate(id) }
         getSystemService(NotificationManager::class.java).createNotificationChannel(
             NotificationChannel(CHANNEL, "BRIDGIT Device Manager", NotificationManager.IMPORTANCE_LOW).apply {
                 description = "Shown while the listener runs and during every capture"
             }
         )
+        getSystemService(NotificationManager::class.java).createNotificationChannel(
+            NotificationChannel(CAPTURE_CHANNEL, "Agent captures and control", NotificationManager.IMPORTANCE_DEFAULT)
+        )
+        getSystemService(NotificationManager::class.java).createNotificationChannel(
+            NotificationChannel(INTERACTION_CHANNEL, "Agent questions and notices", NotificationManager.IMPORTANCE_DEFAULT)
+        )
+        platform
     }
 
     companion object {
         const val CHANNEL = "bridge"
+        const val CAPTURE_CHANNEL = "agent_capture"
+        const val INTERACTION_CHANNEL = "agent_interaction"
     }
 }
 

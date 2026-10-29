@@ -48,6 +48,7 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
     fun start() {
         engine = embeddedServer(CIO, host = host, port = port) {
             routing {
+                net.finleg.bridget.platform.PlatformApi(app).install(this)
                 route("/v1") {
                     post("/pair") { pair(call) }
                     get("/agent/profile") { handle(call, "agent/profile") { AgentBranding.json(policy.agents().first { it.id == agentId }) } }
@@ -106,13 +107,10 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
             ctx.agentId = agent.id
             entry.put("agent", agent.name).put("agent_id", agent.id)
             policy.touch(agent.id)
-            if (capture && !limiter.allowCapture(source))
+            if (capture && !limiter.allowCapture(agent.id))
                 throw ApiError(429, "rate_limited", "At most 10 capture requests per minute")
-            val body = if (call.request.httpMethod.value == "POST") parseBody(call, if (endpoint == "agent/profile") AgentBranding.MAX_BODY_BYTES else null) else JSONObject()
-            // Branding payloads must never be duplicated into the audit log.
-            if (endpoint == "agent/profile") {
-                ctx.params.put("updated_fields", JSONArray(body.keys().asSequence().toList()))
-            } else body.keys().forEach { k -> ctx.params.put(k, body.get(k)) }
+            val body = if (call.request.httpMethod.value == "POST") parseBody(call, if (endpoint == "agent/profile") AgentBranding.MAX_BODY_BYTES else 65536) else JSONObject()
+            ctx.params.put("fields", JSONArray(body.keys().asSequence().toList()))
             val result = ctx.block(body)
             entry.put("http", 200).put("result", "ok").put("bytes", ctx.bytes)
             val rawOut = respond?.invoke()
@@ -124,6 +122,8 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
                 result.put("request_id", ctx.requestId)
                 call.respondText(result.toString(), ContentType.Application.Json, HttpStatusCode.OK)
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: ApiError) {
             entry.put("http", e.http).put("result", e.code).put("bytes", 0)
             respondError(call, ctx.requestId, e)
@@ -138,7 +138,7 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
     }
 
     private suspend fun respondError(call: ApplicationCall, requestId: String, e: ApiError) {
-        val o = JSONObject().put("error", e.code).put("message", e.message).put("request_id", requestId)
+        val o = JSONObject().put("error", e.code).put("message", e.message).put("request_id", requestId).put("retryable", e.http in listOf(429,503,504)).put("user_action_required", e.http in listOf(403,409))
         e.extra.forEach { (k, v) -> o.put(k, v) }
         call.respondText(o.toString(), ContentType.Application.Json, HttpStatusCode.fromValue(e.http))
     }
@@ -152,7 +152,7 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
             if (!isTailnet(source)) throw ApiError(403, "forbidden_source", "Only Tailscale peers may call this API")
             if (limiter.authBlocked(source)) throw ApiError(429, "rate_limited", "Too many failed attempts; wait a minute")
             if (!app.pairing.isOpen()) throw ApiError(403, "pairing_closed", "No pairing window is open on the phone")
-            val code = parseBody(call).optString("code", "")
+            val code = parseBody(call,65536).optString("code", "")
             val w = app.pairing.redeem(code)
             if (w == null) {
                 limiter.recordAuthFailure(source)
@@ -163,6 +163,8 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
             call.respondText(JSONObject().put("token", w.token).put("agent", w.agentName)
                 .put("base_url", "http://$host:$port/v1").put("request_id", ctx.requestId).toString(),
                 ContentType.Application.Json)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: ApiError) {
             entry.put("http", e.http).put("result", e.code)
             respondError(call, ctx.requestId, e)
@@ -181,7 +183,7 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
             if (l >= 0) l * 100 / s else null
         }
         val plugged = (bat?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0
-        return JSONObject().put("status", "ok").put("app", "Bridgit").put("agent", agent)
+        return JSONObject().put("status", "ok").put("app", "Bridgit").put("agent", agent).put("device_id",app.platform.store.deviceId).put("epoch",app.platform.epoch)
             .put("app_version", BuildConfigInfo.versionName(service))
             .put("listener_uptime_seconds", (System.currentTimeMillis() - service.startedAt) / 1000)
             .put("battery_level", level ?: JSONObject.NULL)
@@ -214,7 +216,7 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
             ?: throw ApiError(422, "invalid_parameter", "flash must be true or false") else false
         val maxW = maxWidth(b.has("max_width_px"), b.opt("max_width_px"), 2048)
         require(Policy.Capability.CAMERA, Manifest.permission.CAMERA, service.cameraReady)
-        val img = withSensor("$agent is taking a photo", agentId) { camera.snapshot(which == "rear", flash, maxW) }
+        val img = app.platform.capture(agentId,"camera.snapshot") { camera.snapshot(which == "rear", flash, maxW) }
         return mediaEnvelope(img, isoAt(System.currentTimeMillis()), "captured_at", null)
             .put("source", "camera").put("camera", which)
     }
@@ -226,7 +228,7 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
             throw ApiError(422, "invalid_parameter", "duration_seconds must be a whole number from 1 to 120")
         require(Policy.Capability.MIC, Manifest.permission.RECORD_AUDIO, service.micReady)
         val started = System.currentTimeMillis()
-        val clip = withSensor("$agent is recording audio (${secs}s)", agentId) { mic.record(secs) }
+        val clip = app.platform.capture(agentId,"microphone.clip") { mic.record(secs) }
         val b64 = Base64.encodeToString(clip.bytes, Base64.NO_WRAP)
         if (b64.length > MAX_PAYLOAD) throw ApiError(413, "payload_too_large", "Clip exceeds transfer cap")
         bytes = clip.bytes.size.toLong()
@@ -302,8 +304,9 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
     }
 
     private fun Ctx.auditRead(call: ApplicationCall): JSONObject {
+        app.platform.authorize(agentId,"audit.read")
         val limit = intParam(call, "limit", 50, 1, AuditLog.MAX_ENTRIES)
-        return JSONObject().put("entries", JSONArray(audit.recent(limit)))
+        return JSONObject().put("entries", JSONArray(audit.recent(AuditLog.MAX_ENTRIES).filter { it.optString("agent_id") == agentId }.take(limit)))
     }
 
     // ---- helpers ------------------------------------------------------------
@@ -320,7 +323,8 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
             .put("format", fmt).put("mime", img.mime).put("size_bytes", img.bytes.size).put("data_base64", b64)
     }
 
-    private fun require(c: Policy.Capability, perm: String, ready: Boolean) {
+    private fun Ctx.require(c: Policy.Capability, perm: String, ready: Boolean) {
+        app.platform.authorize(agentId, when(c) { Policy.Capability.CAMERA -> "camera.snapshot"; Policy.Capability.MIC -> "microphone.clip"; Policy.Capability.GALLERY -> "gallery.read" })
         if (!policy.isEnabled(c)) throw ApiError(403, "capability_disabled", "${c.key} is switched off on the phone")
         if (!service.granted(perm)) throw ApiError(403, "permission_denied", "Grant $perm on the phone",
             mapOf("permission" to perm))
@@ -328,7 +332,8 @@ class ApiServer(private val service: BridgeService, private val host: String, pr
             "Android has not allowed ${c.key} access for the listener yet. Open BRIDGIT Device Manager once on the phone.")
     }
 
-    private fun requireGallery(): String {
+    private fun Ctx.requireGallery(): String {
+        app.platform.authorize(agentId,"gallery.read")
         if (!policy.isEnabled(Policy.Capability.GALLERY))
             throw ApiError(403, "capability_disabled", "gallery is switched off on the phone")
         return gallery.accessMode() ?: throw ApiError(403, "permission_denied",

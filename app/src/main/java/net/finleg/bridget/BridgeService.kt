@@ -34,6 +34,7 @@ class BridgeService : LifecycleService() {
     var startedAt = System.currentTimeMillis(); private set
     @Volatile var cameraReady = false; private set
     @Volatile var micReady = false; private set
+    @Volatile var locationReady = false; private set
     @Volatile private var captureNote: String? = null
     @Volatile var captureAgentId: String? = null; private set
 
@@ -59,12 +60,14 @@ class BridgeService : LifecycleService() {
     private fun promote(): Boolean {
         val wantCamera = granted(Manifest.permission.CAMERA)
         val wantMic = granted(Manifest.permission.RECORD_AUDIO)
+        val wantLocation = granted(Manifest.permission.ACCESS_COARSE_LOCATION)
         var types = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
         if (wantCamera) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
         if (wantMic) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+        if (wantLocation) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
         try {
             ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(), types)
-            cameraReady = wantCamera; micReady = wantMic
+            cameraReady = wantCamera; micReady = wantMic; locationReady = wantLocation
             return true
         } catch (e: Exception) {
             Log.w(TAG, "camera/mic foreground start refused, falling back", e)
@@ -74,7 +77,7 @@ class BridgeService : LifecycleService() {
         return try {
             ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(),
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-            cameraReady = false; micReady = false
+            cameraReady = false; micReady = false; locationReady = false
             app.audit.event("listener", "started without camera/mic access; open the app once to restore")
             true
         } catch (e: Exception) {
@@ -106,7 +109,8 @@ class BridgeService : LifecycleService() {
                 refreshNotification()
                 notifyUi()
             }
-            delay(10_000)
+            runCatching { app.platform.workflows.tick(); app.platform.delivery.tick() }
+            delay(1_000)
         }
     }
 
@@ -139,7 +143,7 @@ class BridgeService : LifecycleService() {
         val text = captureNote ?: boundTo?.let { "Listening on Tailscale $it:${app.policy.port}" }
             ?: "Waiting for Tailscale - not reachable"
         val agent = app.policy.agents().firstOrNull { it.id == captureAgentId }
-        return NotificationCompat.Builder(this, BridgeApp.CHANNEL)
+        return NotificationCompat.Builder(this, if (captureNote != null) BridgeApp.CAPTURE_CHANNEL else BridgeApp.CHANNEL)
             .setSmallIcon(R.drawable.ic_notif)
             .setContentTitle(if (captureNote != null) "BRIDGIT - capturing" else "BRIDGIT Device Manager")
             .setContentText(text)
@@ -153,9 +157,10 @@ class BridgeService : LifecycleService() {
     }
 
     private fun stopEverything() {
+        app.platform.stopAll()
         watcher?.cancel(); watcher = null
         server?.stop(); server = null; boundTo = null
-        cameraReady = false; micReady = false
+        cameraReady = false; micReady = false; locationReady = false
         if (running === this) running = null
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()

@@ -80,6 +80,13 @@ android {
         targetSdk = 35
     }
 
+    buildFeatures { buildConfig = true }
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("private") { dimension = "distribution"; buildConfigField("boolean", "PRIVATE_CONTROL", "true") }
+        create("play") { dimension = "distribution"; applicationIdSuffix = ".play"; buildConfigField("boolean", "PRIVATE_CONTROL", "false") }
+    }
+
     signingConfigs {
         if (keystoreProps.getProperty("storeFile") != null) {
             create("release") {
@@ -139,6 +146,8 @@ androidComponents {
 dependencies {
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.14.1")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+    implementation("com.google.mlkit:translate:17.0.3")
     val camerax = "1.4.1"
     val ktor = "2.3.12"
     implementation("androidx.core:core-ktx:1.15.0")
