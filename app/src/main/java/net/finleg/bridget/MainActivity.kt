@@ -46,6 +46,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var settingsButton: Button
     private lateinit var batteryStatus: TextView
     private lateinit var batteryButton: Button
+    private lateinit var interactionBrand: LinearLayout
+    private var interactionSig = ""
     private lateinit var agentsBox: LinearLayout
     private var agentsSig = ""
     private lateinit var pairTitle: TextView
@@ -158,8 +160,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun rotateAgent(a: Policy.Agent) {
-        AlertDialog.Builder(this).setTitle("New key for ${a.name}?")
-            .setMessage("${a.name}'s current key stops working immediately. A pairing window opens so ${a.name} can fetch the new one. Other agents are not affected.")
+        AlertDialog.Builder(this).setCustomTitle(agentIdentity(a))
+            .setMessage("Rotate key? ${a.name}'s current key stops working immediately. A pairing window opens so ${a.name} can fetch the new one. Other agents are not affected.")
             .setPositiveButton("Rotate") { _, _ ->
                 val (agent, token) = policy.rotate(a.id)
                 app.audit.event("pairing", "rotated key for ${a.name}; old key invalid")
@@ -170,8 +172,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun removeAgent(a: Policy.Agent) {
         AlertDialog.Builder(this)
-            .setTitle("Remove ${a.name}?")
-            .setMessage("Deletes ${a.name}'s key. Removing the last agent also stops the listener.")
+            .setCustomTitle(agentIdentity(a))
+            .setMessage("Remove agent? Deletes ${a.name}'s key. Removing the last agent also stops the listener.")
             .setPositiveButton("Remove") { _, _ ->
                 policy.remove(a.id)
                 if (app.pairing.window?.agentId == a.id) app.pairing.close()
@@ -243,6 +245,14 @@ class MainActivity : AppCompatActivity() {
         batteryButton.visibility = if (exempt) View.GONE else View.VISIBLE
 
         renderAgents()
+        val active = policy.agents().firstOrNull { it.id == svc?.captureAgentId }
+        val activeSig = active?.let { "${it.id}:${it.name}:${it.iconBase64}:${it.wordmarkBase64}" } ?: ""
+        if (interactionSig != activeSig) {
+            interactionSig = activeSig
+            interactionBrand.removeAllViews()
+            active?.let { interactionBrand.addView(agentIdentity(it)) }
+        }
+        interactionBrand.visibility = if (active == null) View.GONE else View.VISIBLE
 
         val w = app.pairing.window
         if (w != null && app.pairing.isOpen()) {
@@ -306,6 +316,7 @@ class MainActivity : AppCompatActivity() {
             setOnCheckedChangeListener { _, on -> if (!binding) onChange(on) }
         }.also { root.addView(it, LinearLayout.LayoutParams(-1, -2).apply { topMargin = px(4) }) }
 
+        interactionBrand = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
         root.addView(TextView(this).apply { text = "BRIDGIT"; textSize = 28f; setTypeface(typeface, Typeface.BOLD) })
         body("Device Manager for Android")
         body("Turn any Android device into an agentic appliance.")
@@ -365,16 +376,21 @@ class MainActivity : AppCompatActivity() {
         auditView = body().apply { textSize = 12f; typeface = Typeface.MONOSPACE; setTextIsSelectable(true) }
 
         val scroll = ScrollView(this).apply { addView(root) }
-        ViewCompat.setOnApplyWindowInsetsListener(scroll) { v, insets ->
+        val frame = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(interactionBrand, LinearLayout.LayoutParams(-1, -2))
+            addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(frame) { v, insets ->
             val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(0, bars.top, 0, bars.bottom); insets
         }
-        return scroll
+        return frame
     }
 
     private fun renderAgents() {
         val list = policy.agents()
-        val sig = list.joinToString { "${it.id}:${it.lastUsedAt / 60000}" }
+        val sig = list.joinToString { "${it.id}:${it.name}:${it.iconBase64}:${it.wordmarkBase64}:${it.lastUsedAt / 60000}" }
         if (sig == agentsSig) return
         agentsSig = sig
         agentsBox.removeAllViews()
@@ -386,21 +402,55 @@ class MainActivity : AppCompatActivity() {
         val fmt = java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT)
         for (a in list) {
             val row = LinearLayout(this).apply {
-                orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL
+                orientation = LinearLayout.VERTICAL
                 setPadding(0, (8 * dp).toInt(), 0, (8 * dp).toInt())
             }
-            val label = TextView(this).apply {
-                textSize = 15f
-                text = "${a.name}\n" + (if (a.lastUsedAt > 0) "last used ${fmt.format(java.util.Date(a.lastUsedAt))}" else "not used yet")
-            }
-            row.addView(label, LinearLayout.LayoutParams(0, -2, 1f))
-            row.addView(MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            val identity = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            identity.addView(agentIdentity(a))
+            identity.addView(TextView(this).apply {
+                textSize = 12f
+                text = if (a.lastUsedAt > 0) "last used ${fmt.format(java.util.Date(a.lastUsedAt))}" else "not used yet"
+            })
+            row.addView(identity, LinearLayout.LayoutParams(-1, -2))
+            val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            row.addView(actions)
+            actions.addView(MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
                 text = "Rotate key"; setOnClickListener { rotateAgent(a) }
             })
-            row.addView(MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
+            actions.addView(MaterialButton(this, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
                 text = "Remove"; setOnClickListener { removeAgent(a) }
             }, LinearLayout.LayoutParams(-2, -2).apply { marginStart = (6 * dp).toInt() })
             agentsBox.addView(row)
+        }
+    }
+
+    /** Shared identity treatment for the interaction header, agent list and confirmations. */
+    private fun agentIdentity(agent: Policy.Agent): LinearLayout {
+        val dp = resources.displayMetrics.density
+        fun px(v: Int) = (v * dp).toInt()
+        return LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(px(8), px(8), px(8), px(8))
+            AgentBranding.bitmap(agent.iconBase64)?.let { bitmap ->
+                addView(ImageView(context).apply {
+                    setImageBitmap(bitmap); contentDescription = "${agent.name} icon"
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                }, LinearLayout.LayoutParams(px(40), px(40)).apply { marginEnd = px(8) })
+            }
+            addView(LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                AgentBranding.bitmap(agent.wordmarkBase64)?.let { bitmap ->
+                    addView(ImageView(context).apply {
+                        setImageBitmap(bitmap); contentDescription = "${agent.name} wordmark"
+                        scaleType = ImageView.ScaleType.FIT_START
+                        adjustViewBounds = true
+                    }, LinearLayout.LayoutParams(-1, px(32)))
+                }
+                addView(TextView(context).apply {
+                    text = agent.name; textSize = 16f; setTypeface(typeface, Typeface.BOLD)
+                })
+            }, LinearLayout.LayoutParams(0, -2, 1f))
         }
     }
 

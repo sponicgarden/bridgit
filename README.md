@@ -72,6 +72,8 @@ API is tied to a particular agent; any HTTP client works.
 | Endpoint | Body / query | Returns |
 |---|---|---|
 | `POST /pair` | `{"code":"123456"}` | `{"token","agent","base_url"}`, once per pairing window |
+| `GET /agent/profile` | | calling agent’s id, name, icon and wordmark (no credentials) |
+| `POST /agent/profile` | optional `name`, `icon_base64`, `wordmark_base64` | updated calling agent profile |
 | `GET /health` | | app, calling agent, version, uptime, battery, charging, bind address |
 | `GET /capabilities` | | per capability: toggle, permission, `service_ready`; gallery `access_mode` |
 | `POST /camera/snapshot` | `{"camera":"rear"\|"front","flash":false,"max_width_px":2048}` (`null` = full size) | JPEG as `data_base64` + size, dimensions |
@@ -80,6 +82,51 @@ API is tied to a particular agent; any HTTP client works.
 | `GET /gallery/photo/{id}?max_width_px=1600` | optional downscale | same envelope as snapshot, `source: "gallery"` |
 | `GET /image/last?type=any\|screenshot\|photo` | optional `max_edge_px` (default 1568), `quality` (default 85), `raw=1` | the single newest image of that type, resized for an agent to read |
 | `GET /audit?limit=50` | limit 1-1000 | newest audit entries (all agents) |
+
+### Agent identity and branding
+
+For agents featured on our home page, we already have optimized logo assets:
+Grok, Claude, ChatGPT, Muse, OpenCode, OpenRouter and Gemini. Reuse these assets
+for the default identity in interactions and confirmations; custom artwork can
+override them. Asset provenance is recorded in `website/brand/agent-sources.json`.
+
+After pairing, an agent can set its own display name and upload its branding:
+
+```http
+POST /v1/agent/profile
+Authorization: Bearer <agent key>
+Content-Type: application/json
+
+{
+  "name": "Muse",
+  "icon_base64": "<standard base64 PNG bytes>",
+  "wordmark_base64": "<standard base64 PNG bytes>"
+}
+```
+
+The response contains `id`, `name`, `icon_base64`, `wordmark_base64` and
+`request_id`. `GET /v1/agent/profile` reads the same profile. The token selects
+the agent: these routes cannot edit another agent or change access permissions.
+Names follow the existing rules (1–24 ASCII letters, numbers, spaces, hyphens
+or underscores; first character alphanumeric; unique ignoring case).
+
+Omitted fields stay unchanged; JSON `null` clears an image. Both images are
+optional PNGs, up to 128 KiB decoded each. Icons are at most 512 × 512 pixels;
+wordmarks at most 2048 × 512. Send standard base64 without whitespace or a
+`data:` prefix. URLs, SVG and unknown fields are rejected. Profile request
+bodies are capped at 384 KiB while reading, including chunked requests.
+Invalid updates leave the profile unchanged. Branding bytes are stored in
+app-private storage and omitted from audit entries. Profiles survive restarts
+and key rotation, and are deleted when the agent is removed.
+
+The app shows the identity in the agent list, at the top during captures, and
+on key-rotation/removal confirmations. Capture notifications show the icon and
+name. The name stays visible alongside the wordmark and provides the fallback
+when no images were supplied. Agent artwork is self-supplied, not a verified
+identity badge. BRIDGIT attribution and device controls remain visible.
+Future interaction and action-approval screens must repeat this identity at
+the top and on the confirmation screen; per-request approval screens are not
+implemented in the current capture API.
 
 ### Fastest image: `GET /v1/image/last`
 
@@ -141,6 +188,14 @@ Needs JDK 17 and the Android SDK (platform 35, build-tools 35).
 export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
 ./gradlew assembleRelease   # app/build/outputs/apk/release/app-release.apk
 ```
+
+Each debug or release build automatically advances the patch version and Android
+`versionCode`, continuing from `1.6.0`. The last allocated version lives
+in `apk-version.properties`; keep that file when sharing or committing builds.
+`clean` does not reset it. Sync and help do not allocate a version; tasks that
+process the app manifest (including some tests) do. Failed builds may leave gaps.
+Concurrent builds in this checkout reserve numbers under a file lock. Separate
+checkouts must carry forward the latest counter before building updates.
 
 Signing reads `keystore.properties` (gitignored):
 

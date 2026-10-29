@@ -1,0 +1,83 @@
+{
+  "device": "Pixel 10 Pro XL",
+  "package": "net.finleg.bridget",
+  "versionName": "1.5.4",
+  "versionCode": 16,
+  "captureMethod": "ADB exec-out screencap -p over USB; navigation taps only",
+  "rawStorage": "Private local folder outside repository and distributable package",
+  "uiTreatment": "Status bar and bottom gesture edge cropped; all remaining UI retains source aspect ratio. Controls is a labeled detail crop.",
+  "excluded": [
+    "Unredacted home connection address",
+    "Settings screenshot containing bind addresses",
+    "Raw screenshots",
+    "UI hierarchies",
+    "Development-only app screens"
+  ],
+  "screens": [
+    {
+      "screen": "home",
+      "sourceFile": "01-home.png",
+      "capturedAtUTC": "2026-10-28T23:06:50.186866+00:00",
+      "sourceSHA256": "7eb8f4df53f8b279f6d2aa31065c9eaeef8fe241c167a17d834b6b871c42a478",
+      "sourceDimensions": [
+        1080,
+        2404
+      ],
+      "crop": [
+        0,
+        140,
+        1080,
+        2330
+      ],
+      "redactions": [
+        {
+          "bounds": [
+            78,
+            558,
+            1000,
+            632
+          ],
+          "treatment": "Opaque replacement explicitly labeled Connection details withheld; no endpoint retained."
+        }
+      ],
+      "safeSHA256": "05eba2da3a4a708be2b4fe194c17d031f7026b1d1ce7907e7d6a00cb43ad2187"
+    },
+    {
+      "screen": "controls",
+      "sourceFile": "03-controls.png",
+      "capturedAtUTC": "2026-10-28T23:07:01.644581+00:00",
+      "sourceSHA256": "ef41fdf3454c11b71faa834ab8126f390c9b4da1466e19fe5b13f6f51a2e0fbb",
+      "sourceDimensions": [
+        1080,
+        2404
+      ],
+      "crop": [
+        0,
+        140,
+        1080,
+        1510
+      ],
+      "redactions": [],
+      "safeSHA256": "2ece75ec4e458a49e225404e37bda8490c4476dbc3da34c41bdf43cf7c8bfc91"
+    },
+    {
+      "screen": "capabilities",
+      "sourceFile": "04-capabilities.png",
+      "capturedAtUTC": "2026-10-28T23:07:10.362380+00:00",
+      "sourceSHA256": "19c2a7c661bed4b1de1ad86155198ea85e4723e84f984af7094cae8fa16f1bb2",
+      "sourceDimensions": [
+        1080,
+        2404
+      ],
+      "crop": [
+        0,
+        140,
+        1080,
+        2080
+      ],
+      "redactions": [],
+      "safeSHA256": "cc022829fc2753e94ca95022d4ef2a05a2f8c931f9ba4c835c599831e98a6794"
+    }
+  ],
+  "websiteUse": "Home screenshot gallery and How it works setup steps. Copied from reviewed release collateral; no new device capture."
+}

@@ -45,3 +45,21 @@ The “What can you do with Bridgit?” carousel contains five concept illustrat
 The home page and footer link to `https://github.com/sponicgarden/bridgit`. At verification the repository was private, so the page explains that GitHub access is needed. Recheck visibility before removing that note.
 
 Search-indexing update, 28 October 2026: all seven public pages allow indexing; HTTP/www variants return 301 to the HTTPS apex. Privacy and terms are dated public pages. The support contact receives mail through Cloudflare Email Routing. Cloudflare manages MX/SPF/DKIM DNS; destination verification and routing rules are account configuration and contain no repository secrets. The receive-only forwarding rule does not itself provision outbound SMTP.
+
+## App feature catalog
+
+The home page’s “What can Bridgit do?” section is built from `content/features.json` by `scripts/feature-catalog.mjs`. It reviews all 47 cards from the app 1.5.2 `ui/more/WhatCanData.kt` collection found in the existing `shotpix-5ee1bf` worktree (also identical in `brave-ellis-71a51e` and `bridget-p1a-22eaeb`). These worktrees were read as source material; their app code was not changed or merged.
+
+Seven purpose-based groups replace a flat feature dump. Each item keeps its original source title and stage for coverage checks, with shorter public copy and a practical example. `NOW` maps to Current build (24); P2–P6 and LATER map to Planned (19); IDEA maps to Exploring (4). These labels reflect the app catalog and implementation source, not a new device acceptance test or a public release. Recheck them against the app when features ship. The current root Android checkout is older than this catalog.
+
+The seven original WebP illustrations in `public/assets/features/` come from that app’s `drawable-nodpi/whatcan_*.webp` collection. Native HTML details expose the individual features without requiring JavaScript. The five existing appliance concepts remain a separate planned-workflow carousel. Build before previewing changes to the JSON.
+
+Home page update: the appliance/use-case carousel appears before the complete feature catalog and contains 12 illustrated ideas. The added examples cover voice notes, spoken checklists, agent choices, a family board, project photos, language practice and live progress text. Cards distinguish current tools from planned workflows. Arrow buttons, swipe and Left/Right keys browse; Home/End jump to either end. No autoplay.
+
+Agent setup band: seven locally served official marks identify Grok bot, Claude, ChatGPT, Meta Muse, OpenCode, OpenRouter.ai and Google Gemini. Provenance is in `brand/agent-sources.json`. The three-second copy refers to pasting a prepared pairing prompt after phone permissions and private-network setup, not total installation time. Connections still require a compatible API/MCP-capable agent; this row does not establish universal direct support in each hosted chat product.
+
+The How it works page describes the unified product offering. The Developers page links to the app-generated public API reference (verified version 1.5.4), exact section anchors, live discovery endpoints, vendor MCP guides and the access-controlled source specifications.
+
+## Sample app screenshots
+
+Home (`/#app-screenshots`) and the matching connection, access and first-task steps on `/how-it-works/` use three real Pixel 10 Pro XL captures from app 1.5.4. Privacy-reviewed crops are copied from the local release-collateral worktree into `public/assets/screenshots/`; provenance is retained in `brand/screenshots/provenance.json`. The home connection address is already replaced with an explicit privacy label. Controls is a detail crop. Images preserve their aspect ratio, load lazily and link to the full-size PNG without JavaScript. Captions identify the release version separately from the development feature catalog and planned appliance illustrations.

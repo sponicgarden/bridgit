@@ -21,10 +21,35 @@ if (track) {
   previous.addEventListener('click',()=>move(-1));
   next.addEventListener('click',()=>move(1));
   track.addEventListener('keydown',event=>{
-    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
-    event.preventDefault(); move(event.key === 'ArrowRight' ? 1 : -1);
+    if (!['ArrowRight','ArrowLeft','Home','End'].includes(event.key)) return;
+    event.preventDefault();
+    if (event.key === 'Home' || event.key === 'End') {
+      track.scrollTo({left:event.key === 'Home' ? 0 : track.scrollWidth,behavior:reducedMotion.matches ? 'instant' : 'smooth'});
+    } else move(event.key === 'ArrowRight' ? 1 : -1);
   });
   track.addEventListener('scroll',()=>{if (!frame) frame=requestAnimationFrame(updateCarousel);},{passive:true});
   new ResizeObserver(updateCarousel).observe(track);
   updateCarousel();
+}
+
+const copyAgentPrompt = document.querySelector('#copy-agent-prompt');
+if (copyAgentPrompt) {
+  const prompt = document.querySelector('#agent-intro-prompt');
+  const status = document.querySelector('#agent-copy-status');
+  let notificationTimer;
+  copyAgentPrompt.addEventListener('click', async () => {
+    document.querySelector('#agent-prompt-details').open = true;
+    clearTimeout(notificationTimer);
+    status.textContent = '';
+    try {
+      await navigator.clipboard.writeText(prompt.value);
+      status.textContent = 'Prompt copied';
+      notificationTimer = setTimeout(() => { status.textContent = ''; }, 3500);
+    } catch {
+      document.querySelector('#agent-prompt-details').open = true;
+      prompt.focus();
+      prompt.select();
+      status.textContent = 'Select and copy the prompt below, then paste it into your agent.';
+    }
+  });
 }

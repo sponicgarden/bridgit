@@ -1,0 +1,444 @@
+{
+  "sourceCount": 47,
+  "groups": [
+    {
+      "id": "capture",
+      "title": "See, hear and understand",
+      "intro": "Give your agent the photo, screen or audio context it needs.",
+      "image": "/assets/features/take_a_photo.webp",
+      "alt": "A phone sends a kitchen photo to an agent on a laptop.",
+      "features": [
+        {
+          "sourceTitle": "Take a photo",
+          "sourceStage": "NOW",
+          "title": "Camera snapshots",
+          "description": "Request a front- or rear-camera photo with the camera feature enabled.",
+          "example": "Show your agent what is on the workbench.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Send a screenshot",
+          "sourceStage": "NOW",
+          "title": "Screenshots on request",
+          "description": "After you enable the screenshot service and feature, an agent can request a visible, logged capture.",
+          "example": "Ask your agent to explain an error currently on screen.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Your latest screenshot or photo",
+          "sourceStage": "NOW",
+          "title": "Your latest image",
+          "description": "Retrieve the latest photo or screenshot, or wait for the next one you take.",
+          "example": "Take a screenshot of an error and ask what it means.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Find photos in your gallery",
+          "sourceStage": "NOW",
+          "title": "Photo access",
+          "description": "Let an agent list and retrieve images within the gallery access you grant.",
+          "example": "Find a receipt photo to include in your expenses.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Record a short clip",
+          "sourceStage": "NOW",
+          "title": "Short audio recordings",
+          "description": "Capture an audio clip of up to two minutes for an authorized agent.",
+          "example": "Record a voice note for your agent to summarize.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Videos and downloads",
+          "sourceStage": "P3",
+          "title": "Videos and downloads",
+          "description": "Access supported video files or still frames, and files you select from Downloads.",
+          "example": "Pull a still frame from a video for your agent to inspect.",
+          "status": "planned"
+        },
+        {
+          "sourceTitle": "Short video clips",
+          "sourceStage": "P5",
+          "title": "Short video recordings",
+          "description": "Capture a short front- or rear-camera video, with optional audio.",
+          "example": "Show a repair specialist how a mechanism moves.",
+          "status": "planned"
+        },
+        {
+          "sourceTitle": "Read text on the phone",
+          "sourceStage": "P5",
+          "title": "On-device text recognition",
+          "description": "Extract text from a selected image on the phone before sending the result.",
+          "example": "Read a serial number without sending the whole photo.",
+          "status": "planned"
+        },
+        {
+          "sourceTitle": "Transcribe clips on the phone",
+          "sourceStage": "P5",
+          "title": "On-device transcription",
+          "description": "Turn a microphone clip into text on the phone.",
+          "example": "Dictate a short note for your agent.",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "collaborate",
+      "title": "Work with your agent",
+      "intro": "Answer a question, follow progress, hear a reminder or exchange a file.",
+      "image": "/assets/features/questions_and_notices_to_you.webp",
+      "alt": "A person answers an agent’s question on a phone.",
+      "features": [
+        {
+          "sourceTitle": "Questions and notices to you",
+          "sourceStage": "NOW",
+          "title": "Questions and notices",
+          "description": "Agents can send messages with buttons, choices or a text reply.",
+          "example": "Answer “Which draft should I use?” from your phone.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Rich HTML cards",
+          "sourceStage": "NOW",
+          "title": "Interactive cards",
+          "description": "View an agent-created HTML card with charts or forms in an isolated view without network access.",
+          "example": "Compare three options and send your choice back.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Live text panel",
+          "sourceStage": "NOW",
+          "title": "Live text",
+          "description": "Read text as an agent streams it to a panel on your phone.",
+          "example": "Follow a coding agent’s progress while away from your desk.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Play an audio file",
+          "sourceStage": "NOW",
+          "title": "Audio playback and speech",
+          "description": "Play an agent-supplied audio clip or read text aloud within your sound settings.",
+          "example": "Hear “Time to leave” from your reminder agent.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Open a link or app",
+          "sourceStage": "NOW",
+          "title": "Open a link or app",
+          "description": "Agents can present a link or app shortcut; you tap to open it.",
+          "example": "Open the map your agent prepared for you.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Inbox",
+          "sourceStage": "P2",
+          "title": "A shared inbox",
+          "description": "Bring questions, notices, files and shares into one history.",
+          "example": "Look up an earlier question and your reply.",
+          "status": "planned"
+        },
+        {
+          "sourceTitle": "Files to your phone",
+          "sourceStage": "P4",
+          "title": "Receive files",
+          "description": "Receive documents, images and other supported files from an agent.",
+          "example": "Send a finished PDF from your agent to your phone.",
+          "status": "planned"
+        },
+        {
+          "sourceTitle": "Share to an agent",
+          "sourceStage": "P4",
+          "title": "Share with an agent",
+          "description": "Use Android sharing to send selected photos, links or text to an agent.",
+          "example": "Share a restaurant link with a note about your plans.",
+          "status": "planned"
+        },
+        {
+          "sourceTitle": "Copy to clipboard",
+          "sourceStage": "P6",
+          "title": "Copy text with approval",
+          "description": "Put agent-provided text on the clipboard after you approve it.",
+          "example": "Copy a prepared address to paste into another app.",
+          "status": "planned"
+        },
+        {
+          "sourceTitle": "Events and callbacks",
+          "sourceStage": "NOW",
+          "title": "Events and callbacks",
+          "description": "Integrations can receive events such as answers, new images or feature changes.",
+          "example": "Let your agent continue when you answer a question.",
+          "status": "current"
+        }
+      ]
+    },
+    {
+      "id": "context",
+      "title": "Add real-world context",
+      "intro": "Use selected device information to make an agent’s help more relevant.",
+      "image": "/assets/features/location_details.webp",
+      "alt": "A phone shares a location with a connected agent.",
+      "features": [
+        {
+          "sourceTitle": "Location details",
+          "sourceStage": "NOW",
+          "title": "Location on request",
+          "description": "Share a location fix, accuracy and age when location access is enabled.",
+          "example": "Ask your agent for directions from where you are.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Phone status and context",
+          "sourceStage": "P3",
+          "title": "Phone context",
+          "description": "Expose selected battery, network, screen, sound and activity information.",
+          "example": "Check whether the phone is charging before a long task.",
+          "status": "planned"
+        },
+        {
+          "sourceTitle": "Sensors",
+          "sourceStage": "P3",
+          "title": "Sensor readings",
+          "description": "Request supported light, pressure, motion, orientation or step readings.",
+          "example": "Use a light reading as context for a device workflow.",
+          "status": "planned"
+        },
+        {
+          "sourceTitle": "App usage",
+          "sourceStage": "P6",
+          "title": "App usage summaries",
+          "description": "Read permitted summaries of app usage and screen time.",
+          "example": "Review where your phone time went this week.",
+          "status": "planned"
+        },
+        {
+          "sourceTitle": "Health Connect",
+          "sourceStage": "P6",
+          "title": "Health Connect summaries",
+          "description": "Read the health records you explicitly allow through Health Connect.",
+          "example": "Bring permitted steps or sleep data into a personal check-in.",
+          "status": "planned"
+        },
+        {
+          "sourceTitle": "Read notifications",
+          "sourceStage": "P6",
+          "title": "Notification summaries",
+          "description": "Read notification text only after you enable notification access.",
+          "example": "Summarize the notifications that arrived during a meeting.",
+          "status": "planned"
+        },
+        {
+          "sourceTitle": "City tour",
+          "sourceStage": "P2",
+          "title": "A guided city walk",
+          "description": "Combine location, heading and chosen photos with an agent’s commentary.",
+          "example": "Explore a neighborhood with an architecture guide.",
+          "status": "planned"
+        },
+        {
+          "sourceTitle": "Location history and places",
+          "sourceStage": "IDEA",
+          "title": "Location history and places",
+          "description": "Explore optional local location history and place-based triggers.",
+          "example": "Ask for a reminder when you get home.",
+          "status": "exploring"
+        }
+      ]
+    },
+    {
+      "id": "controls",
+      "title": "Put the phone to work",
+      "intro": "Use deliberate device controls and approved screen-access sessions.",
+      "image": "/assets/features/phone_controls.webp",
+      "alt": "An agent helps adjust phone settings.",
+      "features": [
+        {
+          "sourceTitle": "Flash the light",
+          "sourceStage": "P3",
+          "title": "Flashlight",
+          "description": "Turn the torch on for a bounded period, then switch it off automatically.",
+          "example": "Light the workbench for a photo.",
+          "status": "planned"
+        },
+        {
+          "sourceTitle": "Phone controls",
+          "sourceStage": "P3",
+          "title": "Sound and display",
+          "description": "Adjust supported sound, Do Not Disturb and brightness settings with timed restoration.",
+          "example": "Silence the phone for a meeting, then restore its settings.",
+          "status": "planned"
+        },
+        {
+          "sourceTitle": "Find my phone",
+          "sourceStage": "P3",
+          "title": "Find your phone",
+          "description": "Request a ring and vibration, subject to Android’s sound restrictions.",
+          "example": "Locate the phone you left under a cushion.",
+          "status": "planned"
+        },
+        {
+          "sourceTitle": "Screen sharing as a fallback",
+          "sourceStage": "P5",
+          "title": "Alternative screen access",
+          "description": "Use an owner-approved screen-sharing grant as an alternative capture method.",
+          "example": "Grant screen access for a troubleshooting session.",
+          "status": "planned"
+        }
+      ]
+    },
+    {
+      "id": "connect",
+      "title": "Connect and build",
+      "intro": "Use the documented API or MCP with compatible agents and integrations.",
+      "image": "/assets/features/add_an_agent_in_a_minute.webp",
+      "alt": "A person connects an agent to their phone.",
+      "features": [
+        {
+          "sourceTitle": "Add an agent in a minute",
+          "sourceStage": "NOW",
+          "title": "Connect your agent",
+          "description": "Pair a compatible agent with a setup prompt and its own connection details.",
+          "example": "Connect the agent you already use on your laptop.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "One key per agent",
+          "sourceStage": "NOW",
+          "title": "Separate agent keys",
+          "description": "Give each agent a key you can rotate or revoke independently.",
+          "example": "Remove one agent without disconnecting the others.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "The API explains itself",
+          "sourceStage": "NOW",
+          "title": "Discoverable API",
+          "description": "A live guide describes the API, enabled capabilities and possible errors.",
+          "example": "Let a new integration discover how to use the phone.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Agents learn what's new",
+          "sourceStage": "NOW",
+          "title": "API change notices",
+          "description": "Agents can discover API revisions and read what changed.",
+          "example": "Help an integration pick up a newly added capability.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Use Bridget over MCP",
+          "sourceStage": "NOW",
+          "title": "MCP tools",
+          "description": "Connect an MCP-capable agent to enabled device tools using its own key.",
+          "example": "Ask your connected coding agent for a desk photo.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Reach Bridget without Tailscale (relay)",
+          "sourceStage": "IDEA",
+          "title": "Hosted-agent connection",
+          "description": "Explore a relay for compatible agents that cannot join your private network.",
+          "example": "Connect a hosted assistant without a direct Tailscale connection.",
+          "status": "exploring"
+        }
+      ]
+    },
+    {
+      "id": "ownership",
+      "title": "Keep control",
+      "intro": "Choose access, review activity, pause agents and maintain the app.",
+      "image": "/assets/features/you_stay_in_control.webp",
+      "alt": "A person manages which device features their agent can use.",
+      "features": [
+        {
+          "sourceTitle": "You stay in control",
+          "sourceStage": "NOW",
+          "title": "Feature switches",
+          "description": "Choose enabled features and Android permissions, and pause the listener.",
+          "example": "Turn camera and microphone access off before a meeting.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Quick Settings tile",
+          "sourceStage": "NOW",
+          "title": "Quick pause",
+          "description": "Pause or resume the connection from an Android Quick Settings tile.",
+          "example": "Disconnect agents from the notification shade.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Only over Tailscale",
+          "sourceStage": "NOW",
+          "title": "Private-network connection",
+          "description": "Direct access requires your Tailscale network and an agent key.",
+          "example": "Connect an agent on your computer to your own phone.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Per-agent permissions",
+          "sourceStage": "LATER",
+          "title": "Permissions per agent",
+          "description": "Choose different capability grants for different agents.",
+          "example": "Give a photo organizer gallery access without camera access.",
+          "status": "planned"
+        },
+        {
+          "sourceTitle": "Everything is logged",
+          "sourceStage": "NOW",
+          "title": "Activity history",
+          "description": "Review device requests, results and feature changes in the activity log.",
+          "example": "See which agent requested a photo and when.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Agent notes",
+          "sourceStage": "NOW",
+          "title": "Agent notes",
+          "description": "Agents can leave short notes alongside device activity.",
+          "example": "Keep a note of what a workshop check found.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Report a bug or ask for a feature",
+          "sourceStage": "NOW",
+          "title": "Bug reports and feedback",
+          "description": "Send a report with the context you choose; follow its status and confirm a fix.",
+          "example": "Report a failed capture with the relevant activity attached.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Check for updates",
+          "sourceStage": "NOW",
+          "title": "App updates",
+          "description": "Check for an app update and confirm installation through Android.",
+          "example": "Install a fix when you are ready.",
+          "status": "current"
+        }
+      ]
+    },
+    {
+      "id": "ideas",
+      "title": "Explore what comes next",
+      "intro": "Two directions under consideration, with no availability promise.",
+      "image": "/assets/features/listen_for_a_word_on_the_phone.webp",
+      "alt": "A concept illustration of a person speaking a trigger phrase to a phone.",
+      "features": [
+        {
+          "sourceTitle": "Listen for a word on the phone",
+          "sourceStage": "IDEA",
+          "title": "Local trigger words",
+          "description": "Explore on-device word detection for explicitly enabled voice workflows.",
+          "example": "Say a chosen phrase to begin a voice note.",
+          "status": "exploring"
+        },
+        {
+          "sourceTitle": "Messages, contacts, calendar, calls",
+          "sourceStage": "IDEA",
+          "title": "Messages, contacts and calendar",
+          "description": "Explore communications access and owner-approved actions.",
+          "example": "Approve a prepared “I’m running late” message.",
+          "status": "exploring"
+        }
+      ]
+    }
+  ]
+}

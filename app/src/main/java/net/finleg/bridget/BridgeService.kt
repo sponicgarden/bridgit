@@ -35,6 +35,7 @@ class BridgeService : LifecycleService() {
     @Volatile var cameraReady = false; private set
     @Volatile var micReady = false; private set
     @Volatile private var captureNote: String? = null
+    @Volatile var captureAgentId: String? = null; private set
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
@@ -109,9 +110,16 @@ class BridgeService : LifecycleService() {
         }
     }
 
-    fun showCapture(note: String?) {
+    fun showCapture(note: String?, agentId: String? = null) {
+        captureAgentId = agentId
         captureNote = note
         refreshNotification()
+        notifyUi()
+    }
+
+    fun profileChanged() {
+        refreshNotification()
+        notifyUi()
     }
 
     fun onPaired(agent: String) {
@@ -130,10 +138,12 @@ class BridgeService : LifecycleService() {
             PendingIntent.FLAG_IMMUTABLE)
         val text = captureNote ?: boundTo?.let { "Listening on Tailscale $it:${app.policy.port}" }
             ?: "Waiting for Tailscale - not reachable"
+        val agent = app.policy.agents().firstOrNull { it.id == captureAgentId }
         return NotificationCompat.Builder(this, BridgeApp.CHANNEL)
             .setSmallIcon(R.drawable.ic_notif)
             .setContentTitle(if (captureNote != null) "BRIDGIT - capturing" else "BRIDGIT Device Manager")
             .setContentText(text)
+            .setLargeIcon(AgentBranding.bitmap(agent?.iconBase64))
             .setOngoing(true)
             .setOnlyAlertOnce(captureNote == null)
             .setContentIntent(open)

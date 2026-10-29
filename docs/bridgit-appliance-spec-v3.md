@@ -183,3 +183,34 @@ Policy interpretation is a release-planning input, not a promise of approval. Re
 Brand clarification, 28 October 2026: BRIDGIT is deliberately Android-specific. The primary tagline appears beneath the app name. “Any Android device” is the product ambition; state the actual supported OS/hardware nearby. bridgetandroid.com is under consideration, not registered or selected by this document. Check Android trademark guidance before public branding: https://developer.android.com/distribute/marketing-tools/brand-guidelines
 
 Naming update, 28 October 2026: The approved public name is BRIDGIT Device Manager for Android, short brand BRIDGIT, domain https://bridgit.cc. The tagline is unchanged. Historical filenames and Android package/API identifiers remain unchanged for compatibility.
+
+
+## Agent branding clarification — 29 October 2026
+
+User requirement: agents can supply their name, branded icon and wordmark through
+the API. Display that identity at the top of interactions and repeat it on the
+confirmation screen, so the owner sees which agent is asking before confirming.
+Use the same identity on notices, questions, workflow proposals, permission and
+action approvals, and their confirmation/result screens when those surfaces are
+implemented. Keep the name visible if artwork is absent; preserve BRIDGIT
+attribution, action details, destinations and owner controls. Branding is
+self-supplied presentation and never grants permissions or verifies identity.
+Bind the displayed identity to the authenticated agent ID, not an interaction's
+arbitrary content. If a profile changes while approval is pending, keep the
+reviewed identity consistent through confirmation, or require fresh review.
+
+Current local implementation: authenticated `GET /v1/agent/profile` and
+`POST /v1/agent/profile` with optional `name`, `icon_base64` and
+`wordmark_base64`, as documented in the repository README. Agent list, pinned
+capture header and existing key-rotation/removal dialogs use a shared identity
+display. Capture notifications use the name and icon. Inbox, workflow and
+per-action approval screens remain planned; this change does not implement those
+interaction systems.
+
+
+Default-logo clarification: agents featured on the home page already have
+optimized logo assets. Use those by default in interaction headers and
+confirmation screens, including existing interactions such as Grokbot Demo.
+Custom agent-supplied artwork overrides the default. Unknown agents retain a
+text/initial fallback. Refer to the home-page agent catalog rather than a fixed
+count; the current source lists seven options.

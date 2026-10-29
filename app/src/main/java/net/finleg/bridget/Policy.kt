@@ -19,8 +19,9 @@ class Policy(context: Context) {
 
     enum class Capability(val key: String) { CAMERA("camera"), MIC("mic"), GALLERY("gallery") }
 
-    class Agent(val id: String, val name: String, val salt: String, val hash: String,
-                val createdAt: Long, val lastUsedAt: Long)
+    data class Agent(val id: String, val name: String, val salt: String, val hash: String,
+                val createdAt: Long, val lastUsedAt: Long,
+                val iconBase64: String? = null, val wordmarkBase64: String? = null)
 
     fun isEnabled(c: Capability) = prefs.getBoolean("cap_${c.key}", false)
     fun setEnabled(c: Capability, on: Boolean) = prefs.edit().putBoolean("cap_${c.key}", on).apply()
@@ -41,7 +42,9 @@ class Policy(context: Context) {
         return (0 until arr.length()).map { i ->
             val o = arr.getJSONObject(i)
             Agent(o.getString("id"), o.getString("name"), o.getString("salt"), o.getString("hash"),
-                o.getLong("created_at"), o.optLong("last_used_at", 0))
+                o.getLong("created_at"), o.optLong("last_used_at", 0),
+                o.optString("icon_base64").takeIf { it.isNotEmpty() },
+                o.optString("wordmark_base64").takeIf { it.isNotEmpty() })
         }
     }
 
@@ -70,8 +73,9 @@ class Policy(context: Context) {
     fun rotate(id: String): Pair<Agent, String> {
         val old = agents().first { it.id == id }
         val (agent, token) = newCredential(id, old.name, old.createdAt)
-        save(agents().map { if (it.id == id) agent else it })
-        return agent to token
+        val branded = agent.copy(iconBase64 = old.iconBase64, wordmarkBase64 = old.wordmarkBase64)
+        save(agents().map { if (it.id == id) branded else it })
+        return branded to token
     }
 
     @Synchronized
@@ -90,7 +94,29 @@ class Policy(context: Context) {
     @Synchronized
     fun touch(id: String) {
         val now = System.currentTimeMillis()
-        save(agents().map { if (it.id == id) Agent(it.id, it.name, it.salt, it.hash, it.createdAt, now) else it })
+        save(agents().map { if (it.id == id) it.copy(lastUsedAt = now) else it })
+    }
+
+    /** Atomically updates only the authenticated agent; omitted fields retain their values. */
+    @Synchronized
+    fun updateProfile(id: String, body: JSONObject): Agent {
+        val list = agents()
+        val old = list.firstOrNull { it.id == id }
+            ?: throw ApiError(401, "unauthorized", "Agent was removed")
+        val allowed = setOf("name", "icon_base64", "wordmark_base64")
+        if (body.keys().asSequence().any { it !in allowed })
+            throw ApiError(422, "invalid_parameter", "Unknown profile field")
+        val name = if (body.has("name")) (body.opt("name") as? String)?.trim()
+            ?: throw ApiError(422, "invalid_parameter", "name must be a string") else old.name
+        if (!NAME_RE.matches(name))
+            throw ApiError(422, "invalid_parameter", "Use 1-24 letters, numbers, spaces, - or _ for name")
+        if (list.any { it.id != id && it.name.equals(name, ignoreCase = true) })
+            throw ApiError(422, "invalid_parameter", "An agent with that name already exists")
+        val updated = old.copy(name = name,
+            iconBase64 = AgentBranding.asset(body, "icon_base64", old.iconBase64),
+            wordmarkBase64 = AgentBranding.asset(body, "wordmark_base64", old.wordmarkBase64))
+        save(list.map { if (it.id == id) updated else it })
+        return updated
     }
 
     private fun newCredential(id: String, name: String, createdAt: Long): Pair<Agent, String> {
@@ -103,7 +129,8 @@ class Policy(context: Context) {
         val arr = JSONArray()
         list.forEach {
             arr.put(JSONObject().put("id", it.id).put("name", it.name).put("salt", it.salt).put("hash", it.hash)
-                .put("created_at", it.createdAt).put("last_used_at", it.lastUsedAt))
+                .put("created_at", it.createdAt).put("last_used_at", it.lastUsedAt)
+                .put("icon_base64", it.iconBase64).put("wordmark_base64", it.wordmarkBase64))
         }
         prefs.edit().putString("agents", arr.toString()).apply()
     }
