@@ -76,6 +76,18 @@ class AgentDetailFragment : Fragment() {
         b.activityList.adapter = activityAdapter
         b.seeAll.setOnClickListener { findNavController().navigate(R.id.activity, bundleOf("agentId" to id)) }
 
+        b.capabilityPermissions.setOnClickListener {
+            val a = agent() ?: return@setOnClickListener
+            val modules = app.registry.modules.filter { it.id != "status" }
+            val checked = modules.map { a.allows(it.id) }.toBooleanArray()
+            MaterialAlertDialogBuilder(requireContext()).setTitle("Permissions for ${a.name}")
+                .setMultiChoiceItems(modules.map { it.title }.toTypedArray(), checked) { _, n, on -> checked[n] = on }
+                .setPositiveButton("Save") { _, _ ->
+                    val grants = modules.indices.filter { checked[it] }.map { modules[it].id }.toSet()
+                    updateGrants(grants)
+                }.setNeutralButton("Allow all capabilities") { _, _ -> updateGrants(null) }
+                .setNegativeButton("Cancel", null).show()
+        }
         b.rotate.setOnClickListener { confirmRotate() }
         b.remove.setOnClickListener { confirmRemove() }
         b.developer.setOnCheckedChangeListener { _, on ->
@@ -206,6 +218,13 @@ class AgentDetailFragment : Fragment() {
             .show()
     }
 
+    private fun updateGrants(grants: Set<String>?) {
+        val old = agent() ?: return
+        app.agents.update(id) { it.copy(caps = grants) }
+        fun label(caps: Set<String>?) = caps?.sorted()?.joinToString(",") ?: "all"
+        app.log.system("audit", "agent", "Owner changed ${old.name}'s grants: ${label(old.caps)} -> ${label(grants)}")
+    }
+
     /** Shown once; never stored in the UI state, the log or saved instance state. */
     private fun showSecretOnce(agentName: String, secret: String) {
         val ctx = requireContext()
@@ -232,7 +251,10 @@ class AgentDetailFragment : Fragment() {
                     com.google.android.material.snackbar.Snackbar.LENGTH_LONG).show() }
             }
             .setNegativeButton(R.string.callback_done, null)
-            .show()
+            .create().also { dialog ->
+                dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
+                dialog.show()
+            }
     }
 
     private fun confirmRemoveCallback() {

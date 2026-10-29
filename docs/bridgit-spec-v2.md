@@ -1502,6 +1502,17 @@ one purpose, started by Rahul and run together with one agent. The first is
   Android's camera; the photo is saved to Pictures/Bridgit and sent at once
   as `tour.photo`; the agent fetches it with `GET /v1/tour/photo/{n}` (its
   own tour only, no Gallery switch needed).
+- **TOUR-08** (owner report, 27 Oct 2026: "the agents don't message back")
+  Bridget never calls an agent without a callback URL, so an agent that isn't
+  looping on `GET /v1/events` never sees the tour. An agent is **listening**
+  when it has a callback URL or called `/v1/events` in the last 90 s. Setup
+  shows a warning row with **Copy prompt** when the picked agent isn't
+  listening (Start stays allowed); 20 s after Start, if the agent hasn't
+  fetched its events, the running screen shows the same warning. The prompt
+  (no key) tells the agent to read `GET /v1/tour`, loop on events until
+  `tour.ended` and speak; it carries the brief. The Interactions switch is
+  required (events live behind it). The brief tells the agent to keep looping
+  and to greet Rahul on the first tick, which carries location and compass.
 
 ### 8.22 Communications (not scheduled)
 
@@ -2206,6 +2217,9 @@ its debug builds; Bridgit's is for its **release** build.
 
 ## 16. Roadmap and phases
 
+Implementation update, 28 October 2026: the local `codex/planned-capabilities` development build implements the planned capabilities listed in `docs/planned-features-implementation.md`. That implementation note is authoritative for development endpoint paths, supported subsets, owner flows and validation. Historical phase/version targets below remain the original roadmap, not a statement that these additions have shipped. Exploring/IDEA features remain outside this pass.
+
+
 | Phase | App version | Contents | Done when |
 |---|---|---|---|
 | Built | 1.0-1.2 | Listener, keys, camera photo, mic clip, gallery, last image, audit log, four agents | Done 26 Oct 2026 |
@@ -2460,6 +2474,7 @@ Call /v1/health, then tell Rahul you're connected and which features are on.
 | 403 | `permission_denied` | Android permission not granted (`permission` field) | Tell Rahul; the Access screen fixes it |
 | 403 | `access_needed` | Android special access off (`setting` field) | Tell Rahul; Bridgit also notifies him |
 | 403 | `pairing_closed` | No pairing window open | Ask Rahul to open one |
+| 403 | `consent_expired` | No active owner-approved screen-sharing grant | Request a new grant on the phone |
 | 403 | `screen_denied` | Rahul denied screen access | Don't ask again soon |
 | 403 | `agent_not_allowed` | (Reserved for section 15) | — |
 | 404 | `not_found` | Unknown endpoint or id | Fix the request |

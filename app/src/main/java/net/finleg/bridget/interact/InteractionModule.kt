@@ -68,6 +68,7 @@ class InteractionModule(app: BridgeApp) : Capability(app) {
             val d = try { InteractionRules.parse(body) } catch (e: InteractionError) { fail(e) }
             val jpeg: ByteArray? = when {
                 d.imageGalleryId != null -> {
+                    if (!a.allows("gallery")) throw ErrorCatalog.error("permission_denied", "This agent has no Gallery access.")
                     val g = Gallery(app)
                     if (g.accessMode() == null || !app.settings.isOn("gallery"))
                         throw ErrorCatalog.error("capability_disabled", "image.gallery_id needs the Gallery switch and photo permission.", mapOf("setting" to "gallery"))
@@ -162,6 +163,7 @@ class InteractionModule(app: BridgeApp) : Capability(app) {
 
         endpoint(Endpoints.EVENTS) {
             val a = agent!!
+            app.interactions.notePoll(a.id)
             val since = query("since")?.let { it.toLongOrNull()?.takeIf { n -> n >= 0 } ?: throw ErrorCatalog.error("invalid_parameter", "since must be a cursor from next_cursor.") }
             val types = query("types")?.split(",")?.map { it.trim() }?.filter { it.isNotEmpty() }?.toSet().orEmpty()
             val wait = waitArg()
@@ -179,9 +181,11 @@ class InteractionModule(app: BridgeApp) : Capability(app) {
                     }
                 } finally { api.waits.exit(a.id) }
             }
+            app.interactions.notePoll(a.id)
             val next = list.lastOrNull()?.id ?: since ?: 0L
-            params.put("returned", list.size)
-            Reply.Json(JSONObject().put("events", JSONArray(list.map { it.toJson(::isoAt) })).put("next_cursor", next.toString()))
+            val permitted = list.filter { EventAccess.allowed(app.agents.get(a.id), it.type) }
+            params.put("returned", permitted.size)
+            Reply.Json(JSONObject().put("events", JSONArray(permitted.map { it.toJson(::isoAt) })).put("next_cursor", next.toString()))
         }
     }
 }

@@ -22,8 +22,8 @@ android {
         targetSdk = 35
         // -PbridgetVersionCode / -PbridgetVersionName build an older-looking copy, used only to test
         // the in-app update path (UPD-03/04) against the published release. Never published.
-        versionCode = (project.findProperty("bridgetVersionCode") as String?)?.toInt() ?: 16
-        versionName = (project.findProperty("bridgetVersionName") as String?) ?: "1.5.4"
+        versionCode = (project.findProperty("bridgetVersionCode") as String?)?.toInt() ?: 18
+        versionName = (project.findProperty("bridgetVersionName") as String?) ?: "1.6.0"
         buildConfigField("int", "DEFAULT_PORT", "8734")
         buildConfigField("String", "GIT_COMMIT", "\"${gitCommit()}\"")
         buildConfigField("boolean", "DIRTY_BUILD", "${gitDirty()}")
@@ -48,9 +48,9 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".debug"
+            applicationIdSuffix = (project.findProperty("bridgetApplicationIdSuffix") as String?) ?: ".debug"
             // Debug builds listen on 8735 so they never clash with a release build on 8734.
-            buildConfigField("int", "DEFAULT_PORT", "8735")
+            buildConfigField("int", "DEFAULT_PORT", (project.findProperty("bridgetDebugPort") as String?) ?: "8735")
         }
         release {
             isMinifyEnabled = false
@@ -85,7 +85,18 @@ val copyHelper by tasks.registering(Copy::class) {
     into(layout.buildDirectory.dir("generated/helperAssets"))
     rename { "bridget-helper.py" }
 }
-tasks.named("preBuild") { dependsOn(copyHelper) }
+val writeProvenance by tasks.registering {
+    val target = layout.buildDirectory.file("generated/helperAssets/build-provenance.json")
+    val commit = providers.exec { commandLine("git", "rev-parse", "HEAD") }.standardOutput.asText.get().trim()
+    val dirty = gitDirty()
+    inputs.property("commit", commit)
+    inputs.property("dirty", dirty)
+    outputs.file(target)
+    doLast {
+        target.get().asFile.apply { parentFile.mkdirs(); writeText("""{"git_commit":"$commit","dirty_build":$dirty}""" + "\n") }
+    }
+}
+tasks.named("preBuild") { dependsOn(copyHelper, writeProvenance) }
 
 fun gitCommit(): String = runCatching {
     providers.exec { commandLine("git", "rev-parse", "--short=12", "HEAD") }.standardOutput.asText.get().trim()
@@ -93,7 +104,7 @@ fun gitCommit(): String = runCatching {
 
 fun gitDirty(): Boolean = runCatching {
     providers.exec { commandLine("git", "status", "--porcelain") }.standardOutput.asText.get().isNotBlank()
-}.getOrDefault(false)
+}.getOrDefault(true)
 
 dependencies {
     val camerax = "1.4.1"
@@ -107,6 +118,8 @@ dependencies {
     implementation("androidx.camera:camera-core:$camerax")
     implementation("androidx.camera:camera-camera2:$camerax")
     implementation("androidx.camera:camera-lifecycle:$camerax")
+    implementation("androidx.camera:camera-video:$camerax")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
     implementation("io.ktor:ktor-server-core:$ktor")
     implementation("io.ktor:ktor-server-cio:$ktor")
     implementation("com.google.zxing:core:3.5.3")

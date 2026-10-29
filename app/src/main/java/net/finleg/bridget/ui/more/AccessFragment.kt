@@ -101,6 +101,10 @@ class AccessFragment : Fragment() {
         b.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         b.showHow.setOnClickListener { HowSheet().show(childFragmentManager, "how") }
         b.appInfo.setOnClickListener { openAppInfo() }
+        b.accessContent.addView(com.google.android.material.button.MaterialButton(requireContext()).apply {
+            text = "Device tools and additional access"
+            setOnClickListener { startActivity(Intent(requireContext(), net.finleg.bridget.planned.OwnerToolsActivity::class.java)) }
+        })
     }
 
     override fun onResume() {

@@ -69,7 +69,7 @@ def send(cfg, req, host, port):
         # Keep stdin open: `tailscale nc` drops the connection as soon as its
         # input closes, before the phone has answered. Read until the phone
         # closes the connection (we send Connection: close), then clean up.
-        chunks, deadline = [], time.monotonic() + 170
+        chunks, deadline = [], time.monotonic() + 210
         fd = p.stdout.fileno()
         while True:
             left = deadline - time.monotonic()
@@ -94,7 +94,7 @@ def send(cfg, req, host, port):
         except subprocess.TimeoutExpired:
             p.kill()
         return b"".join(chunks)
-    s = socket.create_connection((host, int(port)), timeout=170)
+    s = socket.create_connection((host, int(port)), timeout=210)
     s.sendall(req)
     chunks = []
     while True:

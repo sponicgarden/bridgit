@@ -141,6 +141,7 @@ class InteractionsAdapter(
     companion object {
         val DIFF = object : DiffUtil.ItemCallback<Interaction>() {
             override fun areItemsTheSame(a: Interaction, b: Interaction) = a.id == b.id
+            @android.annotation.SuppressLint("DiffUtilEquals") // contentKey returns a Kotlin List with structural equality.
             override fun areContentsTheSame(a: Interaction, b: Interaction) = InteractionUi.contentKey(a) == InteractionUi.contentKey(b)
         }
     }

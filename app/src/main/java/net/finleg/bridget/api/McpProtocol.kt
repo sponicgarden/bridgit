@@ -92,6 +92,9 @@ object McpTools {
         "POST /interactions" to "interactions_send", "GET /interactions" to "interactions_list",
         "GET /interactions/{id}" to "interactions_get", "DELETE /interactions/{id}" to "interactions_cancel",
         "GET /speaker" to "speaker_status", "DELETE /speaker" to "speaker_stop",
+        "GET /files" to "files_list", "GET /files/{id}" to "files_get", "DELETE /files/{id}" to "files_delete", "POST /files" to "files_receive",
+        "GET /shares" to "shares_list", "GET /shares/{id}" to "shares_get", "DELETE /shares/{id}" to "shares_delete",
+        "GET /downloads" to "downloads_list", "GET /downloads/{id}" to "downloads_get", "DELETE /downloads/{id}" to "downloads_delete",
         "GET /tour" to "tour_get", "DELETE /tour" to "tour_end",
     )
 
@@ -198,13 +201,23 @@ object McpTools {
      * `data_base64` image or audio lifted out into image/audio content; image/audio bytes → that content
      * plus a text item with the X-Bridget-* details; errors → isError with the error JSON as text.
      */
-    fun result(status: Int, contentType: String, bytes: ByteArray, headers: Map<String, String> = emptyMap()): JSONObject {
+    fun result(status: Int, contentType: String, bytes: ByteArray, headers: Map<String, String> = emptyMap(), downloadUri: String? = null): JSONObject {
         val content = JSONArray()
         val out = JSONObject().put("content", content)
         val ct = contentType.substringBefore(';').trim().lowercase()
         if (status >= 400) {
             content.put(text(String(bytes)))
             return out.put("isError", true)
+        }
+        if (ct != "application/json" && !ct.startsWith("text/") && bytes.size > MAX_EMBEDDED_BYTES) {
+            if (downloadUri != null) content.put(JSONObject().put("type", "resource_link").put("uri", downloadUri)
+                .put("name", "download").put("mimeType", ct).put("size", bytes.size)
+                .put("description", "Download over HTTP with your existing Bridgit Bearer header; no key is included in this URL."))
+            else {
+                content.put(text("Media exceeds the 8 MB MCP attachment limit. Use the HTTP endpoint."))
+                out.put("isError", true)
+            }
+            return out
         }
         when {
             ct == "application/json" -> {
@@ -223,9 +236,22 @@ object McpTools {
                 content.put(media(if (ct.startsWith("image/")) "image" else "audio", Base64.getEncoder().encodeToString(bytes), ct))
             }
             ct.startsWith("text/") || ct == "application/x-ndjson" -> content.put(text(String(bytes)))
-            else -> content.put(text("$ct, ${bytes.size} bytes (binary; use the HTTP endpoint to download it)"))
+            else -> content.put(JSONObject().put("type", "resource").put("resource", JSONObject()
+                .put("uri", "bridgit://result/${java.util.UUID.randomUUID()}")
+                .put("mimeType", ct).put("blob", Base64.getEncoder().encodeToString(bytes))))
         }
         return out
+    }
+
+    const val MAX_EMBEDDED_BYTES = 8 * 1024 * 1024
+
+    fun downloadUri(baseUrl: String, spec: EndpointSpec, paths: Map<String, String>, queries: Map<String, String>): String? {
+        if (spec.method != "GET") return null
+        fun encode(s: String) = java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20")
+        var path = spec.path
+        paths.forEach { (key, value) -> path = path.replace("{$key}", encode(value)) }
+        val query = queries.entries.joinToString("&") { (key, value) -> "${encode(key)}=${encode(value)}" }
+        return baseUrl + path + if (query.isEmpty()) "" else "?$query"
     }
 
     private fun text(s: String) = JSONObject().put("type", "text").put("text", s)

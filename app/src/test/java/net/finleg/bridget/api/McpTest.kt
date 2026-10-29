@@ -12,6 +12,27 @@ import org.junit.Test
 class McpTest {
     private val names = McpTools.specs.map { McpTools.name(it) }
 
+    @Test fun oversizedMediaUsesAnAuthenticatedHttpLink() {
+        val uri = McpTools.downloadUri("http://pixel:8734/v1", Endpoints.GALLERY_PHOTO, mapOf("id" to "123"), mapOf("raw" to "1"))!!
+        assertEquals("http://pixel:8734/v1/gallery/photo/123?raw=1", uri)
+        val result = McpTools.result(200, "video/mp4", ByteArray(McpTools.MAX_EMBEDDED_BYTES + 1), downloadUri = uri)
+        val content = result.getJSONArray("content").getJSONObject(0)
+        assertEquals("resource_link", content.getString("type"))
+        assertEquals(uri, content.getString("uri"))
+        assertFalse(content.has("blob"))
+        assertNull(McpTools.downloadUri("http://pixel/v1", Endpoints.SNAPSHOT, emptyMap(), emptyMap()))
+    }
+    @Test fun binaryResultsAreRetrievableEmbeddedResources() {
+        for (mime in listOf("video/mp4", "application/pdf", "application/octet-stream")) {
+            val bytes = byteArrayOf(0, 1, 2, -1, -128)
+            val result = McpTools.result(200, mime, bytes).getJSONArray("content").getJSONObject(0)
+            assertEquals("resource", result.getString("type"))
+            val resource = result.getJSONObject("resource")
+            assertEquals(mime, resource.getString("mimeType"))
+            assertTrue(resource.getString("uri").startsWith("bridgit://result/"))
+            org.junit.Assert.assertArrayEquals(bytes, java.util.Base64.getDecoder().decode(resource.getString("blob")))
+        }
+    }
     @Test fun namesAreUniqueSnakeCaseAndStable() {
         assertEquals(names.toString(), names.size, names.toSet().size)
         names.forEach { assertTrue(it, Regex("^[a-z][a-z0-9_]{0,63}$").matches(it)) }

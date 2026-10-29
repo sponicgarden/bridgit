@@ -27,7 +27,12 @@ class BridgeApp : Application() {
     lateinit var tours: net.finleg.bridget.tour.TourManager
     lateinit var callbacks: net.finleg.bridget.core.CallbackStore
     lateinit var callbackDispatcher: net.finleg.bridget.interact.CallbackDispatcher
+    lateinit var screenGrants: net.finleg.bridget.planned.ScreenGrants
+    lateinit var hardware: net.finleg.bridget.planned.Hardware
+    lateinit var transfers: net.finleg.bridget.planned.Transfers
+    lateinit var clipboardRequests: net.finleg.bridget.planned.ClipboardRequests
     val pairing = Pairing()
+    val requests = net.finleg.bridget.api.RequestState()
 
     /** What the listener is doing, for Home, the notification and the Add-agent check. */
     data class ListenerState(
@@ -58,15 +63,27 @@ class BridgeApp : Application() {
         settings = Settings(this)
         agents = AgentRegistry(settings.agentStorage(this))
         log = LogStore(this) { settings.retention() }
+        createChannels()
+        java.io.File(cacheDir, "uploads").listFiles()?.forEach { it.delete() }
         registry = Registry(this)
+        screenGrants = net.finleg.bridget.planned.ScreenGrants(this)
+        hardware = net.finleg.bridget.planned.Hardware(this)
+        transfers = net.finleg.bridget.planned.Transfers(this)
+        clipboardRequests = net.finleg.bridget.planned.ClipboardRequests(this)
+        settings.addListener { if (!settings.listenerEnabled || !settings.isOn("notifications")) net.finleg.bridget.planned.NotificationMemory.clear() }
         vault = PendingKeyVault(this)
         feedback = FeedbackStore(this)
         interactions = net.finleg.bridget.interact.InteractionStore(this)
         speaker = net.finleg.bridget.capability.SpeakerQueue(this)
         tours = net.finleg.bridget.tour.TourManager(this)
+        agents.addListener {
+            tours.current()?.let { t -> if (agents.get(t.agentId)?.let { it.allows("tour") && it.allows("interactions") && it.allows("location") && it.allows("speaker") } != true) tours.end("Agent access revoked") }
+            speaker.recheckAccess()
+        }
         callbacks = net.finleg.bridget.core.CallbackStore(this)
         callbackDispatcher = net.finleg.bridget.interact.CallbackDispatcher(this, callbacks)
         interactions.addEventListener { callbackDispatcher.onEvent(it) } // EVT-06
+        interactions.recoverInterruptedTours()
         // Play aloud (UI-16): Rahul's own tap, so silent/DND don't block it; a call still does. Same queue as everything else.
         net.finleg.bridget.ui.interactions.SpeakHook.speak = { _, agent, title, text ->
             if (!speaker.inCall()) speaker.speakText("owner", agent, net.finleg.bridget.interact.NotifRules.utterance(agent, title, text), allowInQuiet = true)
@@ -80,8 +97,9 @@ class BridgeApp : Application() {
             if (now != tileListening) { tileListening = now; net.finleg.bridget.ui.home.ListenerTile.requestUpdate(this) }
         }
         applyAppearance()
-        createChannels()
     }
+
+    fun speakerReady() = ::speaker.isInitialized
 
     fun applyAppearance() = AppCompatDelegate.setDefaultNightMode(when (settings.appearance) {
         "light" -> AppCompatDelegate.MODE_NIGHT_NO

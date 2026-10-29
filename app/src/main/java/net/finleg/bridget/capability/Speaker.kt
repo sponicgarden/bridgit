@@ -44,6 +44,9 @@ import java.util.concurrent.Executor
 
 /** Pure rules for speaker requests (SPK-01, SPK-02), unit-tested. */
 object SpeakerRules {
+    fun allowed(agentId: String, listenerOn: Boolean, switchOn: Boolean, hasGrant: Boolean) =
+        agentId == "owner" || (listenerOn && switchOn && hasGrant)
+
     const val MAX_QUEUE_PER_AGENT = 5
     const val PLAYS_PER_HOUR = 60
     const val MAX_BYTES = 25L * 1024 * 1024
@@ -142,6 +145,7 @@ class SpeakerQueue(private val app: BridgeApp) {
     @Volatile var paused = false; private set
 
     init {
+        app.settings.addListener { recheckAccess() }
         // SPK-01/03: react while a clip plays, not only before it starts.
         am.addOnModeChangedListener(onHandler) { checkConditions() }
         val f = IntentFilter().apply {
@@ -177,11 +181,20 @@ class SpeakerQueue(private val app: BridgeApp) {
      * Adds [item]; the queue owns its file from here on (it is deleted if this throws).
      * [replace] is SpeakerRules.REPLACE. Returns the item's position (0 = playing now).
      */
+    private fun allowed(agentId: String) = SpeakerRules.allowed(agentId, app.settings.listenerEnabled,
+        app.settings.isOn("speaker"), app.agents.get(agentId)?.allows("speaker") == true)
+
+    fun recheckAccess() {
+        (queued().map { it.agentId } + listOfNotNull(current?.agentId)).distinct()
+            .filterNot(::allowed).forEach { stop(it) }
+    }
+
     fun enqueue(item: Item, replace: String): Int {
         val dropped = ArrayList<Item>()
         val pos: Int
         try {
             synchronized(lock) {
+                if (!allowed(item.agentId)) throw ErrorCatalog.error("permission_denied", "Speaker access is disabled or revoked.")
                 val mine = queue.count { it.agentId == item.agentId }
                 if (replace == "queue" && mine >= SpeakerRules.MAX_QUEUE_PER_AGENT)
                     throw ErrorCatalog.error("rate_limited", "At most ${SpeakerRules.MAX_QUEUE_PER_AGENT} sounds waiting per agent.")
@@ -236,6 +249,7 @@ class SpeakerQueue(private val app: BridgeApp) {
             val f = newFile("wav")
             var owned = false
             try {
+                if (!allowed(agentId)) return@launch
                 if (!tts.synth(text, f, null, 1f, 1f)) {
                     app.log.system("diagnostic", "service", "Couldn't read $agent's interaction aloud (text-to-speech failed)", level = "warn")
                     return@launch
@@ -262,7 +276,7 @@ class SpeakerQueue(private val app: BridgeApp) {
     /** Silent / vibrate / DND / a call: don't play (SPK-01, SPK-03). */
     fun quiet(): Boolean = inCall() || silenced()
 
-    private fun blocked(i: Item) = inCall() || (silenced() && !i.allowInQuiet)
+    private fun blocked(i: Item) = !allowed(i.agentId) || inCall() || (silenced() && !i.allowInQuiet)
 
     // ---- playback thread ---------------------------------------------------------------------------
 
@@ -370,7 +384,7 @@ class SpeakerQueue(private val app: BridgeApp) {
     }
 
     /** SPK-01: never louder than Rahul's ceiling; put back afterwards unless he changed it meanwhile. */
-    private fun applyCeiling() {
+    @Synchronized private fun applyCeiling() {
         val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val ceiling = max * app.settings.speakerCeiling / 100
         val now = am.getStreamVolume(AudioManager.STREAM_MUSIC)
@@ -380,7 +394,22 @@ class SpeakerQueue(private val app: BridgeApp) {
         }
     }
 
-    private fun releaseAudio() {
+    @Synchronized fun controlVolume(): Int {
+        val now = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+        return if (setVolume == now) restoreVolume ?: now else now
+    }
+
+    @Synchronized fun controlVolume(value: Int) {
+        val ceilingActive = restoreVolume != null && am.getStreamVolume(AudioManager.STREAM_MUSIC) == setVolume
+        if (ceilingActive) {
+            val ceiling = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC) * app.settings.speakerCeiling / 100
+            am.setStreamVolume(AudioManager.STREAM_MUSIC, minOf(value, ceiling), 0)
+            setVolume = am.getStreamVolume(AudioManager.STREAM_MUSIC)
+            restoreVolume = value
+        } else am.setStreamVolume(AudioManager.STREAM_MUSIC, value, 0)
+    }
+
+    @Synchronized private fun releaseAudio() {
         focus?.let { am.abandonAudioFocusRequest(it) }; focus = null
         pausedByFocus = false; pausedByCall = false
         val r = restoreVolume
@@ -403,7 +432,7 @@ class SpeakerQueue(private val app: BridgeApp) {
  */
 class TtsFiles(private val ctx: Context) {
     private var tts: TextToSpeech? = null
-    private val ready = CompletableDeferred<Boolean>()
+    private var ready = CompletableDeferred<Boolean>()
     private val pending = ConcurrentHashMap<String, CompletableDeferred<Boolean>>()
     private val mutex = Mutex()
     /** Chosen offline voice per language tag (null = keep the engine's default). */
@@ -418,7 +447,8 @@ class TtsFiles(private val ctx: Context) {
     }
 
     private fun ensure() {
-        if (tts == null) tts = TextToSpeech(ctx) { status -> ready.complete(status == TextToSpeech.SUCCESS) }.also {
+        val signal = ready
+        if (tts == null) tts = TextToSpeech(ctx) { status -> signal.complete(status == TextToSpeech.SUCCESS) }.also {
             it.setOnUtteranceProgressListener(listener)
         }
     }
@@ -426,7 +456,10 @@ class TtsFiles(private val ctx: Context) {
     /** Writes [text] to [out]. False on failure; the caller deletes [out]. */
     suspend fun synth(text: String, out: File, language: String?, rate: Float, pitch: Float): Boolean = mutex.withLock {
         withContext(Dispatchers.Main) { ensure() }
-        if (withTimeoutOrNull(5000) { ready.await() } != true) return false
+        if (withTimeoutOrNull(5000) { ready.await() } != true) {
+            withContext(Dispatchers.Main) { tts?.shutdown(); tts = null; ready = CompletableDeferred(); voices.clear() }
+            return false
+        }
         val t = tts!!
         val id = UUID.randomUUID().toString()
         val done = CompletableDeferred<Boolean>()

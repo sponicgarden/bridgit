@@ -77,12 +77,12 @@ object Endpoints {
         errors = listOf("capability_disabled", "permission_denied", "notifications_required", "device_locked", "sensor_busy", "capture_timeout", "service_start_blocked", "payload_too_large"))
     val MIC = EndpointSpec("POST", "/mic/record", "mic", "Record an audio clip",
         capture = true, idempotent = true, media = true,
-        body = listOf(Param("duration_seconds", "integer", "Whole seconds, 1-120", required = true)),
+        body = listOf(Param("transcribe", "boolean", "Use only Android on-device recognition; no cloud fallback"), Param("return_audio", "boolean", "true by default; false requires transcribe=true"), Param("language", "string", "Optional offline language, e.g. en-US"), Param("duration_seconds", "integer", "Whole seconds, 1-120", required = true)),
         example = "POST /v1/mic/record {\"duration_seconds\":5}",
         returns = "recorded_at, duration_seconds, format (m4a), sample_rate_hz, size_bytes, data_base64",
         errors = listOf("capability_disabled", "permission_denied", "notifications_required", "sensor_busy", "capture_timeout", "service_start_blocked"))
     val GALLERY_RECENT = EndpointSpec("GET", "/gallery/recent", "gallery", "Newest gallery images (metadata only)",
-        query = listOf(Param("limit", "integer", "1-100, default 20")),
+        query = listOf(Param("type", "string", "any, photo or screenshot"), Param("album", "string", "Exact album name"), Param("since", "string", "ISO-8601 UTC added-at lower bound"), Param("until", "string", "ISO-8601 UTC upper bound"), Param("limit", "integer", "1-100, default 20")),
         example = "GET /v1/gallery/recent?limit=10", returns = "access_mode, photos[id, taken_at, width_px, height_px, size_bytes, mime, album]",
         errors = listOf("capability_disabled", "permission_denied"))
     val GALLERY_PHOTO = EndpointSpec("GET", "/gallery/photo/{id}", "gallery", "One gallery image, sized for you",
@@ -265,5 +265,5 @@ object Endpoints {
     val all = listOf(HEALTH, CAPABILITIES, GUIDE, OPENAPI, CHANGES, HELPER, PAIR, SNAPSHOT, MIC, GALLERY_RECENT, GALLERY_PHOTO,
         IMAGE_LAST, SCREEN_CAPTURE, LOG, LOG_ENTRY, LOG_STATS, LOG_EXPORT, LOG_NOTE, AUDIT, FEEDBACK_LIST, FEEDBACK_GET, FEEDBACK_STATUS, FEEDBACK_POST,
         INTERACTION_CREATE, INTERACTION_LIST, INTERACTION_GET, INTERACTION_CANCEL, EVENTS, TEXT_STREAM, CALLBACK_TEST, MCP,
-        LOCATION, SPEAKER_PLAY, SPEAKER_SAY, SPEAKER_STATUS, SPEAKER_STOP, TOUR_GET, TOUR_PHOTO, TOUR_END, ME)
+        LOCATION, SPEAKER_PLAY, SPEAKER_SAY, SPEAKER_STATUS, SPEAKER_STOP, TOUR_GET, TOUR_PHOTO, TOUR_END, ME) + net.finleg.bridget.planned.PlannedEndpoints.all
 }

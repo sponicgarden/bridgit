@@ -21,7 +21,7 @@
 #      key (SHA-256 6bbd482d…2f61).
 #   4. Computes SHA-256 and size and writes latest.json:
 #      {"package","version_name","version_code","url","sha256","size_bytes","published_at","notes"}.
-#   5. Uploads bridget/bridget-<version>.apk, then bridget/latest.json, to the public R2 bucket
+#   5. Uploads bridget/bridget-<version>.apk and API docs, verifies the APK, then bridget/latest.json, to the public R2 bucket
 #      sponic-images via the Cloudflare API, and checks each reply says "success": true.
 #   5a. Generates the public API page (ApiDocsTest writes app/build/apidocs/api.html for this version)
 #      and uploads it as bridget/api.html; the What can Bridgit do? cards' Share buttons link to it.
@@ -114,8 +114,21 @@ print(f("name"), f("versionCode"), f("versionName"))
 ' "${BADGING}")
 [[ "${PKG}" == "${PACKAGE}" ]] || die "package is '${PKG}', expected ${PACKAGE} (debug builds can't be published)"
 [[ "${VCODE}" =~ ^[1-9][0-9]*$ ]] || die "bad versionCode '${VCODE}'"
-[[ "${VNAME}" =~ ^[0-9A-Za-z.+_-]{1,32}$ ]] || die "bad versionName '${VNAME}'"
+[[ "${VNAME}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "bad versionName '${VNAME}'"
 echo "==> ${PKG} ${VNAME} (versionCode ${VCODE})"
+
+# The supplied APK must come from this exact clean revision, even with --apk/--no-build.
+[[ -z "$(git -C "${ROOT}" status --porcelain)" ]] || die "source tree is dirty; commit the reviewed changes before publishing"
+COMMIT="$(git -C "${ROOT}" rev-parse HEAD)"
+python3 "${ROOT}/tools/check-apk-provenance.py" "${APK}" "${COMMIT}" || die "APK provenance check failed"
+git -C "${ROOT}" fetch origin main || die "cannot verify the production revision"
+git -C "${ROOT}" merge-base --is-ancestor "${COMMIT}" origin/main || die "commit ${COMMIT} must be on origin/main before publication"
+if [[ ${GITHUB} -eq 1 ]]; then
+  command -v gh >/dev/null || die "gh not found (or pass --no-github)"
+  [[ "$(gh api "repos/${GH_REPO}" --jq '.permissions.push')" == "true" ]] || die "GitHub write access could not be verified"
+  [[ -z "$(git -C "${ROOT}" ls-remote --tags origin "refs/tags/bridget-v${VNAME}")" ]] || die "release tag already exists"
+  gh release view "bridget-v${VNAME}" --repo "${GH_REPO}" >/dev/null 2>&1 && die "GitHub release bridget-v${VNAME} already exists"
+fi
 
 # ---- 3. Signing certificate ----
 CERTS="$("${APKSIGNER}" verify --print-certs "${APK}" 2>/dev/null | sed -n 's/^Signer #[0-9]* certificate SHA-256 digest: //p' | tr "A-F" "a-f" | sort -u || true)"
@@ -148,10 +161,16 @@ echo "==> latest.json"
 cat "${MANIFEST}"
 
 # Refuse to publish a version that isn't newer than what's already public.
-CUR_CODE="$( (curl -sS -A "${UA}" --max-time 20 "${PUBLIC_BASE}/latest.json" 2>/dev/null || true) | python3 -c '
+curl -fsS -A "${UA}" --max-time 20 "${PUBLIC_BASE}/latest.json" -o "${WORK}/current.json" || die "cannot verify the current public release"
+CUR_CODE="$(python3 - "${WORK}/current.json" "${PACKAGE}" <<'CHECK'
 import json, sys
-try: print(int(json.load(sys.stdin).get("version_code", 0)))
-except Exception: print(0)')"
+m = json.load(open(sys.argv[1]))
+assert m.get("package") == sys.argv[2], "unexpected package in current release"
+code = m["version_code"]
+assert type(code) is int and code > 0, "invalid current version_code"
+print(code)
+CHECK
+)" || die "current public release manifest is invalid"
 if (( CUR_CODE >= VCODE )); then
   if [[ ${FORCE} -eq 1 ]]; then echo "==> Public latest.json has version_code ${CUR_CODE}; publishing ${VCODE} anyway (--force)"
   else die "public latest.json already has version_code ${CUR_CODE} (this APK is ${VCODE}); bump versionCode or pass --force"; fi
@@ -220,8 +239,11 @@ PY
 
 echo "==> Uploading to R2 (${R2_BUCKET})"
 upload "${KEY_APK}" "${APK}" "application/vnd.android.package-archive"
-upload "${KEY_JSON}" "${MANIFEST}" "application/json"
 upload "bridget/api.html" "${DOCS}" "text/html; charset=utf-8"
+# Verify the immutable APK before making the updater advertise it.
+curl -fsSL -A "${UA}" --max-time 600 -o "${WORK}/preflight.apk" "${URL}" || die "couldn't verify the uploaded APK"
+[[ "$(shasum -a 256 "${WORK}/preflight.apk" | awk '{print $1}')" == "${SHA}" ]] || die "uploaded APK hash mismatch"
+upload "${KEY_JSON}" "${MANIFEST}" "application/json"
 rm -f "${HDR}"; HDR=""
 
 # ---- 6. Verify the public copies ----
@@ -247,8 +269,6 @@ if [[ ${GITHUB} -eq 1 ]]; then
   cp "${APK}" "${ASSET}"
   echo "==> Creating GitHub release bridget-v${VNAME}"
   # Tag the commit the APK was built from (it must be pushed), not the default branch.
-  COMMIT="$(git -C "${ROOT:-.}" rev-parse HEAD)"
-  git -C "${ROOT:-.}" branch -r --contains "${COMMIT}" | grep -q . || die "commit ${COMMIT} isn't pushed; push the branch first"
   gh release create "bridget-v${VNAME}" "${ASSET}" --repo "${GH_REPO}" --target "${COMMIT}" --title "Bridgit ${VNAME}" \
     --notes "${NOTES}
 

@@ -8,6 +8,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.route
 import net.finleg.bridget.capability.appVersion
+import net.finleg.bridget.capability.address
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -52,7 +53,7 @@ class McpDispatch(private val api: ApiServer) {
             "ping" -> McpProtocol.result(m.id, JSONObject())
             "tools/list" -> {
                 val tools = JSONArray()
-                visible(agent.developer).forEach { e ->
+                visible(agent.developer).filter { agent.allows(it.capability) }.forEach { e ->
                     val off = api.app.registry.byId(e.capability)?.enabled == false
                     tools.put(McpTools.tool(e, off))
                 }
@@ -74,7 +75,8 @@ class McpDispatch(private val api: ApiServer) {
                     return McpProtocol.result(m.id, McpTools.result(err.http, "application/json", err.toJson(r.requestId).toString().toByteArray()))
                 }
                 val out = api.dispatch(spec, agent, r.source, routed.queries, routed.pathParams, routed.body, routed.idempotencyKey)
-                McpProtocol.result(m.id, McpTools.result(out.status, out.contentType, out.bytes, out.headers))
+                McpProtocol.result(m.id, McpTools.result(out.status, out.contentType, out.bytes, out.headers,
+                    McpTools.downloadUri(api.app.address().baseUrl, spec, routed.pathParams, routed.queries)))
             }
             else -> McpProtocol.error(m.id, McpProtocol.METHOD_NOT_FOUND, "Method not found: ${m.method.take(60)}")
         }

@@ -9,7 +9,7 @@
     <string name="tour_kinds_header">Kind of tour</string>
     <string name="tour_kinds_hint">Pick one or more.</string>
     <string name="tour_agent_header">Agent</string>
-    <string name="tour_no_agents">You have no agents yet. Add one to take a tour with it.</string>
+    <string name="tour_no_agents">No eligible tour agent. Add an agent or enable Tour, Location, Interactions and Speaker in its Permissions.</string>
     <string name="tour_add_agent">Add agent</string>
     <string name="tour_interval_header">How often</string>
     <string name="tour_needed_header">What\'s needed</string>
@@ -114,4 +114,9 @@
     <string name="tour_home_card">City tour with %1$s · %2$s</string>
     <string name="tour_home_open">Open</string>
     <string name="tour_home_paused">Paused</string>
+    <string name="tour_need_interactions_switch">Interactions switch is off, so your agent can\'t read tour events</string>
+    <string name="tour_need_agent_listening">%1$s isn\'t listening for Bridget events, so it won\'t hear the tour. Copy the prompt and paste it into %1$s\'s chat.</string>
+    <string name="tour_fix_copy_prompt">Copy prompt</string>
+    <string name="tour_prompt_copied">Copied. Paste it into %1$s\'s chat.</string>
+    <string name="tour_waiting_agent">%1$s hasn\'t picked up the tour yet. It may not be listening for Bridget events. Copy the prompt and paste it into %1$s\'s chat.</string>
 </resources>
