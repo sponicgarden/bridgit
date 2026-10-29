@@ -2,8 +2,8 @@
   "title": "Agent control development build",
   "availability": "Local private build; not included in the published 1.6.0 download or API snapshot.",
   "androidMinimum": 14,
-  "appVersion": null,
-  "versionCode": null,
+  "appVersion": "1.6.40",
+  "versionCode": 57,
   "features": [
     {
       "id": "readiness",
