@@ -103,7 +103,7 @@ class InteractionsAdapter(
             b.image.isVisible = false; b.image.setImageDrawable(null); b.image.tag = null
         }
 
-        InteractionUi.buildControls(b.controls, i, drafts, { button, values -> onAnswer(i, button, values) }, onLink)
+        InteractionUi.buildControls(b.controls, i, drafts, { button, values -> onAnswer(i, button, values) }, onLink = onLink)
         if (i.kind == IKind.HTML || i.kind == IKind.TEXT) {
             // CAP-34 cards open in the detail screen; D26 text panels in the lower half.
             val open = MaterialButton(ctx, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {

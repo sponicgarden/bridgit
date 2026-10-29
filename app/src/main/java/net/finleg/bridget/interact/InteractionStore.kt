@@ -109,30 +109,34 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
 
     /** Rahul answered on the phone or in the notification. */
     @Synchronized
-    fun answer(id: Long, button: String?, values: Map<String, String>): Interaction {
+    fun answer(id: Long, button: String?, values: Map<String, String>, resubmission: Boolean = false): Interaction {
         val i = get(id) ?: throw InteractionError("not_found", "No interaction $id.")
-        if (!i.status.open) throw InteractionError("invalid_parameter", "This ${i.kind.id} is already ${i.status.id}.")
+        if (!i.status.acceptsAnswer(resubmission)) throw InteractionError("invalid_parameter", "This ${i.kind.id} is already ${i.status.id}.")
         if (i.kind != IKind.QUESTION) throw InteractionError("invalid_parameter", "Only questions take answers.")
         val ans = InteractionRules.checkAnswer(i.controls, button, values)
         val now = clock()
         update(id, ContentValues().apply { put("status", IStatus.ANSWERED.id); put("answer_json", ans.toString()); put("answered_at", now); put("closed_at", now) })
-        event(i.agentId, "interaction.answered", JSONObject().put("interaction_id", id).put("answer", ans))
+        event(i.agentId, "interaction.answered", JSONObject().put("interaction_id", id).put("answer", ans).apply {
+            if (i.status == IStatus.ANSWERED) put("resubmission", true).put("previous_answer", i.answer)
+        })
         return get(id)!!.also { tell(it, "answered") }
     }
 
     /**
      * An HTML card's page called Bridget.respond(json) (CAP-34). Completes it like a button answer: status
-     * answered, `interaction.answered` with `answer.data`, waits return. Refused once the card isn't open.
+     * answered, `interaction.answered` with `answer.data`, waits return. Explicit phone resubmission also accepts answered cards.
      */
     @Synchronized
-    fun answerCard(id: Long, data: Any): Interaction {
+    fun answerCard(id: Long, data: Any, resubmission: Boolean = false): Interaction {
         val i = get(id) ?: throw InteractionError("not_found", "No interaction $id.")
         if (i.kind != IKind.HTML) throw InteractionError("invalid_parameter", "Only html cards take a card answer.")
-        if (!i.status.open) throw InteractionError("conflict", "This card is already ${i.status.id}.")
+        if (!i.status.acceptsAnswer(resubmission)) throw InteractionError("conflict", "This card is already ${i.status.id}.")
         val ans = JSONObject().put("button", JSONObject.NULL).put("values", JSONObject()).put("data", data)
         val now = clock()
         update(id, ContentValues().apply { put("status", IStatus.ANSWERED.id); put("answer_json", ans.toString()); put("answered_at", now); put("closed_at", now) })
-        event(i.agentId, "interaction.answered", JSONObject().put("interaction_id", id).put("answer", ans))
+        event(i.agentId, "interaction.answered", JSONObject().put("interaction_id", id).put("answer", ans).apply {
+            if (i.status == IStatus.ANSWERED) put("resubmission", true).put("previous_answer", i.answer)
+        })
         return get(id)!!.also { tell(it, "answered") }
     }
 

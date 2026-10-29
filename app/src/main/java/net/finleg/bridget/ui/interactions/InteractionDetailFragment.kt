@@ -17,6 +17,7 @@ import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -48,6 +49,9 @@ class InteractionDetailFragment : Fragment() {
     /** CAP-34: the agent's HTML card, created once per view and destroyed with it. */
     private var card: CardWebView? = null
     private var cardCrashed = false
+    private var editingAnswer = false
+    private var localAnswerInFlight = false
+    private var closeAfterSend: kotlinx.coroutines.Job? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
         _b = FragmentInteractionDetailBinding.inflate(inflater, container, false)
@@ -64,7 +68,12 @@ class InteractionDetailFragment : Fragment() {
         ViewCompat.setOnApplyWindowInsetsListener(b.cardBox) { v, insets ->
             v.updatePadding(bottom = insets.getInsets(WindowInsetsCompat.Type.navigationBars() or WindowInsetsCompat.Type.ime()).bottom); insets
         }
-        b.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
+        editingAnswer = savedInstanceState?.getBoolean("editingAnswer") ?: false
+        b.backToQuestions.setOnClickListener { backToQuestions() }
+        b.toolbar.setNavigationOnClickListener { navigateBack() }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, object : androidx.activity.OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() = navigateBack()
+        })
         b.toolbar.setOnMenuItemClickListener { item ->
             val i = current ?: return@setOnMenuItemClickListener false
             when (item.itemId) {
@@ -94,6 +103,32 @@ class InteractionDetailFragment : Fragment() {
         }
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean("editingAnswer", editingAnswer)
+        super.onSaveInstanceState(outState)
+    }
+
+    private fun navigateBack() {
+        if (current?.status == IStatus.ANSWERED && !editingAnswer) backToQuestions()
+        else findNavController().navigateUp()
+    }
+
+    private fun backToQuestions() {
+        val i = current ?: return
+        if (i.status != IStatus.ANSWERED || localAnswerInFlight) return
+        closeAfterSend?.cancel(); closeAfterSend = null
+        editingAnswer = true
+        // A card may replace its entire DOM with a confirmation. Reload the original question.
+        card?.release(); card = null
+        cardCrashed = false
+        i.answer?.optJSONObject("values")?.let { values ->
+            values.keys().forEach { key -> drafts.set(i.id, key, values.optString(key)) }
+        }
+        shownKey = null
+        render(i)
+        Snackbar.make(b.root, R.string.interactions_resubmit_hint, Snackbar.LENGTH_LONG).show()
+    }
+
     private fun renderMenu() {
         val bb = _b ?: return
         val i = current
@@ -104,6 +139,7 @@ class InteractionDetailFragment : Fragment() {
     private fun render(i: Interaction?) {
         val bb = _b ?: return
         current = i
+        bb.backToQuestions.isVisible = i?.status == IStatus.ANSWERED && !editingAnswer && InteractionUi.isQuestion(i)
         renderMenu()
         if (i == null) {
             bb.header.isVisible = false
@@ -148,7 +184,7 @@ class InteractionDetailFragment : Fragment() {
 
         if (firstRender) loadImage(i)
 
-        InteractionUi.buildControls(bb.controls, i, drafts, { button, values -> answer(i, button, values) }) { c, anchor ->
+        InteractionUi.buildControls(bb.controls, i, drafts, { button, values -> answer(i, button, values) }, resubmission = editingAnswer) { c, anchor ->
             InteractionUi.openLink(anchor, c)
         }
 
@@ -182,7 +218,9 @@ class InteractionDetailFragment : Fragment() {
             v.load(html)
             card = v
         }
-        if (!i.status.open) card?.stopAccepting()
+        if (i.status == IStatus.ANSWERED && !editingAnswer && !localAnswerInFlight) card?.showConfirmation(i.answer,
+            getString(R.string.interactions_confirmation_title), getString(R.string.interactions_confirmation_history, agent))
+        else if (!i.status.acceptsAnswer(editingAnswer)) card?.stopAccepting()
 
         val note: CharSequence? = when {
             cardCrashed -> getString(R.string.interactions_card_crashed, agent)
@@ -210,17 +248,32 @@ class InteractionDetailFragment : Fragment() {
 
     /** The card's page called Bridget.respond(json): stored as `answer.data`, like a button answer. */
     private fun answerCard(i: Interaction, data: Any) {
-        if (_b == null || !isAdded) return // the screen is going away; the card is released with it
+        if (_b == null || !isAdded || localAnswerInFlight) return // the screen is going away; the card is released with it
+        localAnswerInFlight = true
+        val resubmission = editingAnswer
         val store = app.interactions
         val owner = viewLifecycleOwner
         owner.lifecycleScope.launch {
-            val r = withContext(Dispatchers.IO) { runCatching { store.answerCard(i.id, data) } }
+            val r = withContext(Dispatchers.IO) { runCatching { store.answerCard(i.id, data, resubmission = resubmission) } }
             val bb = _b ?: return@launch
             r.onSuccess {
-                card?.stopAccepting()
+                editingAnswer = false
                 render(it)
-                Snackbar.make(bb.root, getString(R.string.interactions_sent_snack, InteractionUi.agentName(i)), Snackbar.LENGTH_SHORT).show()
+                card?.showConfirmation(it.answer, getString(R.string.interactions_confirmation_title),
+                    getString(R.string.interactions_confirmation_detail, InteractionUi.agentName(i)), net.finleg.bridget.interact.CardConfirmation.CLOSE_DELAY_MS)
+                localAnswerInFlight = false
+                closeAfterSend?.cancel()
+                closeAfterSend = owner.lifecycleScope.launch autoClose@ {
+                    delay(net.finleg.bridget.interact.CardConfirmation.CLOSE_DELAY_MS)
+                    owner.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                        if (_b != null && findNavController().currentDestination?.id == R.id.interactionDetail)
+                            findNavController().navigateUp()
+                        this@autoClose.cancel()
+                    }
+                }
             }.onFailure { e ->
+                localAnswerInFlight = false
+                card?.retryAnswer()
                 Snackbar.make(bb.root, getString(R.string.interactions_answer_failed, e.message ?: e.javaClass.simpleName), Snackbar.LENGTH_LONG).show()
             }
         }
@@ -261,12 +314,17 @@ class InteractionDetailFragment : Fragment() {
     }
 
     private fun answer(i: Interaction, button: String?, values: Map<String, String>) {
+        if (localAnswerInFlight) return
+        localAnswerInFlight = true
+        val resubmission = editingAnswer
         val store = app.interactions
         viewLifecycleOwner.lifecycleScope.launch {
-            val r = withContext(Dispatchers.IO) { runCatching { store.answer(i.id, button, values) } }
+            val r = withContext(Dispatchers.IO) { runCatching { store.answer(i.id, button, values, resubmission = resubmission) } }
+            localAnswerInFlight = false
             val bb = _b ?: return@launch
             r.onSuccess {
                 drafts.clear(i.id)
+                editingAnswer = false
                 render(it)
                 Snackbar.make(bb.root, getString(R.string.interactions_sent_snack, InteractionUi.agentName(i)), Snackbar.LENGTH_SHORT).show()
             }.onFailure { e ->
@@ -286,6 +344,8 @@ class InteractionDetailFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        localAnswerInFlight = false
+        closeAfterSend?.cancel(); closeAfterSend = null
         card?.let { runCatching { it.release() } }
         card = null
         super.onDestroyView(); _b = null; shownKey = null

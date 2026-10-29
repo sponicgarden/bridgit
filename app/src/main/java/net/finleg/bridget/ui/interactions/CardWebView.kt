@@ -46,7 +46,11 @@ import java.io.ByteArrayInputStream
  */
 @SuppressLint("SetJavaScriptEnabled", "ViewConstructor")
 class CardWebView(context: Context, private val onRespond: (Any) -> Unit, private val onCrash: () -> Unit) : WebView(context) {
-    private val gate = RespondGate()
+    @Volatile private var gate = RespondGate()
+    private var pageReady = false
+    private data class Confirmation(val answer: org.json.JSONObject?, val title: String, val message: String, val delay: Long?)
+    private var confirmation: Confirmation? = null
+    private var confirmationShown = false
     private val main = Handler(Looper.getMainLooper())
     @Volatile private var accepting = true
 
@@ -91,6 +95,21 @@ class CardWebView(context: Context, private val onRespond: (Any) -> Unit, privat
     /** Answers are no longer taken (the card was answered or closed elsewhere). */
     fun stopAccepting() { accepting = false }
 
+    /** Confirm only after persistence; replay when reopening history or after the page finishes loading. */
+    fun showConfirmation(answer: org.json.JSONObject?, title: String, message: String, closeAfterMs: Long? = null) {
+        accepting = false
+        if (confirmationShown) return
+        confirmation = Confirmation(answer, title, message, closeAfterMs)
+        if (!pageReady) return
+        confirmationShown = true
+        evaluateJavascript(net.finleg.bridget.interact.CardConfirmation.script(answer, title, message, closeAfterMs), null)
+    }
+
+    fun retryAnswer() {
+        gate = RespondGate()
+        accepting = true
+    }
+
     fun release() {
         accepting = false
         main.removeCallbacksAndMessages(null) // an answer queued during teardown is dropped
@@ -120,7 +139,11 @@ class CardWebView(context: Context, private val onRespond: (Any) -> Unit, privat
         override fun shouldInterceptRequest(view: WebView, url: String?): WebResourceResponse = blocked()
         override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) = handler.cancel()
         override fun onFormResubmission(view: WebView, dontResend: Message, resend: Message) { dontResend.sendToTarget() }
-        override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) {}
+        override fun onPageStarted(view: WebView, url: String?, favicon: Bitmap?) { pageReady = false }
+        override fun onPageFinished(view: WebView, url: String?) {
+            pageReady = true
+            confirmation?.let { showConfirmation(it.answer, it.title, it.message, it.delay) }
+        }
         override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
             // Never take Bridgit down with a card; the screen drops the view and shows a note.
             (view as? CardWebView)?.onCrash?.invoke()

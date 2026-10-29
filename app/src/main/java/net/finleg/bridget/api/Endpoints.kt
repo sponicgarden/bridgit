@@ -179,7 +179,7 @@ object Endpoints {
             Param("title", "string", "Up to 80 characters", required = true),
             Param("text", "string", "Up to 2,000 characters"),
             Param("image", "object", "{\"gallery_id\"} or {\"data_base64\"}, up to 2 MB"),
-            Param("html", "string", "kind=html: the card's HTML, up to 256 KB. Runs offline: no network, only data:image/* images; call Bridget.respond(json) once (up to 16 KB) to answer"),
+            Param("html", "string", "kind=html: the card's HTML, up to 256 KB. Runs offline: no network, only data:image/* images; call Bridget.respond(json) once per question view (up to 16 KB) to answer. After persistence, bridgit:answered lets the card show its confirmation; the trusted Back to questions control reloads the question for resubmission"),
             Param("controls", "array", "Question: 1-6 of {type: button|text|choice|link, id, label, style?, placeholder?, options?, url?, package?}. Notice: links only"),
             Param("priority", "string", "normal or urgent", enum = listOf("normal", "urgent")),
             Param("speak", "boolean", "Read it aloud on the phone"),
@@ -212,7 +212,7 @@ object Endpoints {
         errors = listOf("not_found", "too_many_waits"))
     val INTERACTION_CANCEL = EndpointSpec("DELETE", "/interactions/{id}", "interactions", "Cancel one of your interactions",
         example = "DELETE /v1/interactions/12", returns = "the interaction", errors = listOf("not_found"))
-    val EVENTS = EndpointSpec("GET", "/events", "interactions", "Your events, oldest first: answers, closes, expiries, switch changes",
+    val EVENTS = EndpointSpec("GET", "/events", "interactions", "Your events, oldest first: answers, closes, expiries, switch changes. Repeated phone answers emit interaction.answered with resubmission=true and previous_answer; agents decide whether to accept the change",
         query = listOf(Param("since", "string", "next_cursor from the last call; omit for the last 50"),
             Param("wait", "integer", "With since: hold up to 55 s for a new event"), Param("types", "string", "Comma list, e.g. interaction.answered")),
         example = "GET /v1/events?since=0&wait=55", returns = "events[id, type, at, data], next_cursor",

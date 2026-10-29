@@ -136,12 +136,13 @@ object InteractionUi {
         i: Interaction,
         drafts: Drafts,
         onAnswer: (button: String?, values: Map<String, String>) -> Unit,
+        resubmission: Boolean = false,
         onLink: (Control.Link, View) -> Unit,
     ) {
         container.removeAllViews()
         val ctx = container.context
         val inflater = LayoutInflater.from(ctx)
-        val answerable = isQuestion(i) && i.status.open && i.kind == IKind.QUESTION
+        val answerable = isQuestion(i) && i.status.acceptsAnswer(resubmission) && i.kind == IKind.QUESTION
         val sendValues = { anchor: View ->
             val v = drafts.values(i)
             if (v.isEmpty()) Snackbar.make(anchor, R.string.interactions_need_answer, Snackbar.LENGTH_SHORT).show()

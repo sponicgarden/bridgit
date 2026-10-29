@@ -99,4 +99,9 @@
     <string name="cap_ocr_desc">Recognize Latin-script text locally in an image. No cloud recognition.</string>
     <string name="cap_screen_share">Screen sharing fallback</string>
     <string name="cap_screen_share_desc">Approve screen access once, for one hour or sixteen hours. Android can stop it sooner; each grant belongs to one agent.</string>
+    <string name="interactions_back_to_questions">Back to questions</string>
+    <string name="interactions_resubmit_hint">You can change your answer and send it again. The agent may not accept resubmissions.</string>
+    <string name="interactions_confirmation_title">Answer sent</string>
+    <string name="interactions_confirmation_detail">Your answer reached %1$s. Closing in 5 seconds.</string>
+    <string name="interactions_confirmation_history">Your answer was sent to %1$s.</string>
 </resources>

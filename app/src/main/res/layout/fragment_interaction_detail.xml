@@ -16,6 +16,10 @@
         app:navigationContentDescription="@string/interactions_back"
         app:navigationIcon="@drawable/ic_back" />
 
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/back_to_questions" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp" android:text="@string/interactions_back_to_questions" android:visibility="gone" />
+
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scroll"
         android:layout_width="match_parent"
