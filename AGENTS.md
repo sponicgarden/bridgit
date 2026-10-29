@@ -19,5 +19,8 @@
 - Commit the updated counter with changes that are committed for a build. Before
   reporting an APK version, inspect the APK manifest (for example `aapt dump
   badging`); report the actual version name and code, not an assumed value.
-- Independent checkouts do not share a lock or allocator. Coordinate their
-  counters before building; never claim global uniqueness across checkouts.
+- Checkouts that use `tools/allocate-apk-version.py` share a Git-common-directory
+  lock and high-water reservation. It reconciles registered checkout counters
+  before allocation. Legacy checkouts bypass that mechanism: adopt the allocator
+  before any APK build and verify the result. Never claim uniqueness across
+  machines or builders that do not use the same reservation mechanism.

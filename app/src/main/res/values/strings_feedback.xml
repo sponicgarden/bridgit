@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bug reports and feature requests (section 11, ui-spec 5.11 / 5.12). -->
+<resources>
+    <!-- Overflow entry points (FBK-01) -->
+    <string name="feedback_menu_report_bug">Report a bug</string>
+    <string name="feedback_menu_request_feature">Request a feature</string>
+    <string name="feedback_report_about_this">Report a bug about this</string>
+
+    <!-- Form (FBK-03, FBK-04) -->
+    <string name="feedback_title_bug">Report a bug</string>
+    <string name="feedback_title_feature">Request a feature</string>
+    <string name="feedback_submit">Submit</string>
+    <string name="feedback_sending">Sending…</string>
+    <string name="feedback_intro_bug">Describe what went wrong. A screenshot helps if you have one.</string>
+    <string name="feedback_intro_feature">What would make Bridgit more useful? Sketches and screenshots welcome.</string>
+    <string name="feedback_label_bug">What happened?</string>
+    <string name="feedback_label_feature">What would you like to see?</string>
+    <string name="feedback_no_autofix">Don\'t auto-fix</string>
+    <string name="feedback_no_autofix_hint">Leave this for a person to look at. Nothing gets fixed automatically.</string>
+    <string name="feedback_description">Description</string>
+    <string name="feedback_description_placeholder">Steps to reproduce, what you expected, what you saw…</string>
+    <string name="feedback_description_required">Please describe the problem before sending.</string>
+    <string name="feedback_include_last_screen">Include last screen</string>
+    <string name="feedback_last_screen_sub">%1$s, as you left it</string>
+    <string name="feedback_last_screen_sub_generic">The screen you were on</string>
+    <string name="feedback_last_screen_desc">Screenshot of the screen you were on</string>
+    <string name="feedback_add_screenshot">Add screenshot</string>
+    <string name="feedback_add_another">Add another</string>
+    <string name="feedback_max_screenshots">Up to 5 screenshots per report.</string>
+    <string name="feedback_screenshot_failed">Couldn\'t add one of those pictures. Please try again.</string>
+    <string name="feedback_screenshot_desc">Screenshot %1$d</string>
+    <string name="feedback_remove_screenshot">Remove screenshot %1$d</string>
+    <string name="feedback_include_log">Include recent log</string>
+    <plurals name="feedback_log_entries">
+        <item quantity="one">%d log entry</item>
+        <item quantity="other">%d log entries</item>
+    </plurals>
+    <string name="feedback_log_plus_entry">%1$s, plus the entry you picked</string>
+    <string name="feedback_preview">Preview</string>
+    <string name="feedback_preview_desc">Preview the log entries</string>
+    <string name="feedback_preview_title">Recent log</string>
+    <string name="feedback_preview_picked">The entry you picked</string>
+    <string name="feedback_preview_empty">No log entries yet.</string>
+    <string name="feedback_type">Type</string>
+    <string name="feedback_type_bug">Bug</string>
+    <string name="feedback_type_feature">Feature</string>
+    <string name="feedback_auto_caption">App version, device info and the screen you were on are included automatically.</string>
+    <string name="feedback_rate_limited">That\'s 10 reports this hour. Try again later.</string>
+    <string name="feedback_save_failed">Couldn\'t save the report. Please try again.</string>
+    <string name="feedback_keep_draft_title">Keep this draft?</string>
+    <string name="feedback_keep">Keep</string>
+    <string name="feedback_discard">Discard</string>
+
+    <!-- After submitting (FBK-08) -->
+    <string name="feedback_saved_title">Report saved</string>
+    <string name="feedback_saved_body">Thanks. It\'s report %1$s. Developer agents can pick it up from Bridgit\'s API.</string>
+    <string name="feedback_view_report">View report</string>
+    <string name="feedback_filed_log">You filed report %1$s</string>
+
+    <!-- My reports (FBK-09, ui-spec 5.12) -->
+    <string name="feedback_my_reports">My reports</string>
+    <string name="feedback_back">Back</string>
+    <string name="feedback_filter_all">All</string>
+    <string name="feedback_filter_bugs">Bugs</string>
+    <string name="feedback_filter_features">Features</string>
+    <string name="feedback_filter_open">Open</string>
+    <string name="feedback_empty">No reports yet. Use Report a bug from any screen\'s ⋮ menu.</string>
+    <string name="feedback_empty_filtered">No reports match this filter.</string>
+    <string name="feedback_kind_bug">Bug</string>
+    <string name="feedback_kind_feature">Feature request</string>
+    <string name="feedback_row_meta">%1$s · %2$s</string>
+    <string name="feedback_row_meta_updated">%1$s · %2$s · updated by %3$s</string>
+    <string name="feedback_row_desc">%1$s %2$s, %3$s. Status: %4$s. %5$s</string>
+
+    <!-- Report detail (UI-20, FBK-11) -->
+    <string name="feedback_detail_title">%1$s %2$s</string>
+    <string name="feedback_detail_filed">Filed %1$s by %2$s</string>
+    <string name="feedback_section_description">Description</string>
+    <string name="feedback_section_images">Screenshots</string>
+    <string name="feedback_section_log">Attached log</string>
+    <string name="feedback_section_context">Context</string>
+    <string name="feedback_section_history">Status history</string>
+    <string name="feedback_flag_no_autofix">Don\'t auto-fix</string>
+    <string name="feedback_flag_no_autofix_desc">Marked don\'t auto-fix: developer agents must not fix this automatically.</string>
+    <plurals name="feedback_log_count">
+        <item quantity="one">%d entry</item>
+        <item quantity="other">%d entries</item>
+    </plurals>
+    <string name="feedback_log_none">No log was attached.</string>
+    <string name="feedback_log_expand">Show</string>
+    <string name="feedback_log_collapse">Hide</string>
+    <string name="feedback_context_version">Version</string>
+    <string name="feedback_context_device">Device</string>
+    <string name="feedback_context_screen">Screen</string>
+    <string name="feedback_context_source">Filed from</string>
+    <string name="feedback_source_form">The form on this phone</string>
+    <string name="feedback_source_agent">An agent (%1$s)</string>
+    <string name="feedback_image_desc">Screenshot %1$d of %2$d. Tap to view bigger.</string>
+    <string name="feedback_image_unavailable">This picture is no longer on the phone.</string>
+    <string name="feedback_history_row_desc">%1$s, by %2$s, %3$s</string>
+    <string name="feedback_verify_hint">An agent marked this %1$s. Is it sorted?</string>
+    <string name="feedback_confirmed_log">You marked report %1$s confirmed</string>
+    <string name="feedback_reopened_log">You marked report %1$s still broken</string>
+    <string name="feedback_not_found">This report is no longer here.</string>
+    <string name="feedback_close">Close</string>
+</resources>

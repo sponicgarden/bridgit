@@ -15,6 +15,7 @@ object ToolSchemas {
             "session.request" -> fields("apps:array","purpose","duration_seconds:integer")
             "screen.observe" -> fields("session_id","screenshot:boolean")
             "screen.wait" -> fields("session_id","expect:object","timeout_seconds:integer")
+            "ui.sequence" -> fields("session_id","fence","steps:array").apply { put("steps",JSONObject().put("type","array").put("maxItems",8).put("items",JSONObject().put("type","object"))) }
             "ui.action" -> fields("session_id","fence","observation_id","type","ref","text","direction","expect:object")
             "device.action" -> fields("type","url","package","text","language","recipient","subject","number","title","begin_ms:integer","end_ms:integer","hour:integer","minute:integer","seconds:integer","label","file_id","on:boolean","percent:integer","stream","mode","command","duration_seconds:integer","camera","max_width_px:integer")
             "notification.reply" -> fields("id","fingerprint","action_index:integer","text")
@@ -32,6 +33,8 @@ object ToolSchemas {
             "note.create","feedback.create" -> fields("text")
             else -> JSONObject()
         }
+        if(name=="ui.action") p.getJSONObject("type").put("enum",JSONArray(listOf("tap","long_press","set_text","scroll","back","home")))
+        if(name=="device.action") p.getJSONObject("type").put("enum",JSONArray(listOf("open_link","open_app","calendar_draft","message_draft","email_draft","dial","alarm","timer","contact_picker","open_file","clipboard","speak","camera.snapshot","microphone.clip","flashlight","volume","dnd","brightness","ring","media")))
         if(name in Commands.mutations) p.put("idempotency_key",JSONObject().put("type","string").put("description","Unique per logical request. Retries reuse the same key and exact input."))
         return JSONObject().put("type","object").put("properties",p).put("additionalProperties",false).put("required",JSONArray(if(name in Commands.mutations) listOf("idempotency_key") else emptyList<String>()))
     }

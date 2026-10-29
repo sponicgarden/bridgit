@@ -7,4 +7,7 @@ keystore.properties
 .idea/
 *.iml
 captures/
-.wrangler/
+
+# Local compiler and Python test caches.
+.kotlin/
+__pycache__/

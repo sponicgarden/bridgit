@@ -55,6 +55,7 @@ class PlatformStore(context: Context, name: String = "agent-platform.db") : SQLi
         writableDatabase.execSQL("DELETE FROM events WHERE seq < (SELECT COALESCE(MAX(seq),0)-2000 FROM events)")
         return seq
     }
+    @Synchronized fun latestCursor():Long = readableDatabase.rawQuery("SELECT COALESCE(MAX(seq),0) FROM events",null).use { it.moveToFirst(); it.getLong(0) }
     @Synchronized fun events(agent: String, after: Long): JSONObject {
         val bounds = readableDatabase.rawQuery("SELECT COALESCE(MIN(seq),0),COALESCE(MAX(seq),0) FROM events",null).use { it.moveToFirst(); it.getLong(0) to it.getLong(1) }
         val rows = JSONArray(); var cursor = maxOf(after,bounds.second)
@@ -76,6 +77,9 @@ class PlatformStore(context: Context, name: String = "agent-platform.db") : SQLi
                 val record = find(existing.second,agent,"operation") ?: JSONObject().put("id",existing.second).put("status","history_removed").put("agent_id",agent)
                 db.setTransactionSuccessful(); return record to false
             }
+            val used=readableDatabase.rawQuery("PRAGMA page_count",null).use { it.moveToFirst(); it.getLong(0) }-readableDatabase.rawQuery("PRAGMA freelist_count",null).use { it.moveToFirst(); it.getLong(0) }
+            val page=readableDatabase.rawQuery("PRAGMA page_size",null).use { it.moveToFirst(); it.getLong(0) }
+            if(used*page>50*1024*1024) throw ApiError(429,"storage_quota","Review platform history and remove old data on the phone")
             if (list(agent,"operation",1000).size >= 1000) throw ApiError(429,"operation_limit","Review and remove completed operations before creating more")
             val op = save(agent,"operation",JSONObject().put("command",command).put("input",body).put("digest",digest).put("status","accepted"))
             db.execSQL("INSERT INTO requests VALUES(?,?,?,?)",arrayOf(agent,key,digest,op.getString("id")))

@@ -77,6 +77,24 @@
       ],
       "redactions": [],
       "safeSHA256": "cc022829fc2753e94ca95022d4ef2a05a2f8c931f9ba4c835c599831e98a6794"
+    },
+    {
+      "screen": "more",
+      "sourceFile": "02-more.png",
+      "capturedAtUTC": "2026-10-28T23:06:56.459787+00:00",
+      "sourceSHA256": "f882036c1c7e49aab6a109639209af971f775a313e31e752a15f0b65bf95630c",
+      "sourceDimensions": [
+        1080,
+        2404
+      ],
+      "crop": [
+        0,
+        140,
+        1080,
+        2330
+      ],
+      "redactions": [],
+      "safeSHA256": "4648f136103e5c8461e6079da50c8382bc3e5d2ed75768197b0338011be72b29"
     }
   ],
   "websiteUse": "Home screenshot gallery and How it works setup steps. Copied from reviewed release collateral; no new device capture."

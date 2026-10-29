@@ -1,7 +1,5 @@
 import java.util.Properties
-import java.io.RandomAccessFile
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
+import java.util.UUID
 
 plugins {
     id("com.android.application")
@@ -13,53 +11,25 @@ plugins {
 @org.gradle.work.DisableCachingByDefault(because = "Each build needs a fresh APK version")
 abstract class AllocateApkVersion : DefaultTask() {
     @get:Internal abstract val counterFile: RegularFileProperty
-    @get:Internal abstract val lockFile: RegularFileProperty
     @get:OutputFile abstract val versionFile: RegularFileProperty
 
-    init { outputs.upToDateWhen { false } }
+    init {
+        outputs.upToDateWhen { false }
+        notCompatibleWithConfigurationCache("APK allocation must use a unique invocation output")
+    }
 
     @TaskAction
     fun allocate() {
-        val lock = lockFile.get().asFile
-        lock.parentFile.mkdirs()
-        RandomAccessFile(lock, "rw").use { handle ->
-            handle.channel.lock().use {
-                val counter = counterFile.get().asFile
-                val version = Properties().apply { counter.inputStream().use { load(it) } }
-                val previousCode = version.getProperty("versionCode").toInt()
-                val parts = version.getProperty("versionName").split('.').toMutableList()
-                require(parts.size == 3 && parts.all { it.toIntOrNull()?.let { n -> n >= 0 } == true }) {
-                    "versionName must be non-negative major.minor.patch"
-                }
-                // Confirmed history: 1.6.0 preceded automatic allocation; the
-                // first verified automatic release is 1.6.1 / code 18.
-                val minimumVersion = listOf(1, 6, 1)
-                val comparison = parts.map { it.toInt() }.zip(minimumVersion)
-                    .map { (actual, minimum) -> actual.compareTo(minimum) }
-                    .firstOrNull { it != 0 } ?: 0
-                require(previousCode >= 18 && comparison >= 0) {
-                    "APK version counter regressed below verified release 1.6.1 / code 18. " +
-                        "Recover the latest apk-version.properties from release history; do not reset it or lower this guard."
-                }
-                val code = Math.addExact(previousCode, 1)
-                parts[2] = Math.addExact(parts[2].toInt(), 1).toString()
-                val contents = "versionCode=$code\nversionName=${parts.joinToString(".")}\n"
-                // Reserve first: failed builds can leave gaps, but never reuse a number.
-                val pending = Files.createTempFile(counter.parentFile.toPath(), ".apk-version-", ".tmp")
-                try {
-                    Files.writeString(pending, contents)
-                    Files.move(pending, counter.toPath(),
-                        StandardCopyOption.ATOMIC_MOVE,
-                        StandardCopyOption.REPLACE_EXISTING)
-                } finally {
-                    Files.deleteIfExists(pending)
-                }
-                val output = versionFile.get().asFile
-                output.parentFile.mkdirs()
-                output.writeText(contents)
-                logger.lifecycle("${name}: ${parts.joinToString(".")} (versionCode $code)")
-            }
-        }
+        val command = listOf(
+            "python3", project.rootProject.file("tools/allocate-apk-version.py").absolutePath,
+            "--counter", counterFile.get().asFile.absolutePath,
+            "--output", versionFile.get().asFile.absolutePath
+        )
+        val process = ProcessBuilder(command).directory(project.rootProject.projectDir)
+            .redirectErrorStream(true).start()
+        val result = process.inputStream.bufferedReader().use { it.readText() }
+        check(process.waitFor() == 0) { "APK version allocation failed: $result" }
+        logger.lifecycle(result.trim())
     }
 }
 
@@ -78,13 +48,20 @@ android {
         applicationId = "net.finleg.bridget"
         minSdk = 34
         targetSdk = 35
+        buildConfigField("int", "DEFAULT_PORT", "8734")
+        buildConfigField("String", "GIT_COMMIT", "\"${gitCommit()}\"")
+        buildConfigField("boolean", "DIRTY_BUILD", "${gitDirty()}")
     }
 
-    buildFeatures { buildConfig = true }
+    buildFeatures {
+        buildConfig = true
+        viewBinding = true
+    }
+
     flavorDimensions += "distribution"
     productFlavors {
-        create("private") { dimension = "distribution"; buildConfigField("boolean", "PRIVATE_CONTROL", "true") }
-        create("play") { dimension = "distribution"; applicationIdSuffix = ".play"; buildConfigField("boolean", "PRIVATE_CONTROL", "false") }
+        create("private") { dimension="distribution"; buildConfigField("boolean","PRIVATE_CONTROL","true") }
+        create("play") { dimension="distribution"; applicationIdSuffix=".play"; buildConfigField("boolean","PRIVATE_CONTROL","false") }
     }
 
     signingConfigs {
@@ -101,7 +78,9 @@ android {
 
     buildTypes {
         debug {
-            applicationIdSuffix = ".debug"
+            applicationIdSuffix = (project.findProperty("bridgetApplicationIdSuffix") as String?) ?: ".debug"
+            // Debug builds listen on 8735 so they never clash with a release build on 8734.
+            buildConfigField("int", "DEFAULT_PORT", (project.findProperty("bridgetDebugPort") as String?) ?: "8735")
         }
         release {
             isMinifyEnabled = false
@@ -113,7 +92,13 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions { jvmTarget = "17" }
-    testOptions { unitTests.isIncludeAndroidResources = true }
+    sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/helperAssets"))
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+        unitTests.isIncludeAndroidResources = true
+        // ApiDocsTest writes build/apidocs/api.html for this version (tools/publish-apk.sh passes the APK's).
+        unitTests.all { it.systemProperty("bridget.version", (project.findProperty("bridgetDocsVersion") as String?) ?: "development") }
+    }
     packaging {
         resources {
             excludes += setOf(
@@ -124,18 +109,51 @@ android {
     }
 }
 
+// GET /v1/tools/bridget serves the helper script. tools/bridgit is the single
+// source of truth; this copies it into the APK's assets at build time.
+val copyHelper by tasks.registering(Copy::class) {
+    from(rootProject.file("tools/bridgit"))
+    into(layout.buildDirectory.dir("generated/helperAssets"))
+    rename { "bridget-helper.py" }
+}
+val writeProvenance by tasks.registering {
+    val target = layout.buildDirectory.file("generated/helperAssets/build-provenance.json")
+    val commit = providers.exec { commandLine("git", "rev-parse", "HEAD") }.standardOutput.asText.get().trim()
+    val dirty = gitDirty()
+    inputs.property("commit", commit)
+    inputs.property("dirty", dirty)
+    outputs.file(target)
+    doLast {
+        target.get().asFile.apply { parentFile.mkdirs(); writeText("""{"git_commit":"$commit","dirty_build":$dirty}""" + "\n") }
+    }
+}
+tasks.named("preBuild") { dependsOn(copyHelper, writeProvenance) }
+
+fun gitCommit(): String = runCatching {
+    providers.exec { commandLine("git", "rev-parse", "--short=12", "HEAD") }.standardOutput.asText.get().trim()
+}.getOrDefault("unknown")
+
+fun gitDirty(): Boolean = runCatching {
+    providers.exec { commandLine("git", "status", "--porcelain") }.standardOutput.asText.get().isNotBlank()
+}.getOrDefault(true)
+
+// An immutable per-invocation file prevents another build in the same checkout
+// from changing values while AGP reads this invocation’s manifest providers.
+val apkVersionInvocation = UUID.randomUUID().toString()
+
 androidComponents {
     onVariants(selector().all()) { variant ->
         val allocation = tasks.register<AllocateApkVersion>(
             "allocate${variant.name.replaceFirstChar { it.uppercaseChar() }}ApkVersion"
         ) {
             counterFile.set(rootProject.layout.projectDirectory.file("apk-version.properties"))
-            lockFile.set(rootProject.layout.projectDirectory.file(".gradle/apk-version.lock"))
-            versionFile.set(layout.buildDirectory.file("generated/apk-version/${variant.name}/version.properties"))
+            versionFile.set(layout.buildDirectory.file("generated/apk-version/${variant.name}/$apkVersionInvocation/version.properties"))
         }
         val version = allocation.flatMap { it.versionFile }.map { file ->
             Properties().apply { file.asFile.inputStream().use { load(it) } }
         }
+        variant.buildConfigFields.put("VERSION_NAME", version.map { com.android.build.api.variant.BuildConfigField("String", "\"${it.getProperty("versionName")}\"", "Allocated APK version") })
+        variant.buildConfigFields.put("VERSION_CODE", version.map { com.android.build.api.variant.BuildConfigField("int", it.getProperty("versionCode"), "Allocated APK version") })
         variant.outputs.forEach { output ->
             output.versionCode.set(version.map { it.getProperty("versionCode").toInt() })
             output.versionName.set(version.map { it.getProperty("versionName") })
@@ -144,9 +162,7 @@ androidComponents {
 }
 
 dependencies {
-    testImplementation("junit:junit:4.13.2")
     testImplementation("org.robolectric:robolectric:4.14.1")
-    implementation("com.google.mlkit:text-recognition:16.0.1")
     implementation("com.google.mlkit:translate:17.0.3")
     val camerax = "1.4.1"
     val ktor = "2.3.12"
@@ -159,7 +175,22 @@ dependencies {
     implementation("androidx.camera:camera-core:$camerax")
     implementation("androidx.camera:camera-camera2:$camerax")
     implementation("androidx.camera:camera-lifecycle:$camerax")
+    implementation("androidx.camera:camera-video:$camerax")
+    implementation("com.google.mlkit:text-recognition:16.0.1")
     implementation("io.ktor:ktor-server-core:$ktor")
     implementation("io.ktor:ktor-server-cio:$ktor")
     implementation("com.google.zxing:core:3.5.3")
+    implementation("androidx.activity:activity-ktx:1.9.3")
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
+    implementation("androidx.navigation:navigation-fragment-ktx:2.8.4")
+    implementation("androidx.navigation:navigation-ui-ktx:2.8.4")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("androidx.recyclerview:recyclerview:1.3.2")
+    implementation("androidx.viewpager2:viewpager2:1.1.0")
+    // Crash reports (D32). Core only: no NDK, replay or Gradle plugin, so nothing is uploaded at build time.
+    implementation("io.sentry:sentry-android-core:7.18.1")
+
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20240303")
 }

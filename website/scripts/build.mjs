@@ -1,10 +1,13 @@
 import { renderFeatureCatalog } from './feature-catalog.mjs';
+import { renderControlCatalog, validateControlCatalog } from './agent-control.mjs';
 import { readFile, writeFile, cp, mkdir, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const config = JSON.parse(await readFile(path.join(root, 'site.config.json'), 'utf8'));
 const featureCatalog = JSON.parse(await readFile(path.join(root, 'content/features.json'), 'utf8'));
+const controlCatalog = JSON.parse(await readFile(path.join(root,'content/agent-control.json'),'utf8'));
+validateControlCatalog(controlCatalog,path.resolve(root,'..'));
 const suppliedOrigin = process.env.SITE_ORIGIN || config.origin;
 let origin = '';
 if (suppliedOrigin) {
@@ -28,7 +31,7 @@ async function prepare(dir) {
     if (!entry.name.endsWith('.html')) continue;
     const relative = path.relative(out, target).split(path.sep).join('/');
     const route = '/' + relative.replace(/index\.html$/, '');
-    let html = (await readFile(target, 'utf8')).replaceAll('{{SITE_ORIGIN}}', origin).replace('{{FEATURE_CATALOG}}', renderFeatureCatalog(featureCatalog));
+    let html = (await readFile(target, 'utf8')).replaceAll('{{SITE_ORIGIN}}', origin).replace('{{FEATURE_CATALOG}}', renderFeatureCatalog(featureCatalog)).replace('{{AGENT_CONTROL_CATALOG}}',renderControlCatalog(controlCatalog));
     html = html.replace('<meta name="robots" content="noindex,nofollow">', `<meta name="robots" content="${config.indexable ? 'index,follow' : 'noindex,nofollow'}">`);
     html = html.replace('</body>', '<script src="/assets/brand.js" defer></script></body>');
     if (origin) {

@@ -21,7 +21,7 @@ class PauseTile:android.service.quicksettings.TileService() {
     override fun onClick() {
         super.onClick(); val app=application as BridgeApp
         if(app.policy.listenerEnabled) { app.platform.stopAll(); app.policy.listenerEnabled=false; BridgeService.stop(this); onStartListening() }
-        else { val pending=PendingIntent.getActivity(this,0,Intent(this,MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),PendingIntent.FLAG_IMMUTABLE); startActivityAndCollapse(pending) }
+        else { val pending=PendingIntent.getActivity(this,0,Intent(this,net.finleg.bridget.ui.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),PendingIntent.FLAG_IMMUTABLE); startActivityAndCollapse(pending) }
     }
 }
 class ApplianceAdmin:android.app.admin.DeviceAdminReceiver()

@@ -20,12 +20,13 @@ class AgentPlatform(val app: BridgeApp) {
     val files by lazy { DeviceFiles(app,store) }
     val monitor by lazy { CameraMonitor(this) }
     private val jobs = java.util.concurrent.ConcurrentHashMap<String, Job>()
-    private val sensorLock = Mutex()
+
     private val credentialEpochs = java.util.concurrent.ConcurrentHashMap<String,String>()
     @Volatile var activeSensorAgent: String? = null; private set
     @Volatile var activeSensorScope: String? = null; private set
 
     init {
+        app.policy.agents().forEach { credentialEpochs[it.id]=it.hash }
         // Preserve only existing authority; new capabilities and newly paired agents start denied.
         if (store.setting("legacy_migrated") != "true") {
             app.policy.agents().forEach { a -> listOf("camera.snapshot","microphone.clip","gallery.read","audit.read").forEach { store.grant(a.id,it,Long.MAX_VALUE) } }
@@ -47,6 +48,7 @@ class AgentPlatform(val app: BridgeApp) {
     }
     fun hasGrant(agent: String, id: String): Boolean = app.policy.agents().any { it.id == agent } && store.allowed(agent,id)
     fun authorize(agent: String, id: String) {
+        if(!app.settings.listenerEnabled) throw ApiError(403,"listener_paused","Resume the listener on the phone")
         val cap = Capabilities.all.firstOrNull { it.id == id } ?: throw ApiError(422,"unknown_scope","Unknown capability")
         if (!hasGrant(agent,id)) throw ApiError(403,"agent_not_allowed","Owner must grant $id to this agent")
         val blockers = Capabilities.blockers(app,cap)
@@ -60,17 +62,27 @@ class AgentPlatform(val app: BridgeApp) {
         store.list(agent,"session").filter { it.optString("status") in setOf("active","awaiting_owner") }.forEach { closeSession(it,"revoked") }
         store.list(agent,"interaction").filter { it.optString("status") == "pending" }.forEach { store.save(agent,"interaction",it.put("status","cancelled")); store.emit(agent,"interaction.cancelled",it.getString("id")) }
         store.list(agent,"operation",1000).filter { it.optString("status") in setOf("accepted","awaiting_owner","running") }.forEach { store.save(agent,"operation",it.put("status",if (it.optString("status") == "running") "unknown_outcome" else "cancelled")) }
+        tools.stopAgent(agent)
+        delivery.stopAgent(agent)
         monitor.stopAgent(agent)
         workflows.pauseAgent(agent)
     }
-    fun stopAll() { app.policy.agents().forEach { invalidate(it.id) }; ProjectionService.instance?.stopSelf(); tools.stopAudio() }
+    fun interrupt() {
+        jobs.values.forEach { it.cancel() }; store.list(kind="session").filter { it.optString("status")=="active" }.forEach { closeSession(it,"interrupted") }; app.policy.agents().forEach { monitor.stopAgent(it.id) }; tools.stopAudio()
+    }
+    fun stopAll() { store.setting("active_control").takeIf { it.isNotEmpty() }?.let { store.find(it,kind="session") }?.let { closeSession(it,"stopped_by_owner") }; app.policy.agents().forEach { invalidate(it.id) }; ProjectionService.instance?.stopSelf(); tools.stopAudio() }
     fun getAgent(id: String) = app.policy.agents().firstOrNull { it.id == id } ?: throw ApiError(401,"unauthorized","Agent was removed")
-    fun changed() { app.sendBroadcast(Intent(BridgeService.ACTION_STATE).setPackage(app.packageName)) }
-    private fun sweep() {
-        app.policy.agents().forEach { a ->
+    fun changed() { app.sendBroadcast(Intent("net.finleg.bridget.PLATFORM_CHANGED").setPackage(app.packageName)) }
+    fun recheckCredentials() {
+        val agents=app.policy.agents()
+        credentialEpochs.keys.filter { id -> agents.none { it.id==id } }.forEach { id -> invalidate(id); credentialEpochs.remove(id) }
+        agents.forEach { a ->
             val old = credentialEpochs.put(a.id,a.hash)
             if (old != null && old != a.hash) invalidate(a.id)
         }
+    }
+    private fun sweep() {
+        recheckCredentials()
         val now = System.currentTimeMillis()
         store.list(kind="interaction").filter { it.optString("status") == "pending" && it.optLong("expires_at") <= now }.forEach { store.save(it.getString("agent_id"),"interaction",it.put("status","expired")); store.emit(it.getString("agent_id"),"interaction.expired",it.getString("id")) }
         store.list(kind="operation",limit=1000).filter { it.optString("status")=="awaiting_owner" && it.optLong("expires_at")<=now }.forEach { store.save(it.getString("agent_id"),"operation",it.put("status","expired")) }
@@ -80,12 +92,13 @@ class AgentPlatform(val app: BridgeApp) {
     }
     fun session(agent: String,id: String): JSONObject {
         val s = store.require(id,agent,"session")
-        if (s.optString("status") != "active" || s.optString("epoch") != epoch || s.optLong("expires_at") <= System.currentTimeMillis() || s.optLong("heartbeat_until") <= System.currentTimeMillis()) throw ApiError(409,"session_inactive","Start or renew a control session on the phone")
+        if (store.setting("active_control")!=id || s.optString("status") != "active" || s.optString("epoch") != epoch || s.optLong("expires_at") <= System.currentTimeMillis() || s.optLong("heartbeat_until") <= System.currentTimeMillis()) throw ApiError(409,"session_inactive","Start or renew a control session on the phone")
         authorize(agent,"screen.control"); return s
     }
     fun closeSession(s: JSONObject,state: String) {
         val agent=s.getString("agent_id")
-        store.list(agent,"operation",1000).filter { it.optString("command")=="ui.action" && it.optJSONObject("input")?.optString("session_id")==s.optString("id") && it.optString("status") in setOf("accepted","awaiting_owner","running") }.forEach { cancelOperation(agent,it.getString("id")) }
+        if(store.setting("active_control")==s.optString("id")) store.setting("active_control","",true)
+        store.list(agent,"operation",1000).filter { it.optString("command") in setOf("ui.action","ui.sequence") && it.optJSONObject("input")?.optString("session_id")==s.optString("id") && it.optString("status") in setOf("accepted","awaiting_owner","running") }.forEach { cancelOperation(agent,it.getString("id")) }
         store.save(agent,"session",s.put("status",state)); DeviceControlService.instance?.clearObservation()
         store.emit(s.getString("agent_id"),"session.$state",s.getString("id")); changed()
     }
@@ -93,9 +106,11 @@ class AgentPlatform(val app: BridgeApp) {
         val s = store.find(id,kind="session") ?: return
         if (s.optString("status") != "awaiting_owner" || s.optLong("request_expires_at") <= System.currentTimeMillis()) throw ApiError(409,"approval_expired","Request expired")
         authorize(s.getString("agent_id"),"screen.control")
-        if (store.list(kind="session").any { it.optString("status") == "active" && it.optLong("expires_at") > System.currentTimeMillis() && it.optLong("heartbeat_until") > System.currentTimeMillis() }) throw ApiError(409,"controller_busy","Stop the current session first")
+        val controller=store.setting("active_control").takeIf { it.isNotEmpty() }?.let { store.find(it,kind="session") }
+        if (controller!=null && controller.optString("status")=="active" && controller.optLong("expires_at")>System.currentTimeMillis() && controller.optLong("heartbeat_until")>System.currentTimeMillis()) throw ApiError(409,"controller_busy","Stop the current session first")
         val now = System.currentTimeMillis()
         store.save(s.getString("agent_id"),"session",s.put("status","active").put("expires_at",now+s.getInt("duration_seconds")*1000L).put("heartbeat_until",now+60_000).put("epoch",epoch).put("fence",UUID.randomUUID().toString()))
+        store.setting("active_control",id,true)
         DeviceControlService.instance?.showController(s.getString("agent_id")); store.emit(s.getString("agent_id"),"session.active",id); changed()
     }
     fun answer(id: String,value: String,dismiss: Boolean = false) {
@@ -121,6 +136,7 @@ class AgentPlatform(val app: BridgeApp) {
     suspend fun <T> capture(agent: String,id: String,block: suspend () -> T): T = coroutineScope {
         authorize(agent,id)
         if (app.getSystemService(KeyguardManager::class.java).isDeviceLocked) throw ApiError(409,"device_locked","Unlock the phone to capture")
+        val sensorLock=if(id in setOf("microphone.clip","speech.transcribe")) app.registry.micLock else app.registry.cameraLock
         if (!sensorLock.tryLock()) throw ApiError(409,"sensor_busy","A sensor operation already owns the camera/microphone")
         val credential = getAgent(agent).hash
         activeSensorAgent = agent; activeSensorScope = id
@@ -128,16 +144,25 @@ class AgentPlatform(val app: BridgeApp) {
         val watchdog = launch {
             while (isActive) { delay(125); if (!runCatching { authorize(agent,id); getAgent(agent).hash == credential }.getOrDefault(false) || app.getSystemService(KeyguardManager::class.java).isDeviceLocked) parent.cancel(CancellationException("Capture authority or visibility lost")) }
         }
-        try { BridgeService.running?.showCapture("${getAgent(agent).name}: ${id.substringBefore('.')}",agent); block() }
-        finally { watchdog.cancel(); activeSensorAgent=null; activeSensorScope=null; BridgeService.running?.showCapture(null); sensorLock.unlock() }
+        val service=BridgeService.running
+        val captureToken=service?.captureStarted("${getAgent(agent).name}: ${id.substringBefore('.')}")
+        try { block() }
+        finally { watchdog.cancel(); activeSensorAgent=null; activeSensorScope=null; if(captureToken!=null) service.captureEnded(captureToken); sensorLock.unlock() }
     }
-    private fun sensitive(command: String,args: JSONObject): Boolean = command in setOf("ui.action","device.action","notification.reply","peripheral.action","translation.download","speech.transcribe","stream.start","alert.trigger")
-    fun mutate(agent: String, command: String,args: JSONObject,key: String): JSONObject {
+    private fun sensitive(command: String,args: JSONObject): Boolean = command in setOf("ui.action","ui.sequence","device.action","notification.reply","peripheral.action","translation.download","speech.transcribe","stream.start","alert.trigger")
+    fun mutate(agent: String, command: String,args: JSONObject,key: String,credential: String? = null): JSONObject {
+        if(credential!=null && getAgent(agent).hash!=credential) throw ApiError(401,"unauthorized","Key was rotated")
         val scopeId = commandScope(command,args)
         authorize(agent,scopeId)
         val (op,fresh) = store.reserve(agent,key,command,args)
         if (!fresh) return publicOperation(op)
-        op.put("expires_at",System.currentTimeMillis()+5*60_000).put("identity",AgentBranding.json(getAgent(agent)))
+        try {
+        if(command=="ui.action") op.put("review_context",DeviceControlService.instance?.review(agent,args) ?: throw ApiError(409,"accessibility_required","Enable private control"))
+        if(command=="ui.sequence") op.put("review_context",DeviceControlService.instance?.reviewSequence(agent,args) ?: throw ApiError(409,"accessibility_required","Enable private control"))
+        if(command=="notification.reply") op.put("review_context",NotificationBridge.instance?.review(agent,args) ?: throw ApiError(409,"notification_access_required","Enable notification access"))
+        if(command=="alert.trigger") op.put("review_context",JSONObject().put("recipients",JSONArray(args.strings("destinations",3).map { id -> store.require(id,"owner","destination").let { JSONObject().put("name",it.getString("name")).put("url",it.getString("url")) } })))
+        } catch(e:ApiError) { store.save(agent,"operation",op.put("status","failed").put("error",e.code)); throw e }
+        op.put("credential_hash",getAgent(agent).hash).put("expires_at",System.currentTimeMillis()+5*60_000).put("identity",AgentBranding.json(getAgent(agent)))
         val pending = sensitive(command,args)
         store.save(agent,"operation",op.put("status",if(pending) "awaiting_owner" else "accepted"))
         if (!pending) launchOperation(op) else { PlatformNotifications.show(app,op); store.emit(agent,"operation.awaiting_owner",op.getString("id")); changed() }
@@ -149,6 +174,7 @@ class AgentPlatform(val app: BridgeApp) {
             if (op.optString("status") != "awaiting_owner" || op.optLong("expires_at") <= System.currentTimeMillis()) throw ApiError(409,"approval_expired","Request is no longer pending")
             // An operation is immutable; approvals bind to the canonical command/input digest.
             if (op.getString("digest") != PlatformStore.digest(JSONObject().put("command",op.getString("command")).put("body",op.getJSONObject("input")))) throw ApiError(409,"approval_changed","Action changed")
+            if(op.optString("credential_hash")!=getAgent(op.getString("agent_id")).hash) throw ApiError(401,"unauthorized","Key was rotated")
             authorize(op.getString("agent_id"),commandScope(op.getString("command"),op.getJSONObject("input")))
             store.save(op.getString("agent_id"),"operation",op.put("status","accepted"))
         }
@@ -165,6 +191,7 @@ class AgentPlatform(val app: BridgeApp) {
         val job = scope.launch(start=CoroutineStart.LAZY) {
             var op = store.require(id,agent,"operation")
             try {
+                if(op.optString("credential_hash")!=getAgent(agent).hash) throw ApiError(401,"unauthorized","Key was rotated")
                 authorize(agent,commandScope(op.getString("command"),op.getJSONObject("input")))
                 if (op.optString("status") != "accepted") return@launch
                 op = store.save(agent,"operation",op.put("status","running"))
@@ -174,7 +201,7 @@ class AgentPlatform(val app: BridgeApp) {
             } catch(e: CancellationException) {
                 store.save(agent,"operation",op.put("status","unknown_outcome").put("error","cancelled_reconcile_before_retry")); throw e
             } catch(e: Exception) {
-                store.save(agent,"operation",op.put("status","failed").put("error",if(e is ApiError) e.code else "execution_failed").put("message",if(e is ApiError) e.message else "Operation failed; inspect readiness"))
+                store.save(agent,"operation",op.put("status","failed").put("error",if(e is ApiError) e.code else "execution_failed").put("message",if(e is ApiError) e.message else "Operation failed; inspect readiness").put("details",if(e is ApiError) JSONObject(e.extra) else JSONObject()))
             } finally {
                 jobs.remove("$agent:$id"); store.emit(agent,"operation.finished",id)
                 app.audit.append(JSONObject().put("agent_id",agent).put("endpoint","platform:${op.optString("command")}").put("operation_id",id).put("result",store.find(id,agent)?.optString("status")))
@@ -184,11 +211,15 @@ class AgentPlatform(val app: BridgeApp) {
         jobs["$agent:$id"] = job; job.start()
     }
     private fun commandScope(command:String,args:JSONObject) = if(command=="device.action") DeviceTools.scopeFor(args.optString("type")) else Commands.scope(command)
-    fun publicOperation(op: JSONObject): JSONObject = PlatformStore.copy(op).apply { remove("input"); remove("identity"); remove("digest") }
-    suspend fun read(agent: String,command: String,args: JSONObject): JSONObject {
+    fun publicOperation(op: JSONObject): JSONObject = PlatformStore.copy(op).apply { remove("input"); remove("identity"); remove("digest"); remove("credential_hash") }
+    suspend fun read(agent: String,command: String,args: JSONObject,credential:String?=null): JSONObject {
+        if(credential!=null && getAgent(agent).hash!=credential) throw ApiError(401,"unauthorized","Key was rotated")
         if(command == "capabilities") return Capabilities.describe(app,getAgent(agent))
         if(command !in setOf("operation.get","operation.list","session.list")) authorize(agent,Commands.scope(command))
-        return when(command) {
+        val waiting=command=="screen.wait" || (command in setOf("events","interaction.get") && args.optInt("wait",0)>0)
+        if(waiting && !app.requests.waits.enter(agent)) throw ApiError(429,"too_many_waits","Close another wait before starting one")
+        try {
+        val result = when(command) {
             "events" -> {
                 val after = args.optLong("after",0); val wait=args.whole("wait",0,0,55); val end=System.currentTimeMillis()+wait*1000L
                 var result=store.events(agent,after)
@@ -217,6 +248,10 @@ class AgentPlatform(val app: BridgeApp) {
             "phone.status", "phone.context", "location.fix", "sensors.read", "images.ocr", "images.barcode", "translation.run", "peripheral.list", "diagnostics" -> tools.read(agent,command,args)
             else -> throw ApiError(404,"unknown_tool","Unknown read tool")
         }
+        if(credential!=null && getAgent(agent).hash!=credential) throw ApiError(401,"unauthorized","Key was rotated")
+        if(command !in setOf("operation.get","operation.list","session.list")) authorize(agent,Commands.scope(command))
+        return result
+        } finally { if(waiting) app.requests.waits.exit(agent) }
     }
     private suspend fun execute(agent: String,command: String,args: JSONObject): JSONObject = when(command) {
         "interaction.create" -> interaction(agent,args)
@@ -224,12 +259,13 @@ class AgentPlatform(val app: BridgeApp) {
         "session.request" -> {
             args.only("apps","duration_seconds","purpose")
             val apps=args.strings("apps",10)
-            if(apps.isEmpty() || apps.any { !it.matches(Regex("[a-zA-Z][a-zA-Z0-9_.]+")) || it==app.packageName }) throw ApiError(422,"invalid_parameter","Choose at least one external app")
+            if(apps.isEmpty() || apps.any { !it.matches(Regex("[a-zA-Z][a-zA-Z0-9_.]+")) || (it==app.packageName && !BuildConfig.DEBUG) }) throw ApiError(422,"invalid_parameter","Choose at least one external app")
             store.save(agent,"session",JSONObject().put("apps",JSONArray(apps)).put("duration_seconds",args.whole("duration_seconds",300,30,1800)).put("purpose",args.text("purpose",256)).put("status","awaiting_owner").put("request_expires_at",System.currentTimeMillis()+300_000).put("identity",AgentBranding.json(getAgent(agent)))).also { store.emit(agent,"session.requested",it.getString("id")); PlatformNotifications.show(app,it); changed() }
         }
         "session.heartbeat" -> session(agent,args.text("id")).let { store.save(agent,"session",it.put("heartbeat_until",minOf(it.getLong("expires_at"),System.currentTimeMillis()+60_000))) }
         "session.stop" -> store.require(args.text("id"),agent,"session").also { closeSession(it,"stopped") }
         "ui.action" -> DeviceControlService.instance?.act(agent,args) ?: throw ApiError(409,"accessibility_required","Enable private control")
+        "ui.sequence" -> DeviceControlService.instance?.sequence(agent,args) ?: throw ApiError(409,"accessibility_required","Enable private control")
         "device.action" -> tools.action(agent,args)
         "speech.transcribe" -> tools.transcribe(agent,args)
         "translation.download" -> tools.downloadTranslation(args)
@@ -253,9 +289,9 @@ class AgentPlatform(val app: BridgeApp) {
 
 object Commands {
     val reads = setOf("capabilities","events","operation.get","operation.list","session.list","screen.observe","screen.wait","interaction.get","interaction.list","notification.list","file.list","file.get","workflow.list","workflow.validate","stream.status","stream.frame","phone.status","phone.context","location.fix","sensors.read","images.ocr","images.barcode","translation.run","peripheral.list","diagnostics","alert.list")
-    val mutations = setOf("interaction.create","interaction.cancel","session.request","session.heartbeat","session.stop","ui.action","device.action","speech.transcribe","translation.download","notification.reply","file.put","workflow.propose","workflow.pause","workflow.run","stream.start","stream.stop","peripheral.action","note.create","feedback.create","alert.trigger","alert.cancel")
+    val mutations = setOf("interaction.create","interaction.cancel","session.request","session.heartbeat","session.stop","ui.action","ui.sequence","device.action","speech.transcribe","translation.download","notification.reply","file.put","workflow.propose","workflow.pause","workflow.run","stream.start","stream.stop","peripheral.action","note.create","feedback.create","alert.trigger","alert.cancel")
     fun scope(name: String): String = when {
-        name.startsWith("session.") || name=="ui.action" || name=="screen.wait" -> "screen.control"
+        name.startsWith("session.") || name.startsWith("ui.") || name=="screen.wait" -> "screen.control"
         name=="screen.observe" -> "screen.observe"
         name.startsWith("interaction.") || name=="note.create" || name=="feedback.create" -> "interactions"
         name=="events" -> "events.read"

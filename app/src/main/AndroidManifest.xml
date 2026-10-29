@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
 
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
@@ -17,57 +17,166 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
-
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- In-app updates (12.14, UPD-04): hands a verified APK to Android's installer, which always asks to confirm. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <!-- Lets Bridgit open the Tailscale app from Home and first run. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+
     <queries>
-        <intent><action android:name="android.speech.RecognitionService" /></intent>
-        <intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent>
-        <intent><action android:name="android.intent.action.VIEW" /><data android:scheme="https" /></intent>
-        <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
+        <package android:name="com.tailscale.ipn" />
+        <!-- CAP-31/41: interaction link controls may open an app by package (its launch intent). -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <!-- City tour Ask (8.25): the default SpeechRecognizer can't find its service on API 30+ without this. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
     </queries>
 
+    <uses-permission android:name="com.android.alarm.permission.SET_ALARM" />
     <application
-        android:name=".BridgeApp"
+        android:name="net.finleg.bridget.BridgeApp"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Bridge">
+        android:theme="@style/Theme.Bridgit">
+
+        <!-- D32: CrashReports.start() initialises Sentry itself, after checking the Settings switch. -->
+        <meta-data android:name="io.sentry.auto-init" android:value="false" />
 
         <activity
-            android:name=".MainActivity"
+            android:name="net.finleg.bridget.ui.MainActivity"
             android:exported="true"
-            android:launchMode="singleTop">
+            android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- UI-23: long-press on the Quick Settings tile opens Home. -->
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+            </intent-filter>
         </activity>
 
+        <receiver android:name="net.finleg.bridget.planned.ControlsReceiver" android:exported="false" />
+        <receiver android:name="net.finleg.bridget.planned.RestoreControlsReceiver" android:exported="false" />
+        <service android:name="net.finleg.bridget.planned.ProjectionService" android:exported="false" android:foregroundServiceType="mediaProjection" />
+        <activity android:name="net.finleg.bridget.planned.HealthPrivacyActivity" android:exported="true">
+            <intent-filter><action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" /></intent-filter>
+        </activity>
+        <activity-alias android:name="net.finleg.bridget.planned.HealthPermissionsUsage" android:targetActivity="net.finleg.bridget.planned.HealthPrivacyActivity"
+            android:exported="true" android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter><action android:name="android.intent.action.VIEW_PERMISSION_USAGE" /><category android:name="android.intent.category.HEALTH_PERMISSIONS" /></intent-filter>
+        </activity-alias>
+        <activity android:name="net.finleg.bridget.planned.OwnerToolsActivity" android:exported="false" />
+        <activity android:name="net.finleg.bridget.planned.ShareActivity" android:exported="true" android:label="Share to Bridgit">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
+        <service android:name="net.finleg.bridget.planned.NotificationReaderService" android:exported="true"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" android:label="Bridgit notification access">
+            <intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter>
+        </service>
+        <!-- UI-23: Quick Settings tile "Bridget": tap pauses or resumes the listener. -->
         <service
-            android:name=".BridgeService"
+            android:name="net.finleg.bridget.ui.home.ListenerTile"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_bridget"
+            android:label="@string/tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data android:name="android.service.quicksettings.ACTIVE_TILE" android:value="true" />
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
+
+        <service
+            android:name="net.finleg.bridget.BridgeService"
             android:exported="false"
-            android:foregroundServiceType="camera|microphone|location|specialUse">
+            android:foregroundServiceType="camera|microphone|location|mediaPlayback|specialUse">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Private API listener on the owner's Tailscale network; answers camera, microphone and gallery requests from the owner's agent." />
+                android:value="Private API listener on the owner's Tailscale network; answers camera, microphone and gallery requests from the owner's agents." />
         </service>
-        <activity android:name=".platform.ControlCenterActivity" android:exported="false" />
-        <activity android:name=".platform.ShareReceiveActivity" android:exported="true">
-            <intent-filter><action android:name="android.intent.action.SEND" /><category android:name="android.intent.category.DEFAULT" /><data android:mimeType="text/plain" /><data android:mimeType="image/*" /><data android:mimeType="application/pdf" /><data android:mimeType="audio/*" /></intent-filter>
-        </activity>
-        <service android:name=".platform.ProjectionService" android:exported="false" android:foregroundServiceType="mediaProjection" />
-        <service android:name=".platform.PauseTile" android:exported="true" android:permission="android.permission.BIND_QUICK_SETTINGS_TILE" android:label="BRIDGIT" android:icon="@drawable/ic_notif"><intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter></service>
+
+        <!-- 8.10 (D17, CAP-26): takes screenshots only; no events, no window content, no gestures, no keys. -->
+        <service
+            android:name="net.finleg.bridget.capability.ScreenshotService"
+            android:exported="false"
+            android:label="@string/screenshot_service_label"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/accessibility_screenshot" />
+        </service>
+
+        <receiver android:name="net.finleg.bridget.feedback.FeedbackActionReceiver" android:exported="false" />
+
+        <!-- CAP-33: answers questions from notification buttons and inline reply. -->
+        <receiver android:name="net.finleg.bridget.interact.InteractionActionReceiver" android:exported="false" />
+
+        <!-- 8.25: Ask, Pause/Resume and End from the City tour notification. -->
+        <receiver android:name="net.finleg.bridget.tour.TourActionReceiver" android:exported="false" />
+
+        <!-- CAP-41: opens an interaction link from a notification action (no trampolines). -->
+        <activity
+            android:name="net.finleg.bridget.interact.LinkActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@style/Theme.Bridgit.Invisible" />
+
+        <!-- UPD-04: shares only cacheDir/updates/ with the package installer. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <receiver android:name="net.finleg.bridget.BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+        <activity android:name="net.finleg.bridget.platform.ControlCenterActivity" android:exported="false" />
+        <activity android:name="net.finleg.bridget.platform.ShareReceiveActivity" android:exported="true" android:label="Share to an agent"><intent-filter><action android:name="android.intent.action.SEND" /><category android:name="android.intent.category.DEFAULT" /><data android:mimeType="text/plain" /><data android:mimeType="image/*" /><data android:mimeType="application/pdf" /><data android:mimeType="audio/*" /></intent-filter></activity>
+        <service android:name="net.finleg.bridget.platform.ProjectionService" android:exported="false" android:foregroundServiceType="mediaProjection" />
+        <service android:name="net.finleg.bridget.platform.WorkflowJobService" android:exported="true" android:permission="android.permission.BIND_JOB_SERVICE" />
         <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.files" android:exported="false" android:grantUriPermissions="true"><meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/agent_files" /></provider>
-        <service android:name=".platform.WorkflowJobService" android:exported="true" android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>
 </manifest>

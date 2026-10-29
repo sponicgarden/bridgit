@@ -13,6 +13,7 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk=[34])
 class WorkflowContractTest {
+    @Before fun enableOwnerListener() { app.settings.listenerEnabled=true }
     private val app get()=(RuntimeEnvironment.getApplication() as BridgeApp)
     private fun definition()=JSONObject().put("name","Help panel").put("trigger",JSONObject().put("type","button")).put("steps",JSONArray().put(JSONObject().put("type","notice").put("title","Help requested").put("text","Please check the panel")))
     private fun rejects(block:()->Unit) { try { block(); fail("Expected rejection") } catch(e:ApiError) { assertTrue(e.http in listOf(403,409,422)) } }

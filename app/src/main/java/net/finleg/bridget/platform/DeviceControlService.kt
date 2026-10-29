@@ -28,7 +28,7 @@ class DeviceControlService : AccessibilityService() {
     private val app get() = application as BridgeApp
     private val handler=Handler(Looper.getMainLooper())
     private data class Observation(val id: String,val agent: String,val session: String,val fence: String,val app: String,val tree: String,val captured: Long,val targets: Map<String,Target>)
-    private data class Target(val path: List<Int>,val signature: String)
+    private data class Target(val path: List<Int>,val signature: String,val label: String)
     private val observations=java.util.concurrent.ConcurrentHashMap<String,Observation>()
     private var overlay: View?=null
     private var dispatchUntil=0L
@@ -38,11 +38,12 @@ class DeviceControlService : AccessibilityService() {
     override fun onDestroy() { clearObservation(); hideOverlay(); if(instance===this) instance=null; super.onDestroy() }
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if(event==null || event.packageName?.toString()==packageName) return
+        if(windows.any { it.id==event.windowId && it.type==android.view.accessibility.AccessibilityWindowInfo.TYPE_INPUT_METHOD }) return
         generation++
         val active=app.platform.store.list(kind="session").firstOrNull { it.optString("status")=="active" } ?: return
         val pkg=event.packageName?.toString() ?: return
         if(event.eventType==AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED && pkg !in active.strings("apps") && pkg !in setOf("com.android.systemui","android")) app.platform.closeSession(active,"paused_app_changed")
-        if(event.eventType==AccessibilityEvent.TYPE_VIEW_CLICKED && SystemClock.elapsedRealtime()>dispatchUntil) {
+        if(event.eventType==AccessibilityEvent.TYPE_VIEW_CLICKED && pkg !in setOf("com.android.systemui","android") && SystemClock.elapsedRealtime()>dispatchUntil) {
             // A best-effort takeover signal; the permanent Stop control is authoritative.
             app.platform.closeSession(active,"paused_owner_interaction")
         }
@@ -62,14 +63,14 @@ class DeviceControlService : AccessibilityService() {
     private fun nodeJson(node: AccessibilityNodeInfo,path: List<Int>,refs: MutableMap<String,Target>,count: IntArray): JSONObject? {
         if(count[0]++ >= 512 || path.size>24) return null
         val bounds=Rect(); node.getBoundsInScreen(bounds)
-        val secret=node.isPassword
+        val secret=node.isPassword || node.isAccessibilityDataSensitive
         val out=JSONObject().put("role",node.className?.toString() ?: "").put("resource_id",node.viewIdResourceName ?: "")
             .put("label",if(secret) "[protected field]" else (node.contentDescription?.toString() ?: node.text?.toString() ?: "").take(512))
             .put("text",if(secret) "" else (node.text?.toString() ?: "").take(1024)).put("password",secret)
             .put("enabled",node.isEnabled).put("clickable",node.isClickable).put("editable",node.isEditable).put("scrollable",node.isScrollable).put("checked",node.isChecked)
             .put("bounds",JSONArray(listOf(bounds.left,bounds.top,bounds.right,bounds.bottom)))
         val ref="e"+refs.size
-        if(!secret && node.isVisibleToUser) { refs[ref]=Target(path,PlatformStore.digest(out)); out.put("ref",ref) }
+        if(!secret && node.isVisibleToUser) { refs[ref]=Target(path,PlatformStore.digest(out),out.optString("label")); out.put("ref",ref) }
         val children=JSONArray()
         for(i in 0 until minOf(node.childCount,100)) { val child=node.getChild(i) ?: continue; try { nodeJson(child,path+i,refs,count)?.let(children::put) } finally { child.recycle() } }
         out.put("children",children); return out
@@ -85,7 +86,7 @@ class DeviceControlService : AccessibilityService() {
         val root=root()
         try {
             val pkg=root.packageName?.toString() ?: ""
-            if(pkg==packageName || pkg.contains("permissioncontroller") || pkg=="com.android.systemui") throw ApiError(409,"protected_window","Owner must handle system or Bridgit controls")
+            if((pkg==packageName && !(BuildConfig.DEBUG && app.platform.store.setting("fixture_active")=="true")) || pkg.contains("permissioncontroller") || pkg=="com.android.systemui") throw ApiError(409,"protected_window","Owner must handle system or Bridgit controls")
             if(session!=null && pkg !in session.strings("apps")) throw ApiError(409,"app_not_allowed","Foreground app is outside the approved session")
             val (tree,targets)=snapshotTree(root); val id=UUID.randomUUID().toString()
             observations.entries.removeIf { SystemClock.elapsedRealtime()-it.value.captured>120_000 }
@@ -93,7 +94,7 @@ class DeviceControlService : AccessibilityService() {
             observations[id]=Observation(id,agent,sessionId,session?.optString("fence") ?: "",pkg,PlatformStore.digest(tree),SystemClock.elapsedRealtime(),targets)
             val metrics=resources.displayMetrics
             val out=JSONObject().put("observation_id",id).put("as_of",System.currentTimeMillis()).put("epoch",app.platform.epoch).put("window_generation",generation).put("package",pkg).put("window_id",root.windowId)
-                .put("display_id",display?.displayId ?: 0).put("rotation",display?.rotation ?: 0).put("width_px",metrics.widthPixels).put("height_px",metrics.heightPixels).put("secure_content",false).put("content_is_untrusted",true)
+                .put("display_id",getSystemService(android.hardware.display.DisplayManager::class.java).getDisplay(android.view.Display.DEFAULT_DISPLAY)?.displayId ?: 0).put("rotation",getSystemService(android.hardware.display.DisplayManager::class.java).getDisplay(android.view.Display.DEFAULT_DISPLAY)?.rotation ?: 0).put("width_px",metrics.widthPixels).put("height_px",metrics.heightPixels).put("secure_content",JSONObject.NULL).put("content_is_untrusted",true)
             if(session!=null) out.put("tree",tree).put("fence",session.optString("fence"))
             if(args.optBoolean("screenshot",true)) out.put("image",screenshot())
             out
@@ -113,6 +114,12 @@ class DeviceControlService : AccessibilityService() {
             override fun onFailure(errorCode:Int) { if(continuation.isActive) continuation.resumeWith(Result.failure(ApiError(409,if(errorCode==ERROR_TAKE_SCREENSHOT_SECURE_WINDOW) "secure_content" else "capture_unavailable","Android refused the screenshot",mapOf("android_error" to errorCode)))) }
         })
     }
+    fun review(agent:String,args:JSONObject):JSONObject {
+        val session=app.platform.session(agent,args.text("session_id"))
+        val observation=observations[args.text("observation_id")] ?: throw ApiError(409,"stale_observation","Observe again")
+        if(observation.agent!=agent || observation.session!=session.getString("id") || observation.fence!=args.text("fence")) throw ApiError(403,"wrong_controller","Observation belongs to another control session")
+        return JSONObject().put("package",observation.app).put("target_label",observation.targets[args.optString("ref")]?.label ?: "Global navigation").put("action",args.text("type",32))
+    }
     suspend fun act(agent:String,args:JSONObject):JSONObject = withContext(Dispatchers.Main) {
         args.only("session_id","fence","observation_id","type","ref","text","direction","expect")
         val s=app.platform.session(agent,args.text("session_id")); val obs=observations[args.text("observation_id")] ?: throw ApiError(409,"stale_observation","Observe the screen again")
@@ -129,10 +136,10 @@ class DeviceControlService : AccessibilityService() {
                     var node=AccessibilityNodeInfo.obtain(root)
                     try {
                         target.path.forEach { index -> val child=node.getChild(index) ?: throw ApiError(409,"stale_observation","Element disappeared"); node.recycle(); node=child }
-                        if(node.isPassword || !node.isEnabled || !node.isVisibleToUser) throw ApiError(403,"protected_element","Element cannot be operated")
+                        if(node.isPassword || node.isAccessibilityDataSensitive || !node.isEnabled || !node.isVisibleToUser) throw ApiError(403,"protected_element","Element cannot be operated")
                         when(type) {
-                            "tap" -> node.performAction(AccessibilityNodeInfo.ACTION_CLICK)
-                            "long_press" -> node.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK)
+                            "tap" -> node.performAction(AccessibilityNodeInfo.ACTION_CLICK) || gesture(node,false)
+                            "long_press" -> node.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK) || gesture(node,true)
                             "set_text" -> { if(!node.isEditable) throw ApiError(422,"not_editable","Choose an editable element"); node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE,args.text("text",4096)) }) }
                             else -> node.performAction(when(args.text("direction",16,"forward")) { "forward" -> AccessibilityNodeInfo.ACTION_SCROLL_FORWARD; "backward" -> AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD; else -> throw ApiError(422,"invalid_parameter","direction must be forward or backward") })
                         }
@@ -148,12 +155,68 @@ class DeviceControlService : AccessibilityService() {
             JSONObject().put("dispatched",dispatched).put("effect_observed",verified).put("outcome",if(verified) "verified" else if(dispatched) "unverified" else "not_dispatched").put("as_of",System.currentTimeMillis())
         } finally { root.recycle() }
     }
+    fun reviewSequence(agent:String,args:JSONObject):JSONObject {
+        args.only("session_id","fence","steps")
+        val session=app.platform.session(agent,args.text("session_id"))
+        if(session.optString("fence")!=args.text("fence")) throw ApiError(409,"stale_controller","Controller changed")
+        val steps=args.optJSONArray("steps") ?: throw ApiError(422,"invalid_parameter","steps must be a list")
+        if(steps.length() !in 1..8) throw ApiError(422,"invalid_parameter","Use one to eight reviewed steps")
+        for(i in 0 until steps.length()) {
+            val step=steps.optJSONObject(i) ?: throw ApiError(422,"invalid_parameter","Each step must be an object")
+            step.only("type","package","label","resource_id","text","direction","expect")
+            if(step.text("type",32) !in setOf("tap","long_press","set_text","scroll")) throw ApiError(422,"unsupported_action","Sequences support element actions only")
+            if(step.text("package",256) !in session.strings("apps")) throw ApiError(403,"app_not_allowed","Sequence app is outside the approved session")
+            if(!step.has("label") && !step.has("resource_id")) throw ApiError(422,"invalid_parameter","Each step needs an exact label or resource ID")
+            if(step.has("label")) step.text("label",512)
+            if(step.has("resource_id")) step.text("resource_id",512)
+            if(step.getString("type")=="set_text") step.text("text",4096)
+            val condition=step.optJSONObject("expect") ?: throw ApiError(422,"invalid_parameter","Every step requires an observed postcondition")
+            condition.only("package","text"); if(!condition.has("text") && !condition.has("package")) throw ApiError(422,"invalid_parameter","Postcondition cannot be empty")
+        }
+        return JSONObject().put("package",steps.getJSONObject(0).getString("package")).put("steps",steps).put("max_steps",8)
+    }
+    suspend fun sequence(agent:String,args:JSONObject):JSONObject {
+        reviewSequence(agent,args)
+        val results=JSONArray();val steps=args.getJSONArray("steps")
+        for(i in 0 until steps.length()) {
+            val step=steps.getJSONObject(i)
+            val observed=observe(agent,JSONObject().put("session_id",args.getString("session_id")).put("screenshot",false))
+            if(observed.optString("package")!=step.getString("package")) throw ApiError(409,"unexpected_app","Sequence stopped in an unexpected app",mapOf("completed_steps" to i))
+            val candidates=mutableListOf<JSONObject>()
+            fun find(node:JSONObject) {
+                if(node.has("ref") && (!step.has("label") || node.optString("label")==step.getString("label")) && (!step.has("resource_id") || node.optString("resource_id")==step.getString("resource_id"))) candidates.add(node)
+                val children=node.optJSONArray("children") ?: return
+                for(n in 0 until children.length()) find(children.getJSONObject(n))
+            }
+            find(observed.getJSONObject("tree"))
+            if(candidates.size!=1) throw ApiError(409,"ambiguous_target","Sequence stopped: target is absent or ambiguous",mapOf("completed_steps" to i))
+            val action=JSONObject().put("session_id",args.getString("session_id")).put("fence",args.getString("fence")).put("observation_id",observed.getString("observation_id")).put("type",step.getString("type")).put("ref",candidates.single().getString("ref")).put("expect",step.getJSONObject("expect"))
+            if(step.has("text")) action.put("text",step.getString("text"));if(step.has("direction")) action.put("direction",step.getString("direction"))
+            val result=act(agent,action)
+            if(!result.optBoolean("dispatched")) throw ApiError(409,"not_dispatched","Sequence stopped before the next step",mapOf("completed_steps" to i))
+            val verified=result.optBoolean("effect_observed") || waitFor(agent,JSONObject().put("session_id",args.getString("session_id")).put("expect",step.getJSONObject("expect")).put("timeout_seconds",3)).optBoolean("matched")
+            if(!verified) throw ApiError(409,"unverified_outcome","Sequence stopped; reconcile before retrying",mapOf("completed_steps" to i,"last_step_dispatched" to true))
+            results.put(result.put("effect_observed",true).put("outcome","verified"))
+        }
+        return JSONObject().put("steps",results).put("completed_steps",results.length()).put("outcome","postconditions_matched")
+    }
+    private suspend fun gesture(node:AccessibilityNodeInfo,long:Boolean):Boolean = suspendCancellableCoroutine { cont ->
+        val bounds=Rect(); node.getBoundsInScreen(bounds)
+        if(bounds.isEmpty) { cont.resume(false); return@suspendCancellableCoroutine }
+        val path=Path().apply { moveTo(bounds.exactCenterX(),bounds.exactCenterY()) }
+        val gesture=GestureDescription.Builder().addStroke(GestureDescription.StrokeDescription(path,0,if(long) 600 else 80)).build()
+        val accepted=dispatchGesture(gesture,object:GestureResultCallback() {
+            override fun onCompleted(description:GestureDescription?) { if(cont.isActive) cont.resume(true) }
+            override fun onCancelled(description:GestureDescription?) { if(cont.isActive) cont.resume(false) }
+        },handler)
+        if(!accepted && cont.isActive) cont.resume(false)
+    }
     private fun checkExpected(args:JSONObject):Boolean {
         args.only("package","text")
         val r=rootInActiveWindow ?: return false
         try {
             if(args.has("package") && r.packageName?.toString()!=args.text("package",256)) return false
-            if(args.has("text")) { val text=args.text("text",512); if(text.isEmpty()) throw ApiError(422,"invalid_parameter","Expected text cannot be empty"); val nodes=r.findAccessibilityNodeInfosByText(text); val found=nodes.any { !it.isPassword && it.isVisibleToUser && (it.text?.toString()?.contains(text)==true || it.contentDescription?.toString()?.contains(text)==true) }; nodes.forEach { it.recycle() }; return found }
+            if(args.has("text")) { val text=args.text("text",512); if(text.isEmpty()) throw ApiError(422,"invalid_parameter","Expected text cannot be empty"); val nodes=r.findAccessibilityNodeInfosByText(text); val found=nodes.any { !it.isPassword && !it.isAccessibilityDataSensitive && it.isVisibleToUser && (it.text?.toString()?.contains(text)==true || it.contentDescription?.toString()?.contains(text)==true) }; nodes.forEach { it.recycle() }; return found }
             return args.has("package")
         } finally { r.recycle() }
     }

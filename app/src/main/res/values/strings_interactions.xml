@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Interactions tab, list and detail (1.5, D26, UI-15, UI-16). -->
+<resources>
+    <string name="nav_interactions">Interactions</string>
+    <string name="more_activity">Activity</string>
+    <plurals name="interactions_badge">
+        <item quantity="one">%d interaction waiting for you</item>
+        <item quantity="other">%d interactions waiting for you</item>
+    </plurals>
+
+    <string name="interactions_title">Interactions</string>
+    <string name="interactions_chip_all">All</string>
+    <string name="interactions_chip_questions">Questions</string>
+    <string name="interactions_chip_notices">Notices</string>
+    <string name="interactions_chip_open">Open</string>
+    <string name="interactions_empty_title">Nothing yet</string>
+    <string name="interactions_empty_body">Questions and notices from your agents show up here.</string>
+    <string name="interactions_empty_questions">No questions waiting.</string>
+    <string name="interactions_empty_notices">No notices.</string>
+    <string name="interactions_empty_open">Nothing open.</string>
+
+    <!-- Row headline: %1$s = agent name (bold), %2$s = title. -->
+    <string name="interactions_asks">%1$s asks: %2$s</string>
+    <string name="interactions_says">%1$s: %2$s</string>
+    <string name="interactions_from">From %1$s</string>
+
+    <string name="interactions_status_waiting">Waiting</string>
+    <string name="interactions_status_seen">Seen</string>
+    <string name="interactions_status_answered">Answered</string>
+    <string name="interactions_status_closed">Closed</string>
+    <string name="interactions_status_expired">Expired</string>
+    <string name="interactions_status_cancelled">Cancelled</string>
+
+    <string name="interactions_expand">Expand</string>
+    <string name="interactions_collapse">Collapse</string>
+    <string name="interactions_expanded">Expanded</string>
+    <string name="interactions_collapsed">Collapsed</string>
+    <!-- Row for TalkBack: %1$s = headline, %2$s = status, %3$s = time ago. -->
+    <string name="interactions_row_a11y">%1$s. %2$s, %3$s.</string>
+
+    <string name="interactions_close">Close</string>
+    <string name="interactions_closed_snack">Closed. %1$s was told.</string>
+    <string name="interactions_sent_snack">Sent to %1$s</string>
+    <string name="interactions_send">Send</string>
+    <string name="interactions_need_answer">Type or pick an answer first.</string>
+    <string name="interactions_answer_failed">Couldn\'t send: %1$s</string>
+    <!-- %1$s = button label, %2$s = time (14:03). -->
+    <string name="interactions_you_answered">You answered %1$s · %2$s</string>
+    <string name="interactions_you_answered_plain">You answered · %1$s</string>
+    <string name="interactions_expired_banner">This question expired. %1$s was told.</string>
+    <string name="interactions_cancelled_banner">%1$s cancelled this.</string>
+    <string name="interactions_closed_banner">You closed this. %1$s was told.</string>
+    <string name="interactions_not_found">This interaction is gone. Interactions are kept for 30 days after they close.</string>
+    <string name="interactions_play">Play aloud</string>
+    <string name="interactions_image">Picture from %1$s</string>
+    <string name="interactions_image_hint">Tap to view bigger</string>
+    <string name="interactions_link_hint">Opens %1$s</string>
+    <string name="interactions_no_app">No app on this phone can open this link.</string>
+    <string name="interactions_not_installed">%1$s isn\'t installed</string>
+    <string name="interactions_back">Back</string>
+    <string name="interactions_ok">OK</string>
+
+    <!-- HTML cards (CAP-34). Bridgit draws this header and toolbar; the agent's page can't cover them. -->
+    <string name="interactions_card_headline">%1$s sent a card: %2$s</string>
+    <string name="interactions_card_from">From %1$s · custom card</string>
+    <string name="interactions_card_desc">Card from %1$s. Its content is made by the agent.</string>
+    <string name="interactions_card_dismiss">Dismiss</string>
+    <string name="interactions_card_open">Open card</string>
+    <string name="interactions_card_sent">Sent: %1$s</string>
+    <string name="interactions_card_crashed">This card stopped working. Dismiss it, or ask %1$s to send it again.</string>
+    <string name="interactions_card_dismiss_desc">Dismiss the card from %1$s</string>
+
+    <!-- Live text panel (D26). -->
+    <string name="interactions_text_headline">%1$s is streaming: %2$s</string>
+    <string name="interactions_text_open">Show panel</string>
+    <string name="text_panel_live">Live · from %1$s</string>
+    <string name="text_panel_finished">Finished · from %1$s</string>
+    <string name="text_panel_closed">Closed · from %1$s</string>
+    <string name="text_panel_pause">Pause scrolling</string>
+    <string name="text_panel_resume">Resume</string>
+    <string name="text_panel_pause_desc">Pause scrolling the live text</string>
+    <string name="text_panel_resume_desc">Resume scrolling to the newest text</string>
+    <string name="text_panel_close_desc">Close the live text panel from %1$s. %1$s is told.</string>
+    <string name="text_panel_hide_desc">Hide the text panel</string>
+    <string name="text_panel_empty">Waiting for text…</string>
+    <string name="text_panel_text_desc">Live text from %1$s</string>
+</resources>

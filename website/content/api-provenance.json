@@ -1,0 +1,25 @@
+{
+  "sourceUrl": "https://pub-3a79691572bc4abc93fce31910fe320b.r2.dev/bridget/api.html",
+  "retrievedAt": "2026-10-29",
+  "appVersion": "1.6.0",
+  "apiRevision": 8,
+  "upstreamSHA256": "13b0355703c30bc894d425307684f55a30ba0fea1acf440b3b9d28d7417f38b0",
+  "edits": [
+    "Replace the original owner first name with the owner",
+    "Replace hardcoded Gradle version-bump instruction with automatic allocation",
+    "Add branded navigation, metadata, and versioned snapshot notice",
+    "Scope pairing to compatible agents with private-network access",
+    "Remove unverified response-time and fixed camera-resolution claims",
+    "Describe HTML-card isolation without claiming general safety",
+    "Scope gallery non-modification to original media",
+    "Distinguish a card reply from a completed authorized payment",
+    "Allow horizontal scrolling within API tables on narrow screens"
+  ],
+  "releaseEvidence": {
+    "manifestUrl": "https://pub-3a79691572bc4abc93fce31910fe320b.r2.dev/bridget/latest.json",
+    "apkVersionName": "1.6.0",
+    "apkVersionCode": 18,
+    "apkSHA256": "f4ec80f7f1e425b2a0f098b1fba79ace32988fbbf5b83f47b88bcca8c27a9e2a",
+    "validation": "Downloaded APK hash and size match manifest; aapt manifest inspected; apksigner verification passed. This does not establish feature acceptance on every device."
+  }
+}

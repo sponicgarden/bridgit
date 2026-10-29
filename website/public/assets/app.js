@@ -53,3 +53,32 @@ if (copyAgentPrompt) {
     }
   });
 }
+
+const remoteCommands = {
+  usage: {
+    request: '“How many tokens has this session used?”',
+    response: 'This example session has used 24,800 input tokens and 6,200 output tokens. I’ll show updated usage when you ask again.'
+  },
+  progress: {
+    request: '“Where are you up to, and what’s next?”',
+    response: 'The settings screen is updated. Next I’ll check the mobile layout and run the tests. There are no blockers in this example.'
+  },
+  tests: {
+    request: '“Run the relevant tests and tell me what fails.”',
+    response: 'Example result: 18 tests passed, 1 failed. The failing test expects the old button label. I can show you the failure details next.'
+  },
+  summary: {
+    request: '“Summarize what you changed.”',
+    response: 'I updated the settings labels and added a connection status display. Three files changed. Nothing has been committed or deployed in this example.'
+  }
+};
+for (const button of document.querySelectorAll('[data-remote-command]')) {
+  button.addEventListener('click', () => {
+    const command = remoteCommands[button.dataset.remoteCommand];
+    for (const control of document.querySelectorAll('[data-remote-command]')) {
+      control.setAttribute('aria-pressed', String(control === button));
+    }
+    document.querySelector('#remote-request').textContent = command.request;
+    document.querySelector('#remote-response').textContent = command.response;
+  });
+}

@@ -1,4 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Shared strings. Each screen keeps its own strings in strings_<screen>.xml. -->
 <resources>
-    <string name="app_name">BRIDGIT Device Manager for Android</string>
-    <string name="private_control_disclosure">Private agent control can read visible app content and perform actions you approve. Enable only for your own agents. Password fields and system permission controls are excluded. Use the visible Stop control at any time. This is not an accessibility tool.</string>
+    <string name="app_name">bridgit</string>
+    <!-- Full name (owner, 27 Oct 2026): shown on first run, under the Home title and in About. -->
+    <string name="app_tagline">Device Manager for Android</string>
+    <string name="app_full_name">bridgit: Device Manager for Android</string>
+
+    <!-- Notification channels (UI-21) -->
+    <string name="channel_listener">Listener</string>
+    <string name="channel_listener_desc">Shown while Bridgit listens for your agents</string>
+    <string name="channel_capture">Captures</string>
+    <string name="channel_capture_desc">Shown every time an agent uses the camera or microphone</string>
+
+    <!-- Listener notification (UI-22) -->
+    <string name="notif_listening">Bridgit is listening</string>
+    <string name="notif_waiting_tailscale">Bridgit is waiting for Tailscale</string>
+    <string name="notif_not_reachable">Agents can\'t reach the phone until Tailscale is on</string>
+    <string name="notif_last_request">%1$s · %2$s</string>
+    <string name="notif_capture_sub">Logged in Bridgit\'s activity</string>
+    <string name="notif_taking_photo">%1$s is taking a photo</string>
+    <string name="notif_recording">%1$s is recording audio (%2$d s)</string>
+    <string name="action_pause">Pause</string>
+    <string name="action_open">Open</string>
+
+    <!-- Capabilities (UI-18) -->
+    <string name="cap_status">Status</string>
+    <string name="cap_status_desc">Health, capabilities, guide</string>
+    <string name="cap_camera">Camera</string>
+    <string name="cap_camera_desc">Photos when an agent asks</string>
+    <string name="cap_mic">Microphone</string>
+    <string name="cap_mic_desc">Audio clips when an agent asks</string>
+    <string name="cap_gallery">Gallery</string>
+    <string name="cap_gallery_desc">Find and send photos from your gallery</string>
+    <string name="cap_screen">Screenshots</string>
+    <string name="cap_screen_desc">Agents see your screen when they ask. Needs Bridgit\'s screenshot service (Access).</string>
+    <string name="notif_screenshot">%1$s is taking a screenshot</string>
+    <string name="screenshot_service_label">Bridgit screenshots</string>
+    <string name="screenshot_service_summary">Lets your agents take a screenshot when they ask</string>
+    <string name="screenshot_service_desc">Bridgit uses this only to take a screenshot when one of your agents asks, and only while Screenshots is on in Bridgit\'s Features. It can\'t read, tap or type on your screen. Every screenshot shows a notification and is logged. Apps that block screenshots come out blank.</string>
+    <string name="cap_log">Log</string>
+    <string name="cap_log_desc">Agents can read the activity log</string>
+
+    <string name="cap_location">Location</string>
+    <string name="cap_location_desc">Where the phone is, with heading</string>
+    <string name="cap_speaker">Speaker</string>
+    <string name="cap_speaker_desc">Agents play audio and speak out loud</string>
+    <string name="cap_tour">City tour</string>
+    <string name="cap_tour_desc">A guided walk with an agent</string>
+    <string name="notif_location">%1$s checked your location</string>
+    <string name="cap_interactions">Interactions</string>
+    <string name="cap_interactions_desc">Questions and notices from agents</string>
+    <string name="cap_feedback">Feedback</string>
+    <string name="cap_feedback_desc">Bug reports and feature requests</string>
+
+    <!-- Feedback channel (UI-21) and verify step (FBK-11) -->
+    <string name="channel_feedback">Feedback</string>
+    <string name="channel_feedback_desc">When an agent marks one of your reports fixed</string>
+    <string name="feedback_notif_title">Report %1$s is marked %2$s</string>
+    <string name="feedback_confirm">Confirm</string>
+    <string name="feedback_still_broken">Still broken</string>
+
+    <!-- Shared -->
+    <string name="nav_home">Home</string>
+    <string name="nav_agents">Agents</string>
+    <string name="nav_activity">Activity</string>
+    <string name="nav_more">More</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">OK</string>
+    <string name="cap_phone">Phone status and context</string>
+    <string name="cap_phone_desc">Read battery, network, screen and sound context.</string>
+    <string name="cap_controls">Sound and display</string>
+    <string name="cap_controls_desc">Change DND, sound and brightness. Timed changes can be undone.</string>
+    <string name="cap_torch">Flashlight</string>
+    <string name="cap_torch_desc">Turn on the torch for up to ten minutes.</string>
+    <string name="cap_ring">Find my phone</string>
+    <string name="cap_ring_desc">Ring and vibrate for up to one minute, respecting sound settings.</string>
+    <string name="cap_sensors">Sensor readings</string>
+    <string name="cap_sensors_desc">Read light, pressure, proximity, motion, orientation and steps where supported.</string>
+    <string name="cap_files">Receive files</string>
+    <string name="cap_files_desc">Files stay in app storage for 30 days. Review, export or delete in Device tools.</string>
+    <string name="cap_shares">Share to an agent</string>
+    <string name="cap_shares_desc">Choose an agent when sharing text, links or files from Android.</string>
+    <string name="cap_downloads">Selected Downloads</string>
+    <string name="cap_downloads_desc">Select individual files in Device tools; agents cannot browse your Downloads folder.</string>
+    <string name="cap_clipboard">Copy with approval</string>
+    <string name="cap_clipboard_desc">Every request needs your Copy tap in Device tools; expires after five minutes.</string>
+    <string name="cap_usage">App usage summaries</string>
+    <string name="cap_usage_desc">Read foreground-time summaries after granting Usage access.</string>
+    <string name="cap_notifications">Read notifications</string>
+    <string name="cap_notifications_desc">Sensitive notification text may be exposed. Requires notification access; kept only in memory.</string>
+    <string name="cap_health">Health Connect records</string>
+    <string name="cap_health_desc">Read only steps, sleep and heart rate you explicitly grant. No health writes.</string>
+    <string name="cap_video">Short video clips</string>
+    <string name="cap_video_desc">Record front or rear camera video for 1–30 seconds. Optional audio needs microphone access.</string>
+    <string name="cap_gallery_video">Gallery videos</string>
+    <string name="cap_gallery_video_desc">Read accessible videos or a still frame; Android selection permissions apply.</string>
+    <string name="cap_ocr">On-device text recognition</string>
+    <string name="cap_ocr_desc">Recognize Latin-script text locally in an image. No cloud recognition.</string>
+    <string name="cap_screen_share">Screen sharing fallback</string>
+    <string name="cap_screen_share_desc">Approve screen access once, for one hour or sixteen hours. Android can stop it sooner; each grant belongs to one agent.</string>
+    <string name="private_control_disclosure">Private agent control reads visible app content and performs actions you approve. Use only your own agents. Password fields and system permission controls are excluded. Stop at any time. This is not an accessibility tool.</string>
 </resources>

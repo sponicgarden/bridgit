@@ -86,10 +86,7 @@ class ControlCenterActivity:AppCompatActivity() {
             text("Grant each selected capability for 16 hours. Unchecking revokes it immediately. Existing camera/microphone/gallery authority was preserved; no new scope was added by upgrade.")
             Capabilities.all.filter { !it.privateOnly || BuildConfig.PRIVATE_CONTROL }.forEach { cap -> root.addView(SwitchMaterial(this).apply { text=cap.label; isChecked=runtime.hasGrant(agent.id,cap.id); setOnCheckedChangeListener { _,on -> safely { if(on) runtime.grant(agent.id,cap.id,System.currentTimeMillis()+16*3600_000L) else runtime.revoke(agent.id,cap.id) } } }) }
             button("Revoke every grant for ${agent.name}") { runtime.revoke(agent.id); render() }
-            if(BuildConfig.PRIVATE_CONTROL) button("Choose notification apps for ${agent.name}") { input("Allowed package names, separated by commas",runtime.store.setting("notification_apps:${agent.id}")) { value ->
-                val packages=value.split(',').map { it.trim() }.filter { it.isNotEmpty() }; if(packages.size>20 || packages.any { !it.matches(Regex("[A-Za-z][A-Za-z0-9_.]+")) }) throw ApiError(422,"invalid_parameter","Use up to 20 package names")
-                runtime.store.setting("notification_apps:${agent.id}",packages.joinToString(","),true)
-            } }
+            if(BuildConfig.PRIVATE_CONTROL) button("Choose notification apps for ${agent.name}") { chooseNotificationApps(agent.id) }
             button("Share a selected file with ${agent.name}") { importAgent=agent.id; document.launch(arrayOf("image/*","text/plain","application/pdf","audio/*")) }
         }
         heading("Questions and approvals")
@@ -98,6 +95,25 @@ class ControlCenterActivity:AppCompatActivity() {
         pending.forEach { record -> button("${record.optJSONObject("identity")?.optString("name") ?: "Agent"}: ${record.optString("title",record.optString("command",record.optString("kind")))}") { review(record) } }
         heading("Control sessions")
         runtime.store.list(kind="session").filter { it.optString("status")=="active" }.forEach { record -> text("${record.optJSONObject("identity")?.optString("name")} • ${record.optString("purpose")}\n${record.optString("apps")}"); button("Stop this control session") { runtime.closeSession(record,"stopped_by_owner"); render() } }
+        heading("Approved recipients and event delivery")
+        text("Destinations are added only here. HTTPS acceptance means delivered to a service; recipient acknowledgment is a separate step. Help alerts allow five seconds to cancel and stop escalating after acknowledgment. This is not emergency dispatch.")
+        button("Add an approved HTTPS recipient") { addDestination() }
+        runtime.store.list("owner","destination").forEach { d ->
+            text("${d.optString("name")} • ${if(d.optBoolean("enabled")) "Enabled" else "Revoked"}\n${d.optString("url")}")
+            if(d.optBoolean("enabled")) {
+                button("Copy ${d.optString("name")}'s verification secret") { sensitiveCopy("Bridgit callback verification",d.getString("secret")) }
+                chosenAgent?.let { agent -> button("Send this agent's scoped events to ${d.optString("name")}") { runtime.delivery.subscribe(agent,d.getString("id")); Toast.makeText(this,"Event delivery enabled",Toast.LENGTH_SHORT).show() } }
+                button("Revoke this recipient") { runtime.delivery.revoke(d.getString("id")); render() }
+            }
+        }
+        chosenAgent?.let { agent -> button("Stop this agent's event callbacks") { runtime.store.setting("callback:$agent","",true) } }
+        runtime.store.list(kind="alert").forEach { alert -> text("Help alert • ${alert.optString("status")} • ${alert.optString("acknowledged_by")}"); if(alert.optString("status") in setOf("queued","delivered","escalated")) button("Cancel this help alert") { runtime.delivery.cancel(alert.getString("agent_id"),alert.getString("id")); render() } }
+        if(BuildConfig.PRIVATE_CONTROL) {
+            val policy=getSystemService(android.app.admin.DevicePolicyManager::class.java)
+            text("Managed kiosk available: ${policy.isLockTaskPermitted(packageName)}. Device-owner provisioning is a separate explicit setup; no device reset is performed by BRIDGIT.")
+            if(policy.isLockTaskPermitted(packageName)) button("Start approved managed kiosk") { startLockTask() }
+            if(getSystemService(ActivityManager::class.java).lockTaskModeState!=ActivityManager.LOCK_TASK_MODE_NONE) button("Exit managed kiosk") { stopLockTask() }
+        }
         heading("Local appliances and workflows")
         text("Native templates only. Interval checks run with the listener; Android maintenance checks may be deferred. No emergency response or continuous availability is promised.")
         runtime.store.list(kind="workflow").forEach { record ->
@@ -113,13 +129,19 @@ class ControlCenterActivity:AppCompatActivity() {
             val id=stream.getString("id"); text(runtime.monitor.status(stream.getString("agent_id"),id).toString(2))
             if(stream.optString("status")=="active") {
                 button("Stop this camera session") { runtime.monitor.stop(stream.getString("agent_id"),id); render() }
-                button("Issue a viewer credential") { val token=runtime.monitor.issueViewer(stream.getString("agent_id"),id); AlertDialog.Builder(this).setTitle("Viewer credential — shown once").setMessage("Read-only for this stream. Store securely.\n\n$token\n\n/v2/viewer/streams/$id").setPositiveButton("Copy") { _,_-> getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Bridgit viewer",token)) }.setNegativeButton("Close",null).show() }
+                button("Issue a viewer credential") { val token=runtime.monitor.issueViewer(stream.getString("agent_id"),id); val dialog=AlertDialog.Builder(this).setTitle("Viewer credential — shown once").setMessage("Read-only for this stream. Store securely.\n\n$token\n\n/v2/viewer/streams/$id").setPositiveButton("Copy") { _,_-> sensitiveCopy("Bridgit viewer",token) }.setNegativeButton("Close",null).create(); dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE); dialog.show() }
                 button("Revoke viewer credential") { runtime.monitor.revokeViewer(id) }
             }
         }
         heading("Files and notices")
+        runtime.store.list(kind="file").forEach { file -> button("Remove local file: ${file.optString("name")}") { runtime.files.remove(file.getString("agent_id"),file.getString("id")); render() } }
         runtime.store.list(kind="file").forEach { record -> button("Open ${record.optString("name")}") { val agent=record.getString("agent_id"); val id=record.getString("id"); val uri=androidx.core.content.FileProvider.getUriForFile(this,"$packageName.files",runtime.files.file(agent,id)); startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri,record.getString("mime")).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)); runtime.store.emit(agent,"file.opened",id) } }
         runtime.store.list(kind="interaction").filter { it.optString("status")=="delivered" }.take(20).forEach { r -> text("${r.optJSONObject("identity")?.optString("name")}: ${r.optString("title")}\n${r.optString("text")}") }
+        button("Remove completed platform history") {
+            AlertDialog.Builder(this).setTitle("Remove completed history?").setMessage("Removes completed operation bodies, answered questions, notes and feedback from this local platform store. Idempotency tombstones remain, so old requests cannot be replayed. Original gallery media and active workflows are preserved.").setPositiveButton("Remove") { _,_->
+                runtime.store.list(limit=1000).filter { (it.optString("kind")=="operation" && it.optString("status") in setOf("completed","failed","cancelled","expired","unknown_outcome")) || (it.optString("kind")=="interaction" && it.optString("status")!="pending") || it.optString("kind") in setOf("note","feedback") }.forEach { runtime.store.delete(it.getString("id"),it.getString("agent_id")) }; render()
+            }.setNegativeButton("Cancel",null).show()
+        }
         heading("Recent operations")
         runtime.store.list(kind="operation").take(20).forEach { record -> text("${record.optString("command")} • ${record.optString("status")}\n${record.optString("message")}"); if(record.optString("status") in listOf("accepted","running","awaiting_owner")) button("Cancel this operation") { runtime.cancelOperation(record.getString("agent_id"),record.getString("id")); render() } }
         text("Build readiness and blockers are also available through /v2/capabilities. Agent artwork is self-supplied, not a verified identity badge.")
@@ -128,7 +150,7 @@ class ControlCenterActivity:AppCompatActivity() {
     private fun review(record:JSONObject) {
         val agent=record.optJSONObject("identity") ?: AgentBranding.json(runtime.getAgent(record.getString("agent_id")))
         val box=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(24,16,24,16) }; identityJson(agent,box)
-        val body=when(record.getString("kind")) { "operation" -> record.getJSONObject("input").toString(2); "session" -> "Purpose: ${record.optString("purpose")}\nApps: ${record.optString("apps")}\nDuration: ${record.optInt("duration_seconds")} seconds\nEvery action still requires review."; "workflow" -> record.getJSONObject("definition").toString(2); else -> record.optString("text") }
+        val body=when(record.getString("kind")) { "operation" -> (record.optJSONObject("review_context")?.toString(2)?.plus("\n\n") ?: "")+record.getJSONObject("input").toString(2); "session" -> "Purpose: ${record.optString("purpose")}\nApps: ${record.optString("apps")}\nDuration: ${record.optInt("duration_seconds")} seconds\nEvery action still requires review."; "workflow" -> record.getJSONObject("definition").toString(2); else -> record.optString("text") }
         box.addView(TextView(this).apply { text=body; textSize=15f; setTextIsSelectable(true) })
         if(record.optString("kind")=="interaction") {
             val edit=EditText(this).apply { hint="Your answer" }; box.addView(edit)
@@ -144,8 +166,8 @@ class ControlCenterActivity:AppCompatActivity() {
                     "session" -> { runtime.approveSession(record.getString("id")); val pkg=record.strings("apps").first(); packageManager.getLaunchIntentForPackage(pkg)?.let { startActivity(it) } }
                     "workflow" -> runtime.workflows.activate(record.getString("id"))
                     else -> {
-                        if(record.optString("command")=="ui.action") {
-                            val input=record.getJSONObject("input"); val session=runtime.session(record.getString("agent_id"),input.text("session_id")); packageManager.getLaunchIntentForPackage(session.strings("apps").first())?.let { startActivity(it) }
+                        if(record.optString("command") in setOf("ui.action","ui.sequence")) {
+                            val input=record.getJSONObject("input"); val session=runtime.session(record.getString("agent_id"),input.text("session_id")); packageManager.getLaunchIntentForPackage(record.optJSONObject("review_context")?.optString("package")?.takeIf { it.isNotBlank() } ?: session.strings("apps").first())?.let { startActivity(it) }
                             handler.postDelayed({ safely { runtime.approveOperation(record.getString("id")) } },1200)
                         } else runtime.approveOperation(record.getString("id"))
                     }
@@ -165,6 +187,27 @@ class ControlCenterActivity:AppCompatActivity() {
         AgentBranding.bitmap(agent.optString("wordmark_base64").takeIf { it.isNotBlank() && it!="null" })?.let { bitmap -> box.addView(ImageView(this).apply { setImageBitmap(bitmap); adjustViewBounds=true; contentDescription="${agent.optString("name")} wordmark" },LinearLayout.LayoutParams(-1,72)) }
     }
     private fun input(title:String,value:String,save:(String)->Unit) { val field=EditText(this).apply { setText(value) }; AlertDialog.Builder(this).setTitle(title).setView(field).setPositiveButton("Save") { _,_-> safely { save(field.text.toString()) } }.setNegativeButton("Cancel",null).show() }
+    private fun chooseNotificationApps(agent:String) {
+        val intent=Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val apps=packageManager.queryIntentActivities(intent,0).distinctBy { it.activityInfo.packageName }.sortedBy { it.loadLabel(packageManager).toString().lowercase() }
+        val selected=runtime.store.setting("notification_apps:$agent").split(',').filter { it.isNotBlank() }.toMutableSet()
+        val checked=BooleanArray(apps.size) { apps[it].activityInfo.packageName in selected }
+        AlertDialog.Builder(this).setTitle("Notifications this agent may read").setMultiChoiceItems(apps.map { it.loadLabel(packageManager).toString() }.toTypedArray(),checked) { _,index,on -> if(on) selected.add(apps[index].activityInfo.packageName) else selected.remove(apps[index].activityInfo.packageName) }
+            .setPositiveButton("Save") { _,_-> safely { if(selected.size>20) throw ApiError(422,"app_limit","Select at most twenty apps"); runtime.store.setting("notification_apps:$agent",selected.joinToString(","),true) } }.setNegativeButton("Cancel",null).show()
+    }
+    private fun sensitiveCopy(label:String,value:String) {
+        val clip=ClipData.newPlainText(label,value)
+        clip.description.extras=PersistableBundle().apply { putBoolean(android.content.ClipDescription.EXTRA_IS_SENSITIVE,true) }
+        getSystemService(ClipboardManager::class.java).setPrimaryClip(clip)
+        Toast.makeText(this,"Copied — store securely",Toast.LENGTH_SHORT).show()
+    }
+    private fun addDestination() {
+        val box=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL; setPadding(24,12,24,12) }
+        val name=EditText(this).apply { hint="Recipient or service name" }; val url=EditText(this).apply { hint="https://recipient.example/bridgit" }
+        val privateNetwork=CheckBox(this).apply { text="Allow this exact destination on my private network" }
+        box.addView(name); box.addView(url); box.addView(privateNetwork)
+        AlertDialog.Builder(this).setTitle("Approve a destination").setMessage("Only this HTTPS address receives signed events. Its service must deduplicate event IDs and verify signatures, timestamps and nonces.").setView(box).setPositiveButton("Approve") { _,_-> safely { runtime.delivery.destination(name.text.toString(),url.text.toString(),privateNetwork.isChecked); render() } }.setNegativeButton("Cancel",null).show()
+    }
     private fun grantUsb() {
         val manager=getSystemService(UsbManager::class.java); val devices=manager.deviceList.values.toList()
         if(devices.isEmpty()) throw ApiError(409,"no_usb_device","Connect a USB device first")

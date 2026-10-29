@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Agents list, Agent detail, Add agent and Pair with code (UI-12 … UI-14, section 6). -->
+<resources>
+    <!-- Agents list (ui-spec 5.3) -->
+    <string name="agents_title">Agents</string>
+    <string name="agents_add">Add agent</string>
+    <string name="agents_empty_title">No agents yet</string>
+    <string name="agents_empty_body">Each AI agent gets its own key. Add one and paste the setup prompt into it.</string>
+    <string name="agents_full">Bridgit holds up to 16 agents. Remove one to add another.</string>
+    <string name="agents_developer">Developer</string>
+    <string name="agents_line2">last used %1$s · %2$d today</string>
+    <string name="agents_not_used">Not used yet · %1$d today</string>
+    <string name="agents_key_rotated">Key rotated · waiting for new prompt</string>
+    <string name="agents_active">Active</string>
+    <string name="agents_idle">Idle</string>
+    <string name="agents_card_desc">%1$s, %2$s, %3$s, %4$d requests today, %5$s</string>
+    <string name="agents_card_desc_rotated">%1$s, %2$s, key rotated, waiting for new prompt, %3$s</string>
+    <string name="agents_model_unknown">Model not reported</string>
+    <string name="agents_model_via">%1$s · via %2$s</string>
+    <string name="agents_card_desc_dev">, developer</string>
+    <string name="agents_desc_last_used">last used %1$s</string>
+    <string name="agents_desc_not_used">not used yet</string>
+    <string name="agents_key_desc">Key starts with %1$s</string>
+
+    <!-- Add agent (ui-spec 5.4) -->
+    <string name="addagent_title">Add agent</string>
+    <string name="addagent_title_named">Add %1$s</string>
+    <string name="addagent_close">Close</string>
+    <string name="addagent_step_name">Name</string>
+    <string name="addagent_step_connection">Connection</string>
+    <string name="addagent_step_check">Check</string>
+    <string name="addagent_step_prompt">Setup prompt</string>
+    <string name="addagent_progress_desc">Step %1$d of 4: %2$s</string>
+    <string name="addagent_back">Back</string>
+    <string name="addagent_next">Next</string>
+    <string name="addagent_continue_anyway">Continue anyway</string>
+
+    <string name="addagent_name_heading">What do you call this agent?</string>
+    <string name="addagent_name_label">Name</string>
+    <string name="addagent_name_helper">Letters, numbers, spaces, - and _. Up to 24.</string>
+
+    <string name="addagent_conn_heading">How does %1$s reach this phone?</string>
+    <string name="addagent_conn_direct">Tailscale (direct)</string>
+    <string name="addagent_conn_direct_desc">The agent\'s computer is on your Tailscale network.</string>
+    <string name="addagent_conn_userspace">Tailscale, userspace host</string>
+    <string name="addagent_conn_userspace_desc">The agent runs on a server where Tailscale can\'t route normally, like Grok\'s box.</string>
+    <string name="addagent_conn_position">%1$d of %2$d</string>
+
+    <string name="addagent_check_heading">Checking that %1$s can reach this phone</string>
+    <string name="addagent_check_listener">Listener running</string>
+    <string name="addagent_check_tailscale">Tailscale address (%1$s)</string>
+    <string name="addagent_check_tailscale_none">Tailscale address</string>
+    <string name="addagent_check_port">Reachable on port %1$d</string>
+    <string name="addagent_check_listener_fail">The listener isn\'t running.</string>
+    <string name="addagent_check_tailscale_fail">The phone has no Tailscale address. Open Tailscale and connect.</string>
+    <string name="addagent_check_port_fail">Couldn\'t confirm from the phone itself; it may still work from the agent</string>
+    <string name="addagent_check_port_blocked">Waiting for the Tailscale address first.</string>
+    <string name="addagent_fix">Fix</string>
+    <string name="addagent_state_pending">checking</string>
+    <string name="addagent_state_ok">passed</string>
+    <string name="addagent_state_fail">failed</string>
+    <string name="addagent_state_warn">warning</string>
+    <string name="addagent_no_tailscale_app">Tailscale isn\'t installed on this phone.</string>
+
+    <string name="addagent_prompt_intro">Paste this into %1$s. It tells %1$s how to reach this phone and holds %1$s\'s key.</string>
+    <string name="addagent_prompt_warning">Anyone who gets this text can use your phone until you rotate the key.</string>
+    <string name="addagent_prompt_risk">Pasting it into a hosted AI service is your call; you can rotate the key any time from the agent\'s page.</string>
+    <string name="addagent_prompt_card_desc">Setup prompt</string>
+    <string name="addagent_copy_prompt">Copy prompt</string>
+    <string name="addagent_share">Share</string>
+    <string name="addagent_qr">Show QR code</string>
+    <string name="addagent_copy_key">Copy key only</string>
+    <string name="addagent_pair">Pair with code</string>
+    <string name="addagent_copied">Copied. Paste it into %1$s. Bridgit clears it the next time you open the app.</string>
+    <string name="addagent_share_title">Send the setup prompt</string>
+    <string name="addagent_qr_caption">Scan with the agent\'s phone app. Holds the address and key only.</string>
+    <string name="addagent_qr_desc">QR code with %1$s\'s address and key</string>
+
+    <string name="addagent_waiting">Waiting for %1$s\'s first call…</string>
+    <string name="addagent_waiting_sub">This switches to \'connected\' by itself.</string>
+    <string name="addagent_connected">%1$s connected</string>
+    <string name="addagent_no_call">No call yet. Check that the agent\'s computer is on Tailscale, or show the troubleshooting steps.</string>
+    <string name="addagent_troubleshooting">Troubleshooting</string>
+    <string name="addagent_trouble_direct">1. On the agent\'s computer, check Tailscale is connected and signed in to the same account as this phone.\n2. Check this phone\'s Tailscale app is on.\n3. Ask the agent to run its health check again: curl -s -m 30 -H @$HOME/.config/bridget/header %1$s/health\n4. A 401 means the key is wrong: paste the prompt again or rotate the key.\n5. A timeout means the network path is blocked: try the userspace option instead.</string>
+    <string name="addagent_trouble_userspace">1. On the agent\'s host, check tailscaled is running and signed in to the same account as this phone.\n2. Check this phone\'s Tailscale app is on.\n3. Check ~/bin/bridget exists and is executable, and ~/.config/bridget/env has BRIDGET_HOST, BRIDGET_PORT and BRIDGET_KEY.\n4. Ask the agent to run: ~/bin/bridget GET /v1/health\n5. A 401 means the key is wrong: paste the prompt again or rotate the key.</string>
+    <string name="addagent_done">Done</string>
+
+    <string name="addagent_leave_title">You won\'t see this key again</string>
+    <string name="addagent_leave_body">Copied it?</string>
+    <string name="addagent_leave_copy">Copy and leave</string>
+    <string name="addagent_leave_stay">Stay</string>
+    <string name="addagent_leave">Leave</string>
+
+    <string name="addagent_resumed">Picked up where you left off. The key is still here for %1$d more minutes.</string>
+    <string name="addagent_key_gone">This key can\'t be shown again. Rotate the key to get a new prompt.</string>
+    <string name="addagent_rotate">Rotate key</string>
+    <string name="addagent_added_log">You added %1$s</string>
+
+    <!-- Pair with code (AGT-13) -->
+    <string name="pair_title">Pair with code</string>
+    <string name="pair_instruction">Ask the agent to call POST /v1/pair with this code.</string>
+    <string name="pair_expires">Expires in %1$s</string>
+    <string name="pair_expired">Code expired</string>
+    <string name="pair_new_code">New code</string>
+    <string name="pair_rotate_needed">The key isn\'t held any more, so a new code can\'t be made. Rotate the key from the agent\'s page to pair again.</string>
+    <string name="pair_redeemed">%1$s fetched its key.</string>
+    <string name="pair_too_many">Too many wrong codes. Start again.</string>
+    <string name="pair_code_desc">Pairing code %1$s</string>
+
+    <!-- Agent detail (ui-spec 5.5) -->
+    <string name="agents_back">Back</string>
+    <string name="agents_rename">Rename</string>
+    <string name="agents_rename_title">Rename %1$s</string>
+    <string name="agents_save">Save</string>
+    <string name="agents_renamed_log">You renamed %1$s to %2$s</string>
+    <string name="agents_added_line">Added %1$s · last used %2$s from</string>
+    <string name="agents_added_line_never">Added %1$s · not used yet</string>
+    <string name="agents_stat_requests">requests today</string>
+    <string name="agents_stat_errors">errors today</string>
+    <string name="agents_stat_sent">sent today</string>
+    <string name="agents_section_key">Key</string>
+    <string name="agents_rotate">Rotate key</string>
+    <string name="agents_rotate_body">Rotate %1$s\'s key? The old key stops working right away. You\'ll get a new setup prompt to paste into %1$s.</string>
+    <string name="agents_rotate_confirm">Rotate</string>
+    <string name="agents_rotated_log">You rotated %1$s\'s key</string>
+    <string name="agents_section_developer">Developer</string>
+    <string name="agents_developer_switch">Developer - can read bug reports and their screenshots</string>
+    <string name="agents_developer_hint">Developer agents can read your reports in More → My reports and mark them fixed.</string>
+    <string name="agents_developer_on_log">You made %1$s a developer agent</string>
+    <string name="agents_developer_off_log">%1$s is no longer a developer agent</string>
+    <string name="agents_section_notes">Notes</string>
+    <string name="agents_notes_hint">Notes</string>
+    <string name="agents_section_activity">Recent activity</string>
+    <string name="agents_see_all">See all</string>
+    <string name="agents_no_calls">%1$s hasn\'t made any calls yet.</string>
+    <string name="agents_section_permissions">Permissions</string>
+    <string name="agents_permissions_later">Coming later: choose what each agent can do. Today all agents share the switches in Features.</string>
+    <string name="agents_remove">Remove agent</string>
+    <string name="agents_remove_body">Remove %1$s? Its key stops working. %1$s will be told the agent was removed.</string>
+    <string name="agents_remove_last">Bridgit will stop listening until you add another agent.</string>
+    <string name="agents_remove_confirm">Remove</string>
+    <string name="agents_removed_log">You removed %1$s</string>
+</resources>

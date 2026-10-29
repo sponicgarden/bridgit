@@ -4,9 +4,15 @@ import android.Manifest
 import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
+import android.net.ConnectivityManager
+import android.net.LinkProperties
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -14,188 +20,297 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.net.Inet4Address
+import kotlinx.coroutines.withTimeoutOrNull
+import net.finleg.bridget.api.ApiServer
+import net.finleg.bridget.capability.CameraCapture
+import net.finleg.bridget.capability.MicCapture
+import net.finleg.bridget.capability.granted
+import net.finleg.bridget.core.Net
+import net.finleg.bridget.ui.MainActivity
+import java.net.InetAddress
 import java.net.NetworkInterface
 
 /**
- * Bridgit's always-on listener. One long-lived foreground service that both runs the
- * HTTP listener and owns camera/microphone access. It must be started by a tap
- * while the app is on screen: Android only grants camera/microphone access to a
- * foreground service that started while the app was visible.
+ * Bridgit's always-on listener (ARC-02): one foreground service that runs the
+ * HTTP listener and owns camera and microphone access. Camera and microphone
+ * types can only be added while the app is visible; a start from the background
+ * (boot, or Android restarting us) uses specialUse only (ARC-02b, ARC-03).
  */
 class BridgeService : LifecycleService() {
     private val app get() = application as BridgeApp
+    val cameraReady get() = app.listener.value.cameraReady
+    val micReady get() = app.listener.value.micReady
+    val locationReady get() = !app.listener.value.startedInBackground
+    val bindAddress get() = app.listener.value.boundTo.firstOrNull()
+    private var platformTick: Job? = null
     private var server: ApiServer? = null
-    private var boundTo: String? = null
+    private var boundTo: List<String> = emptyList()
     private var watcher: Job? = null
-    var startedAt = System.currentTimeMillis(); private set
-    @Volatile var cameraReady = false; private set
-    @Volatile var micReady = false; private set
-    @Volatile var locationReady = false; private set
+    private val recheck = Channel<String>(Channel.CONFLATED)
+    private var netCallback: ConnectivityManager.NetworkCallback? = null
     @Volatile private var captureNote: String? = null
-    @Volatile var captureAgentId: String? = null; private set
+    val camera by lazy { CameraCapture(this, this) }
+    val mic by lazy { MicCapture(this) }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         super.onStartCommand(intent, flags, startId)
-        if (intent?.action == ACTION_STOP) {
-            app.policy.listenerEnabled = false
-            app.audit.event("listener", "stopped from notification")
-            stopEverything()
-            return START_NOT_STICKY
+        when (intent?.action) {
+            ACTION_PAUSE -> {
+                app.settings.listenerEnabled = false
+                if (!intent.getBooleanExtra(EXTRA_SILENT, false))
+                    app.log.system("audit", "setting", "You paused the listener from the notification")
+                stopEverything(); return START_NOT_STICKY
+            }
         }
-        if (!app.policy.listenerEnabled) { stopEverything(); return START_NOT_STICKY }
-        if (!promote()) return START_NOT_STICKY
+        if (!app.settings.listenerEnabled) { stopEverything(); return START_NOT_STICKY }
+        // A null intent means Android restarted us in the background (START_STICKY).
+        val background = intent == null || intent.getBooleanExtra(EXTRA_BACKGROUND, false)
+        // A background start (boot, update, restart) never downgrades a service that is
+        // already running with camera/mic types from a visible start.
+        if (background && watcher != null) return START_STICKY
+        if (!promote(background)) return START_NOT_STICKY
         if (watcher == null) {
-            startedAt = System.currentTimeMillis()
+            app.updateListener { it.copy(running = true, startedAt = System.currentTimeMillis(), port = app.settings.port) }
+            app.log.system("diagnostic", "service", if (background) "Listener started in the background (camera and mic need the app opened once)" else "Listener started")
             watcher = lifecycleScope.launch(Dispatchers.IO) { watchTailscale() }
+            registerNetworkCallback()
         }
+        if(platformTick==null) platformTick=lifecycleScope.launch(Dispatchers.IO) { while(isActive) { runCatching { app.platform.workflows.tick(); app.platform.delivery.tick() }; delay(1000) } }
         running = this
         return START_STICKY
     }
 
-    /** (Re)enters the foreground with every type whose permission is held. */
-    private fun promote(): Boolean {
-        val wantCamera = granted(Manifest.permission.CAMERA)
-        val wantMic = granted(Manifest.permission.RECORD_AUDIO)
-        val wantLocation = granted(Manifest.permission.ACCESS_COARSE_LOCATION)
+    /**
+     * Enters the foreground. From a visible start: every type whose permission is held.
+     * From a background start: specialUse only, since Android refuses camera/mic there.
+     */
+    private fun promote(background: Boolean): Boolean {
+        val wantCamera = !background && granted(Manifest.permission.CAMERA)
+        val wantMic = !background && granted(Manifest.permission.RECORD_AUDIO)
         var types = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
         if (wantCamera) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
         if (wantMic) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-        if (wantLocation) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
-        try {
-            ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(), types)
-            cameraReady = wantCamera; micReady = wantMic; locationReady = wantLocation
-            return true
-        } catch (e: Exception) {
-            Log.w(TAG, "camera/mic foreground start refused, falling back", e)
+        // Location (8.8, City tour) needs the type while in use; playback needs mediaPlayback (SPK-03).
+        if (!background && (granted(Manifest.permission.ACCESS_FINE_LOCATION) || granted(Manifest.permission.ACCESS_COARSE_LOCATION)))
+            types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
+        if (!background) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
+        if (types != ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) {
+            try {
+                ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(), types)
+                app.updateListener { it.copy(cameraReady = wantCamera, micReady = wantMic, startedInBackground = false) }
+                return true
+            } catch (e: Exception) {
+                Log.w(TAG, "camera/mic foreground start refused, falling back", e)
+                app.log.system("diagnostic", "service", "Android refused camera/mic for the listener: ${e.javaClass.simpleName}", level = "warn")
+            }
         }
-        // Started from the background (for example a system restart): Android
-        // refuses camera/mic types. Keep the listener up without them.
         return try {
-            ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(),
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-            cameraReady = false; micReady = false; locationReady = false
-            app.audit.event("listener", "started without camera/mic access; open the app once to restore")
+            ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            app.updateListener { it.copy(cameraReady = false, micReady = false, startedInBackground = true) }
             true
         } catch (e: Exception) {
             Log.e(TAG, "foreground start refused", e)
-            app.audit.event("listener", "Android refused to start the listener: ${e.javaClass.simpleName}")
+            app.log.system("diagnostic", "service", "Android refused to start the listener: ${e.javaClass.simpleName}", level = "error")
             stopSelf()
             false
         }
     }
 
-    /** Binds to the Tailscale address and rebinds when it changes. Never binds elsewhere. */
+    /**
+     * Binds to the Tailscale addresses and rebinds when they change (ARC-04, ARC-04a).
+     * Wakes on network callbacks; a safety re-check runs every 5 minutes.
+     */
     private suspend fun watchTailscale() {
+        recheck.trySend("start")
         while (lifecycleScope.isActive) {
-            val addr = tailscaleAddress()
-            if (addr != boundTo) {
-                server?.stop(); server = null; boundTo = null
-                if (addr != null) {
+            val why = withTimeoutOrNull(RECHECK_MS) { recheck.receive() } ?: "periodic"
+            server?.maintenance()
+            if (why != "start" && why != "periodic") delay(1500) // let the VPN settle after a change
+            val addrs = tailscaleAddresses()
+            val port = app.settings.port
+            if (addrs != boundTo || (server != null && server!!.port != port)) {
+                server?.stop(); server = null; boundTo = emptyList()
+                if (addrs.isNotEmpty()) {
                     try {
-                        ApiServer(this, addr, app.policy.port).also { it.start(); server = it }
-                        boundTo = addr
-                        app.audit.event("listener", "listening on $addr:${app.policy.port}")
+                        ApiServer(this, addrs, port).also { it.start(); server = it }
+                        boundTo = addrs
+                        val name = reverseName(addrs.first { !Net.isIpv6(it) || addrs.size == 1 })
+                        app.updateListener { it.copy(boundTo = addrs, port = port, magicDns = name, bindError = null) }
+                        app.log.system("diagnostic", "service", "Listening on ${addrs.joinToString()} port $port ($why)")
                     } catch (e: Exception) {
                         Log.e(TAG, "bind failed", e)
-                        app.audit.event("listener", "could not bind $addr: ${e.message}")
+                        app.updateListener { it.copy(boundTo = emptyList(), bindError = "${e.javaClass.simpleName}: ${e.message}") }
+                        app.log.system("diagnostic", "service", "Could not listen on port $port: ${e.message}", level = "error")
                     }
                 } else {
-                    app.audit.event("listener", "Tailscale address gone; listener down")
+                    app.updateListener { it.copy(boundTo = emptyList(), magicDns = null) }
+                    app.log.system("diagnostic", "service", "Tailscale address gone; listener down ($why)", level = "warn")
                 }
                 refreshNotification()
-                notifyUi()
             }
-            runCatching { app.platform.workflows.tick(); app.platform.delivery.tick() }
-            delay(1_000)
         }
     }
 
-    fun showCapture(note: String?, agentId: String? = null) {
-        captureAgentId = agentId
+    private fun registerNetworkCallback() {
+        val cm = getSystemService(ConnectivityManager::class.java)
+        val cb = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) { recheck.trySend("vpn available") }
+            override fun onLinkPropertiesChanged(network: Network, lp: LinkProperties) { recheck.trySend("vpn changed") }
+            override fun onLost(network: Network) { recheck.trySend("vpn lost") }
+        }
+        val req = NetworkRequest.Builder().addTransportType(NetworkCapabilities.TRANSPORT_VPN)
+            .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN).build()
+        runCatching { cm.registerNetworkCallback(req, cb); netCallback = cb }
+            .onFailure { app.log.system("diagnostic", "service", "Network callback unavailable: ${it.message}", level = "warn") }
+    }
+
+    /** Asks for a re-check now (the port changed, or the UI wants a fresh state). */
+    fun poke(reason: String) { recheck.trySend(reason) }
+
+    private val activeCaptures = LinkedHashMap<Long, String>()
+    private var nextCapture = 0L
+
+    /** A capture began; the notification names it until [captureEnded]. Camera and mic can overlap. */
+    @Synchronized
+    fun captureStarted(note: String): Long {
+        val t = ++nextCapture
+        activeCaptures[t] = note
+        showCaptures()
+        return t
+    }
+
+    @Synchronized
+    fun captureEnded(token: Long) {
+        activeCaptures.remove(token)
+        showCaptures()
+    }
+
+    private fun showCaptures() {
+        val note = activeCaptures.values.lastOrNull()
         captureNote = note
+        app.updateListener { it.copy(capturing = note) }
         refreshNotification()
-        notifyUi()
     }
 
-    fun profileChanged() {
-        refreshNotification()
-        notifyUi()
-    }
-
-    fun onPaired(agent: String) {
-        app.audit.event("pairing", "$agent fetched its token")
-        notifyUi()
-    }
-
-    private fun refreshNotification() {
+    fun refreshNotification() {
+        if (running !== this) return
         getSystemService(NotificationManager::class.java).notify(NOTIF_ID, buildNotification())
     }
 
     private fun buildNotification(): Notification {
-        val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java),
+        val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_IMMUTABLE)
+        val pause = PendingIntent.getService(this, 1, Intent(this, BridgeService::class.java).setAction(ACTION_PAUSE),
             PendingIntent.FLAG_IMMUTABLE)
-        val stop = PendingIntent.getService(this, 1, Intent(this, BridgeService::class.java).setAction(ACTION_STOP),
-            PendingIntent.FLAG_IMMUTABLE)
-        val text = captureNote ?: boundTo?.let { "Listening on Tailscale $it:${app.policy.port}" }
-            ?: "Waiting for Tailscale - not reachable"
-        val agent = app.policy.agents().firstOrNull { it.id == captureAgentId }
-        return NotificationCompat.Builder(this, if (captureNote != null) BridgeApp.CAPTURE_CHANNEL else BridgeApp.CHANNEL)
+        val s = app.listener.value
+        val title = when {
+            captureNote != null -> captureNote!!
+            boundTo.isEmpty() -> getString(R.string.notif_waiting_tailscale)
+            else -> getString(R.string.notif_listening)
+        }
+        val last = app.agents.all().maxByOrNull { it.lastUsedAt }?.takeIf { it.lastUsedAt > 0 }
+        val text = when {
+            captureNote != null -> getString(R.string.notif_capture_sub)
+            boundTo.isEmpty() -> getString(R.string.notif_not_reachable)
+            last != null -> getString(R.string.notif_last_request, last.name,
+                android.text.format.DateUtils.getRelativeTimeSpanString(last.lastUsedAt).toString())
+            else -> "${s.magicDns ?: boundTo.first()}:${app.settings.port}"
+        }
+        return NotificationCompat.Builder(this, if (captureNote != null) BridgeApp.CHANNEL_CAPTURE else BridgeApp.CHANNEL_LISTENER)
             .setSmallIcon(R.drawable.ic_notif)
-            .setContentTitle(if (captureNote != null) "BRIDGIT - capturing" else "BRIDGIT Device Manager")
+            .setColor(getColor(R.color.brand_primary))
+            .setContentTitle(title)
             .setContentText(text)
-            .setLargeIcon(AgentBranding.bitmap(agent?.iconBase64))
             .setOngoing(true)
             .setOnlyAlertOnce(captureNote == null)
             .setContentIntent(open)
-            .addAction(0, "Stop listener", stop)
+            .addAction(0, getString(R.string.action_pause), pause)
+            .addAction(0, getString(R.string.action_open), open)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
     }
 
     private fun stopEverything() {
-        app.platform.stopAll()
+        app.platform.stopAll(); platformTick?.cancel(); platformTick=null
+        app.hardware.stop()
         watcher?.cancel(); watcher = null
-        server?.stop(); server = null; boundTo = null
-        cameraReady = false; micReady = false; locationReady = false
+        netCallback?.let { runCatching { getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(it) } }
+        netCallback = null
+        server?.stop(); server = null; boundTo = emptyList()
+        app.updateListener { BridgeApp.ListenerState() }
         if (running === this) running = null
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
-        notifyUi()
     }
 
     override fun onDestroy() {
+        app.platform.interrupt(); platformTick?.cancel(); platformTick=null
+        app.hardware.stop()
         server?.stop(); server = null
+        netCallback?.let { runCatching { getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(it) } }
+        app.agents.flush()
         if (running === this) running = null
+        app.updateListener { it.copy(running = false, boundTo = emptyList()) }
         super.onDestroy()
     }
 
-    private fun notifyUi() = sendBroadcast(Intent(ACTION_STATE).setPackage(packageName))
-
-    val bindAddress: String? get() = boundTo
+    private fun reverseName(ip: String): String? = runCatching {
+        InetAddress.getByName(ip).canonicalHostName.trimEnd('.').takeIf { it != ip && it.endsWith(".ts.net") }
+    }.getOrNull()
 
     companion object {
         private const val TAG = "BridgeService"
         const val NOTIF_ID = 1
-        const val ACTION_STOP = "net.finleg.bridget.STOP"
-        const val ACTION_STATE = "net.finleg.bridget.STATE"
+        const val ACTION_PAUSE = "net.finleg.bridget.PAUSE"
+        const val EXTRA_BACKGROUND = "background"
+        const val EXTRA_SILENT = "silent"
+        private const val RECHECK_MS = 5 * 60 * 1000L
 
         @Volatile var running: BridgeService? = null; private set
 
+        /** Start from a visible screen: camera and mic types are added if granted. */
         fun start(ctx: Context) = ctx.startForegroundService(Intent(ctx, BridgeService::class.java))
-        fun stop(ctx: Context) = ctx.startService(Intent(ctx, BridgeService::class.java).setAction(ACTION_STOP))
 
-        /** The phone's Tailscale IPv4 (100.64.0.0/10), or null if Tailscale is down. */
-        fun tailscaleAddress(): String? = runCatching {
+        /** Start from the background (boot): specialUse only (ARC-02b). */
+        fun startInBackground(ctx: Context) =
+            ctx.startForegroundService(Intent(ctx, BridgeService::class.java).putExtra(EXTRA_BACKGROUND, true))
+
+        fun stop(ctx: Context) = pause(ctx)
+        fun tailscaleAddress(): String? = tailscaleAddresses().firstOrNull()
+        fun pause(ctx: Context) = ctx.startService(Intent(ctx, BridgeService::class.java).setAction(ACTION_PAUSE))
+
+        /** Stops the listener without the "paused from the notification" log line; the caller logs its own reason. */
+        fun pauseSilently(ctx: Context) =
+            ctx.startService(Intent(ctx, BridgeService::class.java).setAction(ACTION_PAUSE).putExtra(EXTRA_SILENT, true))
+
+        /** The phone's Tailscale addresses: IPv4 in 100.64.0.0/10 and, if present, IPv6 in fd7a:115c:a1e0::/48. */
+        fun tailscaleAddresses(): List<String> = runCatching {
             NetworkInterface.getNetworkInterfaces().toList()
                 .filter { it.isUp }
                 .flatMap { it.inetAddresses.toList() }
-                .filterIsInstance<Inet4Address>()
-                .map { it.hostAddress!! }
-                .firstOrNull { ApiServer.isTailnet(it) }
-        }.getOrNull()
+                .map { it.hostAddress!!.substringBefore('%') }
+                .filter { Net.isTailnet(it) }
+                .sortedBy { if (Net.isIpv6(it)) 1 else 0 }
+        }.getOrDefault(emptyList())
+    }
+}
+
+/**
+ * ARC-02b: after a reboot, start the listener with specialUse only. Android sends
+ * BOOT_COMPLETED only after the first unlock, so Bridgit comes back at the first
+ * unlock, not before.
+ */
+class BootReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != Intent.ACTION_BOOT_COMPLETED && intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
+        val app = context.applicationContext as BridgeApp
+        if (!app.settings.listenerEnabled || app.agents.count == 0) return
+        app.log.system("diagnostic", "service", "Starting after ${if (intent.action == Intent.ACTION_BOOT_COMPLETED) "reboot" else "update"}")
+        runCatching { BridgeService.startInBackground(context) }
+            .onFailure { app.log.system("diagnostic", "service", "Boot start refused: ${it.javaClass.simpleName}", level = "error") }
     }
 }

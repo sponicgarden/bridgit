@@ -34,6 +34,9 @@ class DeviceTools(private val app:BridgeApp) {
     private val runtime get()=app.platform
     val peripherals=PeripheralTools(app)
     private var tts:TextToSpeech?=null
+    private val timedEffects=java.util.concurrent.ConcurrentHashMap<String,Job>()
+    @Volatile private var torchLease:String?=null
+    fun stopAgent(agent:String) { timedEffects.entries.filter { it.key.startsWith("$agent:") }.forEach { it.value.cancel() } }
     fun stopAudio() { tts?.stop(); tts?.shutdown(); tts=null }
     suspend fun read(agent:String,name:String,args:JSONObject):JSONObject = when(name) {
         "phone.status","phone.context","diagnostics" -> status().apply { if(name=="diagnostics") put("capabilities",Capabilities.describe(app,runtime.getAgent(agent))) }
@@ -99,7 +102,8 @@ class DeviceTools(private val app:BridgeApp) {
         if(data.size>4*1024*1024) throw ApiError(413,"payload_too_large","Downsize the image first")
         val bounds=BitmapFactory.Options().apply { inJustDecodeBounds=true }; BitmapFactory.decodeByteArray(data,0,data.size,bounds)
         if(bounds.outWidth<=0 || bounds.outHeight<=0 || bounds.outWidth.toLong()*bounds.outHeight>32_000_000) throw ApiError(422,"invalid_image","Unsupported or oversized image")
-        val bitmap=BitmapFactory.decodeByteArray(data,0,data.size) ?: throw ApiError(422,"invalid_image","Cannot decode image")
+        val prepared=net.finleg.bridget.capability.ImageUtil.prepare(data,bounds.outMimeType ?: "image/jpeg",net.finleg.bridget.api.Sizing.Spec(2048,null,90))
+        val bitmap=BitmapFactory.decodeByteArray(prepared.bytes,0,prepared.bytes.size) ?: throw ApiError(422,"invalid_image","Cannot decode image")
         try {
             if(name=="images.ocr") {
                 val recognizer=TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
@@ -136,7 +140,7 @@ class DeviceTools(private val app:BridgeApp) {
                 JSONObject().put("data_base64",Base64.encodeToString(image.bytes,Base64.NO_WRAP)).put("mime",image.mime).put("width_px",image.width).put("height_px",image.height)
             }
             "microphone.clip" -> runtime.capture(agent,"microphone.clip") { val clip=MicCapture(app).record(args.whole("duration_seconds",5,1,120)); JSONObject().put("mime","audio/mp4").put("duration_seconds",clip.durationSeconds).put("data_base64",Base64.encodeToString(clip.bytes,Base64.NO_WRAP)) }
-            "flashlight","volume","dnd","brightness","ring","media" -> phoneControl(type,args)
+            "flashlight","volume","dnd","brightness","ring","media" -> phoneControl(agent,type,args)
             "clipboard" -> withContext(Dispatchers.Main) { app.getSystemService(ClipboardManager::class.java).setPrimaryClip(ClipData.newPlainText("Agent text",args.text("text",4096))); JSONObject().put("outcome","clipboard_set") }
             "open_link","open_app","calendar_draft","message_draft","email_draft","dial","alarm","timer","contact_picker","open_file" -> launchDraft(agent,type,args)
             else -> throw ApiError(422,"unsupported_action","Unknown device action")
@@ -153,7 +157,7 @@ class DeviceTools(private val app:BridgeApp) {
         }
         tts=engine
         if(engine.setLanguage(Locale.forLanguageTag(language))<0) throw ApiError(422,"unsupported_language","Speech language data is unavailable")
-        val id=java.util.UUID.randomUUID().toString(); val accepted=engine.speak(text,TextToSpeech.QUEUE_FLUSH,Bundle(),id)==TextToSpeech.SUCCESS
+        val id=java.util.UUID.randomUUID().toString(); val accepted=engine.speak(text,TextToSpeech.QUEUE_FLUSH,Bundle().apply { putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME,app.settings.speakerCeiling/100f) },id)==TextToSpeech.SUCCESS
         return@withContext JSONObject().put("dispatched",accepted).put("utterance_id",id).put("outcome",if(accepted) "speech_queued" else "speech_failed")
     }
     suspend fun transcribe(agent:String,args:JSONObject):JSONObject = runtime.capture(agent,"speech.transcribe") {
@@ -178,15 +182,26 @@ class DeviceTools(private val app:BridgeApp) {
             } } finally { recognizer.destroy() }
         } }
     }
-    private suspend fun phoneControl(type:String,args:JSONObject):JSONObject {
+    private suspend fun phoneControl(agent:String,type:String,args:JSONObject):JSONObject {
         val sound=app.getSystemService(AudioManager::class.java); val duration=args.whole("duration_seconds",60,1,3600)
         when(type) {
             "flashlight" -> {
                 if(runtime.activeSensorAgent!=null) throw ApiError(409,"sensor_busy","Camera or microphone is already in use")
                 if(!app.granted(Manifest.permission.CAMERA)) throw ApiError(403,"permission_required","Grant Camera permission")
                 val cm=app.getSystemService(CameraManager::class.java); val id=cm.cameraIdList.firstOrNull { cm.getCameraCharacteristics(it).get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE)==true } ?: throw ApiError(409,"not_supported","No flashlight")
-                val on=args.optBoolean("on",true); cm.setTorchMode(id,on)
-                if(on) runtime.scope.launch { delay(duration*1000L); runCatching { cm.setTorchMode(id,false) } }
+                val on=args.optBoolean("on",true)
+                synchronized(timedEffects) {
+                    if(!on) { timedEffects.entries.filter { it.key.endsWith(":torch") }.forEach { it.value.cancel() }; cm.setTorchMode(id,false) }
+                    else {
+                        if(torchLease!=null) throw ApiError(409,"setting_busy","Stop the active flashlight session first")
+                        val lease=java.util.UUID.randomUUID().toString(); torchLease=lease; cm.setTorchMode(id,true)
+                        val key="$agent:torch"
+                        val job=runtime.scope.launch(start=CoroutineStart.LAZY) {
+                            try { delay(duration*1000L) } finally { if(torchLease==lease) { runCatching { cm.setTorchMode(id,false) }; torchLease=null }; timedEffects.remove(key) }
+                        }
+                        timedEffects[key]=job; job.start()
+                    }
+                }
             }
             "volume" -> {
                 val stream=when(args.text("stream",16,"media")) { "media" -> AudioManager.STREAM_MUSIC; "alarm" -> AudioManager.STREAM_ALARM; else -> throw ApiError(422,"invalid_parameter","Choose media or alarm") }
@@ -196,9 +211,14 @@ class DeviceTools(private val app:BridgeApp) {
                 val nm=app.getSystemService(NotificationManager::class.java)
                 if(!nm.isNotificationPolicyAccessGranted) throw ApiError(403,"dnd_access_required","Grant Do Not Disturb access on the phone")
                 val before=nm.currentInterruptionFilter; val desired=when(args.text("mode",16,"priority")) { "priority" -> NotificationManager.INTERRUPTION_FILTER_PRIORITY; "all" -> NotificationManager.INTERRUPTION_FILTER_ALL; else -> throw ApiError(422,"invalid_parameter","Choose priority or all") }
-                nm.setInterruptionFilter(desired)
-                val restore=runtime.store.save("owner","restore",JSONObject().put("type","dnd").put("before",before).put("desired",desired).put("at",System.currentTimeMillis()+duration*1000L))
-                runtime.scope.launch { delay(duration*1000L); restoreSettings(restore) }
+                synchronized(timedEffects) {
+                    if(timedEffects.keys.any { it.endsWith(":dnd") }) throw ApiError(409,"setting_busy","Stop the active DND session before replacing it")
+                    nm.setInterruptionFilter(desired)
+                    val restore=runtime.store.save("owner","restore",JSONObject().put("type","dnd").put("before",before).put("desired",desired).put("owner_actor",agent).put("at",System.currentTimeMillis()+duration*1000L))
+                    val key="$agent:dnd"
+                    val job=runtime.scope.launch(start=CoroutineStart.LAZY) { try { delay(duration*1000L) } finally { runCatching { restoreSettings(restore) }; timedEffects.remove(key) } }
+                    timedEffects[key]=job; job.start()
+                }
             }
             "brightness" -> {
                 if(!Settings.System.canWrite(app)) throw ApiError(403,"write_settings_required","Allow modifying system settings on the phone")

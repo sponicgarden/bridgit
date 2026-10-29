@@ -40,8 +40,9 @@ class ProjectionService:Service() {
         ServiceCompat.startForeground(this,912,NotificationCompat.Builder(this,BridgeApp.CAPTURE_CHANNEL).setSmallIcon(net.finleg.bridget.R.drawable.ic_notif).setContentTitle("BRIDGIT screen sharing").setContentText("Screen content can be read by your approved agents").setOngoing(true).addAction(0,"Stop sharing",stop).build(),ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
         projection=getSystemService(MediaProjectionManager::class.java).getMediaProjection(Activity.RESULT_OK,data)
         projection?.registerCallback(object:MediaProjection.Callback() { override fun onStop() { stopSelf() } },handler)
-        val bounds=getSystemService(android.view.WindowManager::class.java).maximumWindowMetrics.bounds
-        width=bounds.width(); height=bounds.height()
+        val metrics=android.util.DisplayMetrics()
+        getSystemService(DisplayManager::class.java).getDisplay(android.view.Display.DEFAULT_DISPLAY).getRealMetrics(metrics)
+        width=metrics.widthPixels; height=metrics.heightPixels
         reader=ImageReader.newInstance(width,height,PixelFormat.RGBA_8888,2)
         reader!!.setOnImageAvailableListener({ source ->
             source.acquireLatestImage()?.use { image ->
