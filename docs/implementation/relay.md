@@ -80,9 +80,14 @@ mock cipher.
   the new relay setup supplies its distinct URL/credential/mode and MCP
   contract. No parallel website work was overwritten.
 
-Build/signature/source evidence is recorded separately in `relay-release.json`
-after the verified artifact is produced. Public availability and installation
-must remain false until they actually happen.
+The signed private artifact is **1.6.59 / code 76**, package `net.finleg.bridget`,
+SHA-256 `8ed31fd40fc57e639f63e9f994acc9d61ca6692b27332af6df8ab78c3294ac63`.
+Its original certificate, manifest, clean source provenance and 16KiB native
+alignment were verified; debug fixture components are absent. Source commit:
+`d3d42120a40917879db501f9ebfb927125dfc454`. The allocator reserved code76 at
+build time, carrying forward the shared Git-common-dir high-water; gaps were
+not reused. `relay-release.json` records the artifact path and full evidence.
+Public availability and installation remain false.
 
 ## Primary references checked
 
