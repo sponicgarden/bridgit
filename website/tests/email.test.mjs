@@ -7,9 +7,9 @@ const schema = readFileSync(new URL('../migrations/0001_download_requests.sql', 
 function setup() {
  const sql = new DatabaseSync(':memory:'); sql.exec(schema);
  const DB = { prepare(query) { let values=[]; return { bind(...v) { values=v; return this; }, async first() { return sql.prepare(query).get(...values) || null; }, async run() { const result=sql.prepare(query).run(...values); return {meta:{changes:Number(result.changes)}}; } }; }, async batch(statements) { return Promise.all(statements.map(s=>s.run())); } };
- const env = { SIGNUPS:DB, RESEND_API_KEY:'test', TURNSTILE_SECRET:'test', RATE_LIMIT_SALT:'private-test-salt' };
  const messages=[];
- const fetch = async (url, init) => { if (url.includes('siteverify')) return Response.json({success:true,hostname:'bridgit.cc',action:'download_signup'}); messages.push(JSON.parse(init.body)); return Response.json({id:'sent'}); };
+ const env = { SIGNUPS:DB, EMAIL:{ async send(m) { messages.push(m); return {messageId:'sent'}; } }, TURNSTILE_SECRET:'test', RATE_LIMIT_SALT:'private-test-salt' };
+ const fetch = async (url, init) => { if (url.includes('siteverify')) return Response.json({success:true,hostname:'bridgit.cc',action:'download_signup'}); assert.fail('mail must go through the EMAIL binding, not fetch'); };
  return {sql,env,messages,fetch};
 }
 function signup(email='person@example.com', updates=false) { return new Request('https://bridgit.cc/api/download-request',{method:'POST',headers:{Origin:'https://bridgit.cc','Content-Type':'application/json','CF-Connecting-IP':'192.0.2.5'},body:JSON.stringify({email,updates,turnstileToken:'test-token'})}); }
@@ -17,7 +17,7 @@ function post(path, token) { return new Request('https://bridgit.cc'+path,{metho
 test('download email confirms only on explicit POST, tokens are hashed, replay is rejected', async()=>{
  const s=setup(),now=Date.now();
  assert.equal((await handleDownloads(signup('person@example.com',true),s.env,{fetch:s.fetch,now:()=>now})).status,200);
- const message=s.messages[0]; assert.equal(message.to[0],'person@example.com');
+ const message=s.messages[0]; assert.equal(message.to,'person@example.com');
  const token=/confirm-download\/\?token=([a-f0-9]+)/.exec(message.text)[1];
  let row=s.sql.prepare('SELECT * FROM download_requests').get(); assert.notEqual(row.token_hash,token); assert.equal(row.confirmed_at,null); assert.equal(row.wants_updates,0);
  const get=new Request('https://bridgit.cc/confirm-download/?token='+token);

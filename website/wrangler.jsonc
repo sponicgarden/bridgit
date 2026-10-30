@@ -33,6 +33,12 @@
       "migrations_dir": "./migrations"
     }
   ],
+  // Cloudflare Email Sending for download and alert emails; needs bridgit.cc onboarded under Email Service.
+  "send_email": [
+    {
+      "name": "EMAIL"
+    }
+  ],
   "triggers": {
     "crons": [
       "17 3 * * *"

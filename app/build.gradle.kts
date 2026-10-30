@@ -144,6 +144,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.viewpager2:viewpager2:1.1.0")
+    // Email alerts: digests and retries survive restarts and wait for a network.
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
     // Crash reports (D32). Core only: no NDK, replay or Gradle plugin, so nothing is uploaded at build time.
     implementation("io.sentry:sentry-android-core:7.18.1")
     // Wake words (CAP-47): offline keyword spotting. The English model is downloaded on first use, not bundled.
