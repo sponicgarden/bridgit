@@ -71,11 +71,34 @@ details or keys.
     `/download/` and `/features/`.
 
   Merge them into one source before deploying again.
-- [ ] **[DECIDE] Unmerged work.** The main checkout (`codex/agent-appliance-launch-kit`)
-  is 3 commits ahead of `main` and has 27 modified and 3 untracked files: the version
-  allocator, legal pages, README, AGENTS.md and build.gradle.kts. Merge it or drop it
-  before squashing or tagging a release. Version numbering also needs reconciling: that
-  checkout records 1.6.1 as versionCode 18, while `main` says 1.6.0 / 18.
+- [x] **Merged the launch-kit work (30 Oct 2026), with `main` as the base.** The main
+  checkout's uncommitted edits were snapshotted to `codex/launch-kit-wip-snapshot`;
+  that folder itself was not touched.
+  - **Taken:** the Play collateral and brand files (`launch-kit/`, minus the private
+    preview site), the v3 appliance spec and packed plan, the 29 Oct reviews, the clean
+    app screenshots, the `/api/` reference page, the plum social card, and the helper's
+    `wait-interaction` command plus its `tailscale nc` cleanup fix, with tests.
+  - **Kept from `main`:** the website pages, app code, README and docs. Both sides
+    built the website separately, and `main`'s has the download, features and email
+    flow.
+  - **Not merged:**
+    - agent logo uploads (`AgentBranding`) and the agent-setup edits: written for the
+      1.2 code, so they would need a port
+    - the AI vendor logos
+    - the unpacked plan page: it needs local stylesheets
+- [ ] **[DECIDE] Version counter.**
+  - The branch's automatic allocator (`tools/allocate-apk-version.py`,
+    `apk-version.properties`, the Gradle task and AGENTS.md rules) has reached
+    **1.6.13 / versionCode 30**. `main` still hard-codes **1.6.0 / 18**.
+  - A `main` build can't install over an allocator build of the same package that is
+    already on a phone.
+  - The allocator also rewrites a tracked file on every build. That is awkward for CI
+    and outside contributors.
+  - Choose one:
+    - port the allocator, keeping the counter out of git (for example in `~/.config`);
+    - or set `main` to the next free code (31+).
+
+  The allocator files stay on `codex/launch-kit-wip-snapshot`.
 - [ ] **[DECIDE] Launch scope.** Global or a staged set of countries. Free (assumed).
   Target audience: adults 18+ managing their own devices.
 - [ ] **[DECIDE] Play account type.** Personal accounts need a closed test with 12 testers
@@ -203,9 +226,8 @@ details or keys.
   - Website font: Bricolage Grotesque (OFL). Add it to the website's notices.
 - [ ] **[DECIDE] Internal docs.** Decide whether to publish `docs/reviews/*` (AI review
   transcripts), `docs/handover-p1b.md` and the old specs, or move them out.
-- [ ] **[DECIDE] `launch-kit/`.** It is untracked and contains a nested `site/.git`, a
-  zip and a tarball, and it links to a spec (`bridgit-appliance-spec-v3.md`) that isn't
-  on `main`. Keep it out of the open-source repo or give it its own private repo.
+- [x] **`launch-kit/` is tracked, minus the private preview `site/`, the zip and the
+  tarball** (30 Oct 2026). Private preview links and deployment ids were removed.
 - [ ] **[NICE]** Add SPDX license headers to source files. Add placeholders and setup
   docs for `website/wrangler.jsonc` (account id, D1 id) so forks can deploy. Fix
   `website/README.md:45` ("repository was private").
@@ -386,8 +408,8 @@ details or keys.
 - [ ] **[SHOULD] Security headers.** There is no HSTS, CSP or frame-ancestors
   (`website/scripts/build.mjs:53`; Worker pages at `email.mjs:5`). Add them, since the
   site distributes an APK.
-- [ ] **[SHOULD]** The `og:image` social card uses the retired lime/teal identity;
-  regenerate it in the approved plum identity.
+- [x] The `og:image` social card now uses the approved plum identity (from the
+  launch-kit branch). It reaches the live site with the next deploy.
 
 ### Privacy policy (`website/public/privacy/`)
 - [ ] **[BLOCKER] ⚖️ Name the controller.** Give the legal name, postal address, country,
@@ -497,7 +519,10 @@ Everything in `launch-kit/play-store/` was written for 1.2 (camera, mic, gallery
     §0.
 - [ ] **[SHOULD] ⚖️ Remove AI vendor logos** (Claude, ChatGPT, Gemini, Grok, OpenCode,
   OpenRouter, Muse) from the live homepage (`/assets/agents/*`) unless you have
-  permission. Plain-text mentions are fine. Never use them in Play assets.
+  permission. They are not in the repo; they disappear when the site is redeployed
+  from `main`. Plain-text mentions are fine. Never use them in Play assets. The
+  conversation screenshots in `assets/screenshots/` show the Grok and Muse app icons
+  inside the demo cards.
 - [ ] **[NICE]** Promotional video (optional for Play).
 
 ## 8. Sideload channel (keeps the full feature set)

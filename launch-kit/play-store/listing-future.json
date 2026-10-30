@@ -1,0 +1,10 @@
+{
+  "status": "FUTURE COPY — do not upload until stages A/B are implemented and tested",
+  "language": "en-US",
+  "title": "BRIDGIT Device Manager",
+  "short_description": "Turn your Android into an appliance your AI agent can build and control.",
+  "full_description": "Turn any Android device into an agentic appliance.\n\nTurn an Android phone into a useful appliance with an AI agent you authorize. Ask your agent to build a workflow; review it on the phone; let BRIDGIT run the approved actions locally.\n\nBUILD YOUR OWN USE\nCombine supported camera, audio, selected-photo, button and timer capabilities. Agents discover what the phone supports and propose workflows within your permissions.\n\nAPPROVE ONCE, STAY IN CONTROL\nReview the capabilities and destinations each workflow needs. Give each agent its own permissions. See what is running, inspect activity, pause a workflow or stop all access from the phone. New permissions require your approval.\n\nLOCAL WORKFLOWS\nApproved workflows run on the phone after setup. Features that contact an agent or another person still require a working network connection. Android can require you to reopen BRIDGIT after a restart or interruption.\n\nUse your own compatible agent and private network. Support depends on Android version and device capabilities. AI services are not included. Live monitoring and voice-triggered help are separate future features, not included in this release. BRIDGIT Device Manager is not an emergency dispatch or medical monitoring service.",
+  "support_email": null,
+  "website_url": "https://bridgit.cc",
+  "privacy_policy_url": null
+}

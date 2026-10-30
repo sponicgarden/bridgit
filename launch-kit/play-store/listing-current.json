@@ -1,0 +1,11 @@
+{
+  "status": "Draft copy for current 1.2 functionality; submission blocked by readiness gates",
+  "language": "en-US",
+  "title": "BRIDGIT Device Manager",
+  "short_description": "Connect your AI agent to your Android camera, microphone and selected photos.",
+  "full_description": "Turn any Android device into an agentic appliance.\n\nBRIDGIT Device Manager for Android gives AI agents you authorize controlled access to your own Android phone over a private Tailscale network. Use it on your everyday phone or give a spare device a new purpose.\n\nWHAT YOU CAN DO\n• Pair named agents with separate access keys.\n• Let an authorized agent take a camera snapshot.\n• Record an audio clip of up to 120 seconds.\n• Retrieve photos from the media access you grant, including selected-photo access where supported.\n• See request activity on your phone and rotate or remove an agent’s key.\n\nYOU CONTROL ACCESS\nThe listener and capabilities start off. You enable access on the phone and can stop the listener. In this version, capability switches apply to all paired agents. Camera and microphone activity uses Android’s privacy indicators.\n\nSETUP REQUIREMENTS\nThe current version requires Android 14 or later, Tailscale on the phone, and an agent or compatible tool that can reach the phone’s private network and call the BRIDGIT API. An AI subscription or agent service is not included. Open BRIDGIT after reboot or interruption to restore camera and microphone availability. Camera snapshots require the phone to be unlocked.\n\nBRIDGIT currently provides snapshots and short audio clips. It does not provide live baby monitoring, wake-word alerts, emergency dispatch or guaranteed unattended operation.\n\nOnly connect devices you own or are authorized to manage, with the knowledge and consent of people affected by capture.",
+  "category_proposal": "Tools",
+  "support_email": null,
+  "website_url": "https://bridgit.cc",
+  "privacy_policy_url": null
+}
