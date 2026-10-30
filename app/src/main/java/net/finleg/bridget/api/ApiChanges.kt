@@ -85,6 +85,11 @@ object ApiChanges {
             Item("Listen for any sounds: the owner can have the phone tell you when the room gets loud (sound.heard events), and how it's set", "/v1/sounds"),
             Item("The audio of a sound, when the owner lets sounds send audio", "/v1/sounds/clip/{id}"),
         )),
+        Revision(12, "1.6.0", "2026-10-31", listOf(
+            Item("A five-minute first-run demo to offer right after pairing: ${Demos.SKILL_URL}", null),
+            Item("speaker/say and speaker/play reply status \"silenced\" when the phone is on silent, Do Not Disturb or in a call", "/v1/speaker/say"),
+            Item("Flashlight on a device without one: capabilities shows blocked_reason no_hardware and the call fails with not_supported", "/v1/flashlight"),
+        )),
     )
 
     val CURRENT: Int = revisions.maxOf { it.revision }
