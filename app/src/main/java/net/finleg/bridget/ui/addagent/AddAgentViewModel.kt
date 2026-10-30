@@ -52,6 +52,9 @@ class AddAgentViewModel(application: Application) : AndroidViewModel(application
     var prompt: String? = null; private set
     /** Copied, shared or otherwise acknowledged (AGT-05): leaving needs no dialog and the vault is wiped. */
     var acknowledged = false; private set
+
+    /** The trust warning was accepted for the current key; a rotated key asks again. */
+    var trustWarned = false
     /** Opened for an existing agent whose key is no longer held (AGT-05a after expiry). */
     val keyGone = MutableStateFlow(false)
     /** Minutes left on a resumed key; read once by the fragment for its Snackbar. */
@@ -156,6 +159,7 @@ class AddAgentViewModel(application: Application) : AndroidViewModel(application
         app.log.system("audit", "agent", app.getString(net.finleg.bridget.R.string.agents_rotated_log, agent.name))
         key = k
         acknowledged = false
+        trustWarned = false
         buildPrompt()
         keyGone.value = false
         _wait.value = Wait()
