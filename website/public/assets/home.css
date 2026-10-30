@@ -73,3 +73,15 @@
 .screen.screen-shot{padding:0;overflow:hidden;min-height:0;aspect-ratio:392/640;background:#1c1220}
 .screen.screen-shot img{display:block;width:100%;height:auto}
 .conceptlabel{z-index:2;background:#f0e7f7;padding:3px 7px;border-radius:4px}
+
+/* Logo row: every icon in the same box at the same left offset, names on one line */
+.hero-logos li{justify-content:flex-start;padding:10px 12px;gap:10px}
+.hero-logos img{width:28px;height:28px;object-fit:contain;flex:none}
+.hero-logos span{font-size:13px;white-space:nowrap;text-align:left;letter-spacing:-.1px}
+@media(max-width:900px){.hero-logos li{justify-content:center;padding:10px 6px}.hero-logos span{white-space:normal;text-align:center}}
+.hero-logos li{padding:10px 9px;gap:7px;overflow:hidden}
+.hero-logos img,.hero-logos img[src$="chatgpt.svg"]{width:24px;height:24px;margin:0}
+.hero-logos img[src$="chatgpt.svg"]{transform:scale(1.4)}
+.hero-logos span{font-size:12.5px;overflow:hidden;text-overflow:ellipsis}
+.hero-logos li{min-height:54px}.hero-logos span{white-space:normal;text-overflow:clip;line-height:1.15;overflow-wrap:anywhere}
+.hero-logos li{padding:10px 8px;gap:6px}.hero-logos span{overflow-wrap:normal;font-size:12px}
