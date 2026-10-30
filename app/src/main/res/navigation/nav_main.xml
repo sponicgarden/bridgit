@@ -30,6 +30,10 @@
     <fragment android:id="@+id/pairCode" android:name="net.finleg.bridget.ui.addagent.PairCodeFragment" />
     <fragment android:id="@+id/features" android:name="net.finleg.bridget.ui.more.FeaturesFragment" />
     <fragment android:id="@+id/access" android:name="net.finleg.bridget.ui.more.AccessFragment" />
+    <!-- Maximum powers: every switch on, then each Android permission in one guided pass. agentId = the agent just given every grant. -->
+    <fragment android:id="@+id/powers" android:name="net.finleg.bridget.ui.power.PowersFragment">
+        <argument android:name="agentId" app:argType="string" app:nullable="true" android:defaultValue="@null" />
+    </fragment>
     <fragment android:id="@+id/settings" android:name="net.finleg.bridget.ui.more.SettingsFragment" />
     <!-- P1b feedback (section 11). reportForm: kind = "bug" | "feature"; optional logEntryId attaches one log entry. -->
     <fragment android:id="@+id/reportForm" android:name="net.finleg.bridget.ui.feedback.ReportFormFragment">

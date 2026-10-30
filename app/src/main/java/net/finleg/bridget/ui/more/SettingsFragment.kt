@@ -46,7 +46,7 @@ import java.text.NumberFormat
 
 /**
  * Settings (UI-19, ui-spec 5.10), built from our own rows. Sections:
- * Listener, Privacy (log visibility, lock-screen question text, urgent read-aloud in DND),
+ * Listener, Agent powers (Turn everything on / off), Privacy (log visibility, lock-screen question text, urgent read-aloud in DND),
  * Log, Notifications, Appearance, About.
  * Allow internet callbacks (EVT-05) sits under Listener. Email alerts sit after Notifications.
  * Send crash reports (D32) sits under Privacy.
@@ -82,6 +82,14 @@ class SettingsFragment : Fragment() {
         row(b.bind, R.string.settings_bind, mono = true, onClick = null)
         prefSwitch(b.internetCallbacks, R.string.settings_internet_callbacks, R.string.settings_internet_callbacks_desc,
             net.finleg.bridget.core.Settings.PREF_INTERNET_CALLBACKS, R.string.settings_changed_internet_callbacks)
+
+        // Agent powers: the same Maximum powers pass as Add agent, and its undo.
+        row(b.everythingOn, R.string.settings_everything_on) { net.finleg.bridget.ui.power.PowersFragment.confirmMaximum(this, null) }
+        b.everythingOn.value.setText(R.string.settings_everything_on_desc)
+        row(b.everythingOff, R.string.settings_everything_off) {
+            net.finleg.bridget.ui.power.PowersFragment.confirmAllOff(this) { Snackbar.make(b.root, R.string.power_off_done, Snackbar.LENGTH_SHORT).show() }
+        }
+        b.everythingOff.value.setText(R.string.settings_everything_off_desc)
 
         // Privacy
         row(b.logVisibility, R.string.settings_log_visibility) { askVisibility() }

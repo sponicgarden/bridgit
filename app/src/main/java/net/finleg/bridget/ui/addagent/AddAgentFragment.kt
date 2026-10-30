@@ -426,6 +426,7 @@ class AddAgentFragment : Fragment() {
         b.share.setOnClickListener { share() }
         b.qr.setOnClickListener { showQr() }
         b.troubleshoot.setOnClickListener { showTroubleshooting() }
+        setupPowers()
         b.keyGoneRotate.setOnClickListener {
             MaterialAlertDialogBuilder(requireContext())
                 .setMessage(getString(R.string.agents_rotate_body, vm.name))
@@ -441,6 +442,7 @@ class AddAgentFragment : Fragment() {
         b.keyGone.isVisible = gone
         b.promptSection.isVisible = !gone
         b.waitCard.isVisible = vm.agentId != null
+        renderPowers()
         b.toolbar.menu.findItem(R.id.addagent_copy_key).isVisible = !gone
         b.toolbar.menu.findItem(R.id.addagent_pair).isVisible = !gone
         if (gone) return
@@ -462,6 +464,58 @@ class AddAgentFragment : Fragment() {
             }
         }
         b.promptText.text = span
+    }
+
+    // ---- Powers: Limited (nothing new turned on) or Maximum (everything on, one guided pass)
+
+    private fun isMaximum() = vm.agentId?.let { net.finleg.bridget.power.PowerAccess(app).isMaximum(it) } == true
+
+    private fun setupPowers() {
+        val p = b.powers
+        p.cardLimited.setOnClickListener {
+            if (isMaximum()) net.finleg.bridget.ui.power.PowersFragment.confirmAllOff(this) { renderPowers() }
+            renderPowers()
+        }
+        p.cardMaximum.setOnClickListener {
+            val id = vm.agentId ?: return@setOnClickListener
+            if (isMaximum()) findNavController().navigate(R.id.powers, androidx.core.os.bundleOf("agentId" to id))
+            else net.finleg.bridget.ui.power.PowersFragment.confirmMaximum(this, id) { renderPowers() }
+        }
+        val cards = listOf(p.cardLimited to false, p.cardMaximum to true)
+        cards.forEachIndexed { i, (card, max) ->
+            ViewCompat.setAccessibilityDelegate(card, object : AccessibilityDelegateCompat() {
+                override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfoCompat) {
+                    super.onInitializeAccessibilityNodeInfo(host, info)
+                    info.className = RadioButton::class.java.name
+                    info.isCheckable = true
+                    info.isChecked = isMaximum() == max
+                    info.setCollectionItemInfo(AccessibilityNodeInfoCompat.CollectionItemInfoCompat.obtain(i, 1, 0, 1, false, isMaximum() == max))
+                }
+            })
+        }
+        ViewCompat.setAccessibilityDelegate(p.powersGroup, object : AccessibilityDelegateCompat() {
+            override fun onInitializeAccessibilityNodeInfo(host: View, info: AccessibilityNodeInfoCompat) {
+                super.onInitializeAccessibilityNodeInfo(host, info)
+                info.className = RadioGroup::class.java.name
+                info.setCollectionInfo(AccessibilityNodeInfoCompat.CollectionInfoCompat.obtain(
+                    cards.size, 1, false, AccessibilityNodeInfo.CollectionInfo.SELECTION_MODE_SINGLE))
+            }
+        })
+    }
+
+    private fun renderPowers() {
+        if (_b == null) return
+        val p = b.powers
+        p.root.isVisible = vm.agentId != null
+        p.powersHeading.text = getString(R.string.power_heading, vm.name.trim())
+        val ctx = requireContext()
+        val max = isMaximum()
+        listOf(p.cardLimited to !max, p.cardMaximum to max).forEach { (card, on) ->
+            card.isChecked = on
+            card.strokeWidth = ctx.dp(if (on) 2 else 1)
+            card.strokeColor = ctx.themeColor(if (on) M.attr.colorPrimary else M.attr.colorOutlineVariant)
+            card.setCardBackgroundColor(ctx.themeColor(if (on) M.attr.colorPrimaryContainer else M.attr.colorSurface))
+        }
     }
 
     private fun renderWait(w: AddAgentViewModel.Wait) {
