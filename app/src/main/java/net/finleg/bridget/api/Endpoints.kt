@@ -52,6 +52,8 @@ object Endpoints {
         example = "GET /v1/capabilities", returns = "per capability: enabled, ready, blocked_reason, details; callback {set, host}")
     val GUIDE = EndpointSpec("GET", "/guide", "status", "This guide, generated live (Markdown)",
         example = "GET /v1/guide", returns = "text/markdown")
+    val DEMO = EndpointSpec("GET", "/demo", "status", "A script for showing the owner what Bridgit can do: offer it, ask a few questions, run the demos that fit (Markdown)",
+        example = "GET /v1/demo", returns = "text/markdown")
     val OPENAPI = EndpointSpec("GET", "/openapi.json", "status", "OpenAPI 3.1 description of every endpoint",
         example = "GET /v1/openapi.json", returns = "application/json")
     val CHANGES = EndpointSpec("GET", "/changes", "status", "What's new in the API since a revision you know (API-14)",
@@ -262,7 +264,7 @@ object Endpoints {
         errors = listOf("capability_disabled", "access_needed", "notifications_required", "device_locked", "rate_limited", "sensor_busy",
             "not_supported", "capture_timeout", "service_start_blocked", "payload_too_large"))
 
-    val all = listOf(HEALTH, CAPABILITIES, GUIDE, OPENAPI, CHANGES, HELPER, PAIR, SNAPSHOT, MIC, GALLERY_RECENT, GALLERY_PHOTO,
+    val all = listOf(HEALTH, CAPABILITIES, GUIDE, DEMO, OPENAPI, CHANGES, HELPER, PAIR, SNAPSHOT, MIC, GALLERY_RECENT, GALLERY_PHOTO,
         IMAGE_LAST, SCREEN_CAPTURE, LOG, LOG_ENTRY, LOG_STATS, LOG_EXPORT, LOG_NOTE, AUDIT, FEEDBACK_LIST, FEEDBACK_GET, FEEDBACK_STATUS, FEEDBACK_POST,
         INTERACTION_CREATE, INTERACTION_LIST, INTERACTION_GET, INTERACTION_CANCEL, EVENTS, TEXT_STREAM, CALLBACK_TEST, MCP,
         LOCATION, SPEAKER_PLAY, SPEAKER_SAY, SPEAKER_STATUS, SPEAKER_STOP, TOUR_GET, TOUR_PHOTO, TOUR_END, ME) + net.finleg.bridget.planned.PlannedEndpoints.all

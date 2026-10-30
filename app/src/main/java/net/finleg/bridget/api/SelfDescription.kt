@@ -96,7 +96,7 @@ object SetupPrompt {
         sb.appendLine("FIRST TEST")
         sb.appendLine("1. Call /v1/health.")
         sb.appendLine("2. POST /v1/me {\"model\":\"<your model id>\",\"harness\":\"<e.g. Claude Code>\"} so your card shows your model.")
-        sb.append("3. Tell the owner you're connected and which features are on.")
+        sb.append("3. Tell the owner you're connected and offer a short demo: follow GET /v1/demo.")
         return sb.toString()
     }
 
@@ -154,6 +154,9 @@ object Guide {
             if (e.idempotent) sb.appendLine("Accepts `Idempotency-Key`.")
             sb.appendLine("Example: `${e.example}`")
         }
+        sb.appendLine()
+        sb.appendLine("## Show the owner what's possible")
+        sb.appendLine("`GET /v1/demo` is a script for a hands-on tour: offer it, ask the owner a few questions, then run the demos that fit them. Offer it once after you connect.")
         sb.appendLine()
         sb.appendLine("## Hearing from the phone")
         sb.appendLine("Bridgit never calls you: it queues events for you. Loop on `GET /v1/events?since=<last id>&wait=55` with a 60 s timeout.")

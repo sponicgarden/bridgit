@@ -74,6 +74,9 @@ object ApiChanges {
             Item("Notification reads", "/v1/notifications"), Item("Usage summaries", "/v1/usage"), Item("Shared-screen capture", "/v1/screen/share/capture"),
             Item("Per-agent capability grants, enforced for HTTP and MCP", "/v1/capabilities"),
         )),
+        Revision(9, "1.6.0", "2026-10-30", listOf(
+            Item("A demo script: offer the owner a hands-on tour of what you can do, tailored by a few questions", "/v1/demo"),
+        )),
     )
 
     val CURRENT: Int = revisions.maxOf { it.revision }
@@ -90,7 +93,7 @@ object ApiChanges {
         .put("links", links())
 
     /** Where an agent learns the current API (API-09). */
-    fun links(): JSONObject = JSONObject().put("guide", "/v1/guide").put("openapi", "/v1/openapi.json")
+    fun links(): JSONObject = JSONObject().put("guide", "/v1/guide").put("demo", "/v1/demo").put("openapi", "/v1/openapi.json")
         .put("capabilities", "/v1/capabilities").put("changes", "/v1/changes")
 
     /** health's "whats_new": null when the agent is up to date. */

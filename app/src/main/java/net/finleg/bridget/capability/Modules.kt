@@ -64,7 +64,7 @@ class StatusModule(app: BridgeApp) : Capability(app) {
     override val titleRes = R.string.cap_status
     override val descriptionRes = R.string.cap_status_desc
     override val group = "status"
-    override val endpoints = listOf(Endpoints.HEALTH, Endpoints.CAPABILITIES, Endpoints.GUIDE, Endpoints.OPENAPI, Endpoints.CHANGES, Endpoints.HELPER, Endpoints.PAIR, Endpoints.MCP, Endpoints.ME)
+    override val endpoints = listOf(Endpoints.HEALTH, Endpoints.CAPABILITIES, Endpoints.GUIDE, Endpoints.DEMO, Endpoints.OPENAPI, Endpoints.CHANGES, Endpoints.HELPER, Endpoints.PAIR, Endpoints.MCP, Endpoints.ME)
 
     /** Reading the guide, openapi.json or the changes means the agent now knows the current API (API-14). */
     private fun markKnown(r: Req) {
@@ -124,6 +124,10 @@ class StatusModule(app: BridgeApp) : Capability(app) {
             markKnown(this)
             Reply.Text(Guide.build(agentName, app.appVersion(), app.address(), app.registry.caps(), app.settings.logVisibility,
                 agent?.developer == true), "text/markdown; charset=utf-8")
+        }
+        endpoint(Endpoints.DEMO) {
+            Reply.Text(net.finleg.bridget.api.Demos.build(agentName, app.registry.caps(), { agent?.allows(it) ?: false }),
+                "text/markdown; charset=utf-8")
         }
         endpoint(Endpoints.OPENAPI) { markKnown(this); Reply.Json(OpenApi.build(app.appVersion(), app.address())) }
         // API-15: JSON-RPC in, each tools/call dispatched in-process to the endpoint's own handler.

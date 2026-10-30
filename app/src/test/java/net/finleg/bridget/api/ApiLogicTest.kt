@@ -21,6 +21,8 @@ import java.io.File
  * Setup prompt: key missing or present twice; wrong port/host; userspace prompt without the helper; direct
  *   prompt over the 2,500-character budget (AGT-10); capture calls listed while switched off (AGT-07).
  * Guide / openapi: an endpoint missing; invalid structure; a secret leaking in.
+ * Demo script: a demo names an endpoint that doesn't exist; a switched-off or ungranted demo offered as ready;
+ *   the setup prompt or guide not pointing at it.
  * Wait gate: more than 4 waits per agent; counts never released.
  */
 class ApiLogicTest {
@@ -141,6 +143,7 @@ class ApiLogicTest {
         assertTrue(p.contains("curl -s -m 30 -H @\$HOME/.config/bridget/header"))
         assertTrue(p.contains("/v1/camera/snapshot") && p.contains("/v1/image/last"))
         assertTrue(p.contains("GET /v1/guide"))
+        assertTrue(p.contains("GET /v1/demo"))
         assertTrue("AGT-10 budget: ${p.length}", p.length < 2500)
         // AGT-09 order
         val order = listOf("CONNECTION", "YOUR KEY", "HOW TO CALL", "START HERE", "MOST USEFUL CALLS", "RULES", "FIRST TEST").map { p.indexOf(it) }
@@ -186,6 +189,23 @@ class ApiLogicTest {
         for (e in Endpoints.all) assertTrue(e.fullPath, paths.getJSONObject(e.fullPath).has(e.method.lowercase()))
         assertEquals("id", paths.getJSONObject("/v1/log/{id}").getJSONObject("get").getJSONArray("parameters").getJSONObject(0).getString("name"))
         assertEquals(0, paths.getJSONObject("/v1/tools/bridget").getJSONObject("get").getJSONArray("security").length())
+    }
+
+    @Test fun demoScript() {
+        val keys = Endpoints.all.map { "${it.method} ${it.fullPath}" }.toSet()
+        for (d in Demos.all) d.calls.forEach { assertTrue("${d.title}: no endpoint $it", it in keys) }
+        val caps = listOf(CapInfo("interactions", "Questions", "interactions", true, true, null),
+            CapInfo("camera", "Camera", "camera", true, true, null), CapInfo("mic", "Microphone", "mic", false, true, null),
+            CapInfo("location", "Location", "location", true, true, null))
+        val m = Demos.build("Grok", caps) { it != "location" }
+        val ready = m.lines().first { it.startsWith("Ready now:") }
+        assertTrue(ready.contains("Camera control") && ready.contains("Ask me with buttons"))
+        assertFalse(ready.contains("Listen and transcribe") || ready.contains("Where am I"))
+        assertTrue(m.contains("### Listen and transcribe (not available: Microphone is switched off"))
+        assertTrue(m.contains("### Where am I (not available: the owner hasn't allowed you"))
+        assertTrue(m.contains("ask these on the phone instead"))
+        assertFalse(Demos.build("Grok", caps.drop(1)) { true }.contains("ask these on the phone instead"))
+        assertTrue(Guide.build("Grok", "1.6.0", addr, caps, "own", developer = false).contains("`GET /v1/demo`"))
     }
 
     @Test fun pendingSchema() {
