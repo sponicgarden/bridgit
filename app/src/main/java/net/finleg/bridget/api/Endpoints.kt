@@ -185,7 +185,7 @@ object Endpoints {
             Param("controls", "array", "Question: 1-6 of {type: button|text|choice|link, id, label, style?, placeholder?, options?, url?, package?}. Notice: links only"),
             Param("priority", "string", "normal or urgent", enum = listOf("normal", "urgent")),
             Param("speak", "boolean", "Read it aloud on the phone"),
-            Param("expires_in_seconds", "integer", "60 to 604800, default 86400"),
+            Param("expires_in_seconds", "integer", "60 to 604800, default 86400. After it, waits return expired and you get interaction.expired, but a question stays on the owner's phone and they can still answer it late (interaction.answered with late=true)"),
         ),
         example = "POST /v1/interactions {\"kind\":\"question\",\"title\":\"Pay this invoice?\",\"controls\":[{\"type\":\"button\",\"id\":\"yes\",\"label\":\"Pay\",\"style\":\"primary\"},{\"type\":\"button\",\"id\":\"no\",\"label\":\"Not now\"}]}",
         returns = "interaction_id, status, expires_at",
@@ -214,7 +214,7 @@ object Endpoints {
         errors = listOf("not_found", "too_many_waits"))
     val INTERACTION_CANCEL = EndpointSpec("DELETE", "/interactions/{id}", "interactions", "Cancel one of your interactions",
         example = "DELETE /v1/interactions/12", returns = "the interaction", errors = listOf("not_found"))
-    val EVENTS = EndpointSpec("GET", "/events", "interactions", "Your events, oldest first: answers, closes, expiries, switch changes. Repeated phone answers emit interaction.answered with resubmission=true and previous_answer; agents decide whether to accept the change",
+    val EVENTS = EndpointSpec("GET", "/events", "interactions", "Your events, oldest first: answers, closes, expiries, switch changes. Repeated phone answers emit interaction.answered with resubmission=true and previous_answer; agents decide whether to accept the change. An answer given after the question expired comes as interaction.answered with late=true",
         query = listOf(Param("since", "string", "next_cursor from the last call; omit for the last 50"),
             Param("wait", "integer", "With since: hold up to 55 s for a new event"), Param("types", "string", "Comma list, e.g. interaction.answered")),
         example = "GET /v1/events?since=0&wait=55", returns = "events[id, type, at, data], next_cursor",

@@ -80,7 +80,7 @@ class InteractionsAdapter(
         ViewCompat.replaceAccessibilityAction(b.header, AccessibilityActionCompat.ACTION_COLLAPSE,
             if (expanded) ctx.getString(R.string.interactions_collapse) else null, if (expanded) { _, _ -> toggle(h); true } else null)
         if (h.closeActionId != View.NO_ID) { ViewCompat.removeAccessibilityAction(b.header, h.closeActionId); h.closeActionId = View.NO_ID }
-        if (i.status.open) h.closeActionId = ViewCompat.addAccessibilityAction(b.header, ctx.getString(R.string.interactions_close)) { _, _ -> onClose(i); true }
+        if (InteractionUi.waiting(i)) h.closeActionId = ViewCompat.addAccessibilityAction(b.header, ctx.getString(R.string.interactions_close)) { _, _ -> onClose(i); true }
 
         b.chevron.rotation = if (expanded) 180f else 0f
         b.chevron.contentDescription = ctx.getString(if (expanded) R.string.interactions_collapse else R.string.interactions_expand)
@@ -121,7 +121,7 @@ class InteractionsAdapter(
         b.answer.isVisible = summary != null
         b.answer.text = summary
 
-        b.close.isVisible = i.status.open
+        b.close.isVisible = InteractionUi.waiting(i)
         b.close.contentDescription = ctx.getString(R.string.interactions_close) + ", " + headline
         b.close.setOnClickListener { onClose(i) }
     }
