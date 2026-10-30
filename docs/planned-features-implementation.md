@@ -1,6 +1,6 @@
 # Planned capabilities: Bridgit 1.6.0
 
-This development branch starts from app 1.5.2 and merges the latest main (including 1.5.4 branding/fixes) and implements the catalog's 19 planned/later cards, including the already present City tour. Four IDEA cards remain out: relay, local trigger words, communications, and location history/places. The app-only release is version 1.6.0, code 18. New feature switches start off. The website is excluded from this release.
+This development branch starts from app 1.5.2 and merges the latest main (including 1.5.4 branding/fixes) and implements the catalog's 19 planned/later cards, including the already present City tour. Three IDEA cards remain out: relay, communications, and location history/places. Local trigger words were added later as wake words (8.23, CAP-46/47/48), off by default. The app-only release is version 1.6.0, code 18. New feature switches start off. The website is excluded from this release.
 
 ## Phone interface
 

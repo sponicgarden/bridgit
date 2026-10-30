@@ -83,6 +83,11 @@ class WakeWordsActivity : AppCompatActivity() {
         if (problem != null) { b.phraseLayout.error = problem; return }
         app.wake.saveWords(app.wake.words() + w)
         app.log.system("audit", "setting", "You added the wake word \"${w.phrase}\" for ${app.agents.get(w.agentId)?.name}")
+        // Mapping a wake word to an agent is the owner's grant: an agent with a restricted grant set gets wake words too.
+        app.agents.get(w.agentId)?.takeIf { !it.allows("wakewords") }?.let { a ->
+            app.agents.update(a.id) { it.copy(caps = it.caps.orEmpty() + "wakewords") }
+            app.log.system("audit", "agent", "Owner changed ${a.name}'s grants: added wakewords with a wake word")
+        }
         b.phrase.setText(""); b.clip.isChecked = false
         render()
     }
