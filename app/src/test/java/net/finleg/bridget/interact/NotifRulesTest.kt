@@ -56,7 +56,7 @@ class NotifRulesTest {
         assertFalse(NotifRules.shouldSpeak(true, false, true, false, true))
         assertFalse(NotifRules.shouldSpeak(true, false, true, true, false))
         assertTrue(NotifRules.shouldSpeak(true, false, true, true, true))
-        // SPK-03: a call always blocks speech, even urgent speech Rahul allowed through DND.
+        // SPK-03: a call always blocks speech, even urgent speech the owner allowed through DND.
         assertFalse(NotifRules.shouldSpeak(true, true, false, false, false))
         assertFalse(NotifRules.shouldSpeak(true, true, true, true, true))
         assertFalse(NotifRules.shouldSpeak(true, true, false, true, true))

@@ -31,7 +31,7 @@ class SpeakerRulesTest {
 
     /** GET /v1/speaker must not show another agent's caption or play id (it may be private narration). */
     @Test fun statusShowsOnlyYourOwnSound() {
-        val a = SpeakerRules.Entry("p1", "agentA", "Grok", "Secret narration for Rahul")
+        val a = SpeakerRules.Entry("p1", "agentA", "Grok", "Secret narration for the owner")
         val queued = listOf(SpeakerRules.Entry("p2", "agentA", "Grok", "next"), SpeakerRules.Entry("p3", "agentB", "Claude", "mine"))
         val forB = SpeakerRules.status("agentB", a, queued, quiet = false, paused = false)
         assertTrue(forB.isNull("playing"))
@@ -43,7 +43,7 @@ class SpeakerRulesTest {
 
         val forA = SpeakerRules.status("agentA", a, queued, quiet = true, paused = true)
         assertEquals("p1", forA.getJSONObject("playing").getString("play_id"))
-        assertEquals("Secret narration for Rahul", forA.getJSONObject("playing").getString("text"))
+        assertEquals("Secret narration for the owner", forA.getJSONObject("playing").getString("text"))
         assertFalse(forA.getBoolean("busy")); assertTrue(forA.getBoolean("paused")); assertTrue(forA.getBoolean("quiet"))
         assertEquals(1, forA.getJSONArray("queued").length())
 

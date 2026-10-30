@@ -11,7 +11,7 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
- * AGT-05a: until Rahul copies the prompt or leaves the setup screen, the new key is
+ * AGT-05a: until the owner copies the prompt or leaves the setup screen, the new key is
  * kept encrypted with a non-exportable Android Keystore AES-GCM key, for at most
  * 30 minutes. If the app is killed meanwhile, reopening it returns to the prompt.
  * The plaintext key is never written to disk or saved instance state.

@@ -84,7 +84,7 @@ class BridgeApp : Application() {
         callbackDispatcher = net.finleg.bridget.interact.CallbackDispatcher(this, callbacks)
         interactions.addEventListener { callbackDispatcher.onEvent(it) } // EVT-06
         interactions.recoverInterruptedTours()
-        // Play aloud (UI-16): Rahul's own tap, so silent/DND don't block it; a call still does. Same queue as everything else.
+        // Play aloud (UI-16): the owner's own tap, so silent/DND don't block it; a call still does. Same queue as everything else.
         net.finleg.bridget.ui.interactions.SpeakHook.speak = { _, agent, title, text ->
             if (!speaker.inCall()) speaker.speakText("owner", agent, net.finleg.bridget.interact.NotifRules.utterance(agent, title, text), allowInQuiet = true)
         }

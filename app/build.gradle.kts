@@ -27,6 +27,11 @@ android {
         buildConfigField("int", "DEFAULT_PORT", "8734")
         buildConfigField("String", "GIT_COMMIT", "\"${gitCommit()}\"")
         buildConfigField("boolean", "DIRTY_BUILD", "${gitDirty()}")
+        // Crash reports (D32) go only where the builder points them: -PbridgitSentryDsn, BRIDGIT_SENTRY_DSN,
+        // or sentryDsn in keystore.properties. Empty (the default, and every fork) means no crash reports.
+        val sentryDsn = (project.findProperty("bridgitSentryDsn") as String?)
+            ?: System.getenv("BRIDGIT_SENTRY_DSN") ?: keystoreProps.getProperty("sentryDsn") ?: ""
+        buildConfigField("String", "SENTRY_DSN", "\"${sentryDsn.trim()}\"")
     }
 
     buildFeatures {

@@ -115,7 +115,7 @@ object SpeakerRules {
 class SpeakerQueue(private val app: BridgeApp) {
     data class Item(val id: String, val agentId: String, val agent: String, val file: File, val caption: String?,
                     val tourId: String?, val urgent: Boolean, val queuedAt: Long = System.currentTimeMillis(),
-                    /** Interaction speech Rahul allowed through silent/DND (urgent) or tapped himself. Never during a call. */
+                    /** Interaction speech the owner allowed through silent/DND (urgent) or tapped themselves. Never during a call. */
                     val allowInQuiet: Boolean = false)
 
     private val lock = Any()
@@ -383,7 +383,7 @@ class SpeakerQueue(private val app: BridgeApp) {
         return if (am.requestAudioFocus(req) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) { focus = req; true } else false
     }
 
-    /** SPK-01: never louder than Rahul's ceiling; put back afterwards unless he changed it meanwhile. */
+    /** SPK-01: never louder than the owner's ceiling; put back afterwards unless they changed it meanwhile. */
     @Synchronized private fun applyCeiling() {
         val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val ceiling = max * app.settings.speakerCeiling / 100

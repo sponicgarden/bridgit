@@ -55,7 +55,7 @@ object NotifRules {
 
     /**
      * CAP-31 speak: never unless the agent asked; never during a phone call (SPK-03), urgent or not; when the
-     * phone is silent, vibrate or DND only an urgent one, and only if Rahul allowed it in Settings.
+     * phone is silent, vibrate or DND only an urgent one, and only if the owner allowed it in Settings.
      */
     fun shouldSpeak(speak: Boolean, inCall: Boolean, quiet: Boolean, urgent: Boolean, urgentInQuietAllowed: Boolean): Boolean =
         speak && !inCall && (!quiet || (urgent && urgentInQuietAllowed))
@@ -103,7 +103,7 @@ object InteractionNotifier {
     private fun post(ctx: Context, i: Interaction) {
         val app = ctx.applicationContext as BridgeApp
         val nid = notifId(i.id)
-        // Questions and HTML cards wait for Rahul's answer; notices and text panels only tell him.
+        // Questions and HTML cards wait for the owner's answer; notices and text panels only tell them.
         val question = i.kind == IKind.QUESTION || i.kind == IKind.HTML
         val title = SpannableStringBuilder().apply {
             val head = ctx.getString(when (i.kind) {
@@ -156,7 +156,7 @@ object InteractionNotifier {
             }
         }
 
-        // CAP-33: the lock screen shows only who, unless Rahul allowed the full text there.
+        // CAP-33: the lock screen shows only who, unless the owner allowed the full text there.
         if (prefs(ctx).getBoolean(PREF_LOCKSCREEN_TEXT, false)) b.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         else b.setVisibility(NotificationCompat.VISIBILITY_PRIVATE).setPublicVersion(
             NotificationCompat.Builder(ctx, if (question) CHANNEL_QUESTIONS else CHANNEL_NOTICES)

@@ -33,7 +33,7 @@ import net.finleg.bridget.ui.common.themeColor
 import com.google.android.material.R as M
 
 /**
- * What Rahul has typed or picked but not sent yet, per interaction and control, so a list refresh or a
+ * What the owner has typed or picked but not sent yet, per interaction and control, so a list refresh or a
  * rebind never wipes a half-written answer.
  */
 class Drafts {
@@ -56,7 +56,7 @@ class Drafts {
 object InteractionUi {
     fun isQuestion(i: Interaction) = i.kind == IKind.QUESTION || i.kind == IKind.HTML
 
-    /** Rows rebind only when something Rahul can see changed (Interaction holds JSON and controls compared by reference). */
+    /** Rows rebind only when something the owner can see changed (Interaction holds JSON and controls compared by reference). */
     fun contentKey(i: Interaction) = listOf(i.status, i.seenAt, i.answeredAt, i.closedAt, i.title, i.text, i.image, i.agent, i.answer?.toString())
 
     fun agentName(i: Interaction) = i.agent.ifBlank { "Your agent" }
@@ -227,7 +227,7 @@ object InteractionUi {
     }
 
     /**
-     * Opens a link control from Rahul's tap (CAP-41): https/geo/mailto view, tel only dials (never calls),
+     * Opens a link control from the owner's tap (CAP-41): https/geo/mailto view, tel only dials (never calls),
      * a package launches that app. The target is checked against the allowlist again before it is opened.
      */
     fun openLink(anchor: View, c: Control.Link) {

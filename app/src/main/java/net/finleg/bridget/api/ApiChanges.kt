@@ -34,8 +34,8 @@ object ApiChanges {
             Item("API revisions: X-Bridget-API-Revision on every reply, X-Bridget-Whats-New until you've caught up, and this list", "/v1/changes"),
         )),
         Revision(4, "1.5.0", "2026-10-27", listOf(
-            Item("Interactions: send Rahul a notice or a question with buttons, a text reply, a choice or links; read aloud if you ask", "/v1/interactions"),
-            Item("Wait for his answer (wait=55), list or cancel your interactions", "/v1/interactions/{id}"),
+            Item("Interactions: send the owner a notice or a question with buttons, a text reply, a choice or links; read aloud if you ask", "/v1/interactions"),
+            Item("Wait for their answer (wait=55), list or cancel your interactions", "/v1/interactions/{id}"),
             Item("Events: answers, closes and expiries for you, oldest first, with long-poll", "/v1/events"),
         )),
         Revision(5, "1.5.0", "2026-10-27", listOf(
@@ -46,19 +46,19 @@ object ApiChanges {
             Item("City tour: your running tour (tour.started / tour.tick / tour.question / tour.ended events)", "/v1/tour"),
         )),
         Revision(6, "1.5.2", "2026-10-27", listOf(
-            Item("Report your model and harness; Rahul sees it on your agent card", "/v1/me"),
-            Item("City tour brief in tour.started and GET /v1/tour: directions relative to him, nearest interesting places when nothing is left here", "/v1/tour"),
-            Item("tour.photo: Rahul took a photo for you on the tour; fetch it", "/v1/tour/photo/{n}"),
+            Item("Report your model and harness; the owner sees it on your agent card", "/v1/me"),
+            Item("City tour brief in tour.started and GET /v1/tour: directions relative to them, nearest interesting places when nothing is left here", "/v1/tour"),
+            Item("tour.photo: the owner took a photo for you on the tour; fetch it", "/v1/tour/photo/{n}"),
         )),
         Revision(7, "1.5.2", "2026-10-27", listOf(
             Item("HTML cards: kind=html draws your own card (offline, Bridget.respond(json) answers)", "/v1/interactions"),
             Item("Live text panel: kind=text, then stream text into it", "/v1/text/stream"),
-            Item("Callbacks: Rahul can set a callback URL for you; events are POSTed signed with HMAC-SHA256; send a test", "/v1/callback/test"),
+            Item("Callbacks: the owner can set a callback URL for you; events are POSTed signed with HMAC-SHA256; send a test", "/v1/callback/test"),
             Item("MCP: use Bridgit as an MCP server (Streamable HTTP) with your key", "/v1/mcp"),
             Item("Speaker status: playing shows only your own sound; busy and paused added", "/v1/speaker"),
             Item("End tour: optional tour_id so you only end the tour you mean", "/v1/tour"),
-            Item("Screenshot on request: what's on Rahul's screen now, nothing saved (once he turns on Screenshots)", "/v1/screen/capture"),
-            Item("Gallery with \"Select photos\" access: photo_not_found and /v1/gallery/recent say how Rahul allows all", "/v1/gallery/recent"),
+            Item("Screenshot on request: what's on the owner's screen now, nothing saved (once they turn on Screenshots)", "/v1/screen/capture"),
+            Item("Gallery with \"Select photos\" access: photo_not_found and /v1/gallery/recent say how the owner allows all", "/v1/gallery/recent"),
         )),
         Revision(8, "1.6.0", "2026-10-29", listOf(
             Item("Device context, sensors, flashlight, timed sound/display controls and find-phone ring", "/v1/phone/status"),

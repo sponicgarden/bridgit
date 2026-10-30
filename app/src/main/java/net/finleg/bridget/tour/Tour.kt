@@ -32,7 +32,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 
-/** City tour (D30, 8.25): tour kinds Rahul can pick. */
+/** City tour (D30, 8.25): tour kinds the owner can pick. */
 object TourKinds {
     val all = listOf("history", "architecture", "environment", "food", "art", "anything")
     val labels = mapOf("history" to "History", "architecture" to "Architecture", "environment" to "Environment",
@@ -47,32 +47,32 @@ object TourKinds {
     fun brief(kinds: List<String>): String {
         val topics = kinds.joinToString(", ") { labels[it]?.lowercase() ?: it }
         return listOf(
-            "You are Rahul's walking tour guide. Topics: $topics. He is walking now and listening on his phone's speaker.",
+            "You are the owner's walking tour guide. Topics: $topics. They are walking now and listening on their phone's speaker.",
             "Keep listening until tour.ended: loop GET /v1/events?since=<next_cursor>&wait=55 (60 s timeout). If your " +
                 "harness only acts during a turn, run each wait as a background command so the next event wakes you. " +
-                "Don't stop or end your turn while the tour runs; if you stop, he walks in silence.",
-            "The first tour.tick comes seconds after tour.started: greet him in 1-2 sentences, say where he is and what's " +
+                "Don't stop or end your turn while the tour runs; if you stop, they walk in silence.",
+            "The first tour.tick comes seconds after tour.started: greet them in 1-2 sentences, say where they are and what's " +
                 "around for these topics. Every tour.tick has location {latitude, longitude, accuracy_m}, compass " +
-                "{azimuth_deg = the way the phone points, 0 = north; direction}, moved_m and new_photos (photos he took since the last tick).",
+                "{azimuth_deg = the way the phone points, 0 = north; direction}, moved_m and new_photos (photos they took since the last tick).",
             "Speak with POST /v1/speaker/say {\"text\",\"tour_id\"}: 2-4 short sentences per tick, spoken style, no lists. " +
-                "Don't repeat what you already said; if he hasn't moved and you have nothing new, stay silent.",
-            "Say where things are relative to him: work out the bearing from his position to the place, compare it with " +
+                "Don't repeat what you already said; if they haven't moved and you have nothing new, stay silent.",
+            "Say where things are relative to them: work out the bearing from their position to the place, compare it with " +
                 "the compass and say \"ahead\", \"on your left\", \"behind you\" plus the compass direction and distance " +
                 "(\"about 200 m to your right, to the east\").",
             "When there is nothing more of interest right here, say so in one sentence, then name the 2-3 nearest " +
-                "interesting places for these topics with their direction relative to him and distance, so he can choose where to walk.",
-            "tour.question is him asking; answer it first with \"urgent\": true. tour.photo is a photo he just took for you: " +
+                "interesting places for these topics with their direction relative to them and distance, so they can choose where to walk.",
+            "tour.question is them asking; answer it first with \"urgent\": true. tour.photo is a photo they just took for you: " +
                 "GET its fetch link, say what it shows and why it matters for these topics. Fetch new_photos on a tick the same way.",
             "If location accuracy is worse than 100 m, say places are approximate. Never invent facts; say when you're not sure.",
         ).joinToString("\n")
     }
 
     /**
-     * What Rahul pastes into the agent's chat when it isn't listening for events (owner report 27 Oct
+     * What the owner pastes into the agent's chat when it isn't listening for events (owner report 27 Oct
      * 2026: agents never answered because nothing woke them). No key: the agent has it from pairing.
      */
     fun startPrompt(agentName: String, baseUrl: String, kinds: List<String>, tourRunning: Boolean): String = buildString {
-        appendLine("Bridget City tour: Rahul ${if (tourRunning) "has started" else "is starting"} a walking tour with you ($agentName) " +
+        appendLine("Bridget City tour: the owner ${if (tourRunning) "has started" else "is starting"} a walking tour with you ($agentName) " +
             "and you are not listening for Bridget events yet, so nothing reaches you.")
         appendLine("Bridget is at $baseUrl (use your Bridget key from pairing, as before).")
         appendLine("1. GET /v1/tour now. If a tour runs, its brief is there; follow it.")
@@ -89,7 +89,7 @@ object TourKinds {
 /** What was said during the tour, for the tour screen's history. */
 data class Said(val at: Long, val who: String, val text: String)
 
-/** A Take photo picture: where Android's camera saved it (in Rahul's gallery). */
+/** A Take photo picture: where Android's camera saved it (in the owner's gallery). */
 data class Shot(val uri: android.net.Uri, val at: Long)
 
 data class Tour(
@@ -99,7 +99,7 @@ data class Tour(
     val heading: Double? = null, val caption: String? = null, val said: List<Said> = emptyList(),
     /** TOUR-04: battery percentage at the start; [charged] once the phone was seen charging during the tour. */
     val batteryStartPct: Int? = null, val charged: Boolean = false,
-    /** Photos Rahul took with Take photo on this tour, in order; /v1/tour/photo/{n} is 1-based. */
+    /** Photos the owner took with Take photo on this tour, in order; /v1/tour/photo/{n} is 1-based. */
     val shots: List<Shot> = emptyList(),
 ) {
     fun json(): JSONObject = JSONObject().put("tour_id", id).put("kinds", JSONArray(kinds)).put("interval_s", intervalS)
@@ -185,7 +185,7 @@ object TourPrivacy {
 
 /**
  * Runs one tour at a time. Ticks go to the tour's agent as `tour.tick` events (section 9), the
- * agent answers with /v1/speaker (tour_id). Rahul's questions go as `tour.question`.
+ * agent answers with /v1/speaker (tour_id). The owner's questions go as `tour.question`.
  * Location is sent only to that agent, only during the tour (TOUR-02): every tour event is emitted
  * under the lock End takes, End strips location from that tour's stored events, and the Location
  * switch is re-checked right before each tick or question is built.
@@ -254,7 +254,7 @@ class TourManager(private val app: BridgeApp) {
             app.interactions.event(a.id, "tour.started", JSONObject().put("tour_id", t.id).put("kinds", JSONArray(kinds))
                 .put("interval_s", intervalS).put("brief", TourKinds.brief(kinds))
                 .put("how_to_reply", "POST /v1/speaker/say {\"text\",\"tour_id\"} or /v1/speaker/play; newer narration replaces queued")
-                .put("report_model", if (a.model == null) "Tell Rahul which model you are: POST /v1/me {\"model\",\"harness\"}" else JSONObject.NULL))
+                .put("report_model", if (a.model == null) "Tell the owner which model you are: POST /v1/me {\"model\",\"harness\"}" else JSONObject.NULL))
             job = scope.launch { loop(t.id) }
         }
         app.log.system("audit", "agent", "You started a ${kinds.joinToString("/")} city tour with ${a.name}")
@@ -322,7 +322,7 @@ class TourManager(private val app: BridgeApp) {
         tour.update(tourId) { t -> t.copy(caption = text, said = (t.said + Said(System.currentTimeMillis(), t.agent, text)).takeLast(100)) }
     }
 
-    /** Rahul's question (TOUR, owner request): typed, or the transcript of what he said. */
+    /** the owner's question (TOUR, owner request): typed, or the transcript of what they said. */
     suspend fun ask(text: String, spoken: Boolean) {
         val t = tour.current() ?: return
         val q = text.trim().take(1000).ifEmpty { return }
@@ -344,7 +344,7 @@ class TourManager(private val app: BridgeApp) {
         if (sent) app.log.system("audit", "agent", "You asked ${t.agent} a question on the tour")
     }
 
-    /** Rahul took a photo with Take photo (TOUR-07): it goes to the agent now, not at the next tick. */
+    /** the owner took a photo with Take photo (TOUR-07): it goes to the agent now, not at the next tick. */
     suspend fun photoTaken(uri: android.net.Uri) {
         val t = tour.current() ?: return
         if (!locationStillOn(t.id)) return
@@ -370,7 +370,7 @@ class TourManager(private val app: BridgeApp) {
     /** Pause/Resume; keeps everything else as it is now. */
     fun setPaused(p: Boolean, tourId: String? = null) { tour.setPaused(p, tourId) }
 
-    /** Ends whatever tour runs (Rahul's End, the test hook). */
+    /** Ends whatever tour runs (the owner's End, the test hook). */
     fun end(reason: String) { tour.locked { tour.take()?.let { finish(it, reason) } } }
 
     /** Ends tour [tourId] only if it is still the current one (the notification's End). */
@@ -425,7 +425,7 @@ class TourModule(app: BridgeApp) : Capability(app) {
             else Reply.Json(envelope(img, isoAt(shot.at), "taken_at", null).put("source", "tour").put("n", n))
         }
         endpoint(Endpoints.TOUR_END) {
-            // One step: a tour Rahul replaced meanwhile (another agent's) is never ended by this request.
+            // One step: a tour the owner replaced meanwhile (another agent's) is never ended by this request.
             val t = app.tours.endIfOwned(agent!!.id, query("tour_id")?.takeIf { it.isNotBlank() }, "ended by $agentName")
                 ?: throw ErrorCatalog.error("not_found", "You have no tour running.")
             Reply.Json(JSONObject().put("ended", t.id))

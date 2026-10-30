@@ -134,7 +134,7 @@ class StatusModule(app: BridgeApp) : Capability(app) {
             Reply.Bytes(src, "text/x-python; charset=utf-8", mapOf("Content-Disposition" to "attachment; filename=\"bridget\""))
         }
         endpoint(Endpoints.PAIR) {
-            if (!app.pairing.isOpen()) throw ErrorCatalog.error("pairing_closed", "No pairing window is open. Ask Rahul to open one (Add agent, then Pair with code).")
+            if (!app.pairing.isOpen()) throw ErrorCatalog.error("pairing_closed", "No pairing window is open. Ask the owner to open one (Add agent, then Pair with code).")
             val w = app.pairing.redeem(body.optString("code", ""))
                 ?: run { api.recordAuthFailure(source); throw ErrorCatalog.error("unauthorized", "Wrong pairing code.") }
             message = "${w.agentName} fetched its key with a pairing code"
@@ -284,8 +284,8 @@ class GalleryModule(app: BridgeApp) : Capability(app) {
                     .put("size_bytes", it.size).put("mime", it.mime).put("album", it.album ?: JSONObject.NULL))
             }
             val out = JSONObject().put("access_mode", m).put("photos", arr)
-            if (m == "selected") out.put("hint", "Only the photos Rahul picked are visible. For new photos and screenshots, " +
-                "ask him to set Photos to \"Allow all\" (Bridgit > More > Access > Photos > Change).")
+            if (m == "selected") out.put("hint", "Only the photos the owner picked are visible. For new photos and screenshots, " +
+                "ask them to set Photos to \"Allow all\" (Bridgit > More > Access > Photos > Change).")
             Reply.Json(out)
         }
         endpoint(Endpoints.GALLERY_PHOTO) {
@@ -346,13 +346,13 @@ class GalleryModule(app: BridgeApp) : Capability(app) {
     }
 
     /**
-     * photo_not_found. With "Select photos" access Android only shows Bridgit the photos Rahul picked, and
+     * photo_not_found. With "Select photos" access Android only shows Bridgit the photos the owner picked, and
      * new screenshots are never in that set, so say how to fix it instead of just "not found".
      */
     private fun notFound(mode: String, what: String) =
         if (mode != "selected") ErrorCatalog.error("photo_not_found", "$what.", mapOf("access_mode" to mode))
-        else ErrorCatalog.error("photo_not_found", "$what in the photos Rahul picked. Bridgit has \"Select photos\" access only, " +
-            "so new photos and screenshots stay hidden. Ask Rahul to open Bridgit > More > Access > Photos > Change and choose " +
+        else ErrorCatalog.error("photo_not_found", "$what in the photos the owner picked. Bridgit has \"Select photos\" access only, " +
+            "so new photos and screenshots stay hidden. Ask the owner to open Bridgit > More > Access > Photos > Change and choose " +
             "\"Allow all\".", mapOf("access_mode" to mode, "setting" to "photos_allow_all"))
 
     private class Since(val id: Long? = null, val ts: Long? = null) {

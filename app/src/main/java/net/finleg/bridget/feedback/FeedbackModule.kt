@@ -21,7 +21,7 @@ import org.json.JSONObject
 
 /**
  * Section 11.5: the feedback API. Reading and moving reports needs the agent's
- * Developer switch (AGT-15), because reports carry screenshots of Rahul's phone.
+ * Developer switch (AGT-15), because reports carry screenshots of the owner's phone.
  * Any agent may file a report (FBK-12). Always on: there is no master switch.
  */
 class FeedbackModule(app: BridgeApp) : Capability(app) {
@@ -34,7 +34,7 @@ class FeedbackModule(app: BridgeApp) : Capability(app) {
     private fun Req.requireDeveloper() {
         val current = agent?.let { app.agents.get(it.id) }
         if (current?.developer != true) throw ErrorCatalog.error("forbidden",
-            "Only developer agents can read bug reports. Ask Rahul to turn on Developer for $agentName.", mapOf("reason" to "developer_only"))
+            "Only developer agents can read bug reports. Ask the owner to turn on Developer for $agentName.", mapOf("reason" to "developer_only"))
     }
 
     private fun mapError(e: FeedbackError): Nothing = when (e.code) {

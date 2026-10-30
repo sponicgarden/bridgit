@@ -127,7 +127,7 @@ fun decodeFileThumb(path: String, edgePx: Int): Bitmap? {
 
 /**
  * "Preview" from the form (FBK-04 item 7): the redacted entries the report would carry,
- * as Activity rows (shared LogRowAdapter), plus the entry Rahul picked, if any.
+ * as Activity rows (shared LogRowAdapter), plus the entry the owner picked, if any.
  */
 class LogPreviewSheet : BottomSheetDialogFragment() {
     private var _b: FeedbackSheetLogBinding? = null

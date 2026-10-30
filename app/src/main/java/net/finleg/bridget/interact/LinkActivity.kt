@@ -16,7 +16,7 @@ import net.finleg.bridget.R
 
 /**
  * Opens an interaction's link from a notification action (CAP-41). Android 12+ forbids notification
- * trampolines, so the action starts this invisible activity, which starts the link from Rahul's tap.
+ * trampolines, so the action starts this invisible activity, which starts the link from the owner's tap.
  * The extras carry only ids: the URL or package is always read from the stored interaction.
  */
 class LinkActivity : ComponentActivity() {

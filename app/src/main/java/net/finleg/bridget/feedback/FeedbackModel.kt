@@ -16,7 +16,7 @@ enum class ReportStatus(val id: String) {
     companion object { fun of(id: String?) = values().firstOrNull { it.id == id } }
 }
 
-/** Who moves a report: Bridgit itself (first developer read), a developer agent, or Rahul on the phone. */
+/** Who moves a report: Bridgit itself (first developer read), a developer agent, or the owner on the phone. */
 enum class Actor { AUTO, DEVELOPER, OWNER }
 
 /**
@@ -43,7 +43,7 @@ object StatusMachine {
     /** Statuses a developer agent may set from [from], for error messages and the guide. */
     fun nextForDeveloper(from: ReportStatus) = ReportStatus.values().filter { allowed(from, it, Actor.DEVELOPER) }
 
-    /** Rahul is told (FBK-11) when a report becomes one of these. */
+    /** the owner is told (FBK-11) when a report becomes one of these. */
     fun notifiesOwner(to: ReportStatus) = to == ReportStatus.FIXED || to == ReportStatus.WONT_FIX || to == ReportStatus.DUPLICATE
 
     /** Labels for My reports (ui-spec 5.12). */
@@ -84,7 +84,7 @@ data class Report(
         .put("id", id).put("number", number).put("kind", kind.id).put("status", status.id)
         .put("first_line", firstLine).put("created_at", iso(createdAt)).put("updated_at", iso(updatedAt))
         .put("no_autofix", noAutofix).put("capture_source", captureSource)
-        .put("filed_by", agent ?: "Rahul").put("image_count", images.size).put("last_updated_by", lastBy ?: JSONObject.NULL)
+        .put("filed_by", agent ?: "owner").put("image_count", images.size).put("last_updated_by", lastBy ?: JSONObject.NULL)
 }
 
 /** Limits from FBK-13 and FBK-04/07. */

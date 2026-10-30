@@ -28,7 +28,7 @@ class DebugSetupReceiver : BroadcastReceiver() {
             if (intent.hasExtra(k)) app.settings.setOn(k, intent.getBooleanExtra(k, false))
         }
         intent.getStringExtra("log_visibility")?.let { app.settings.logVisibility = it }
-        // answer=<id>:<button> and dismiss=<id> stand in for Rahul's tap in tests.
+        // answer=<id>:<button> and dismiss=<id> stand in for the owner's tap in tests.
         intent.getStringExtra("answer")?.let { spec ->
             val (id, button) = spec.split(":", limit = 2).let { it[0].toLong() to it.getOrNull(1) }
             runCatching { app.interactions.answer(id, button, emptyMap()) }

@@ -43,7 +43,7 @@ object Endpoints {
 
     val HEALTH = EndpointSpec("GET", "/health", "status", "Is Bridgit up, and which agent you are",
         example = "GET /v1/health", returns = "status, app, app_version, agent, listener_uptime_seconds, battery_level, charging, bind_address, port")
-    val ME = EndpointSpec("POST", "/me", "status", "Tell Rahul which model you are and what runs you; shown on your agent card (AGT-16)",
+    val ME = EndpointSpec("POST", "/me", "status", "Tell the owner which model you are and what runs you; shown on your agent card (AGT-16)",
         body = listOf(Param("model", "string", "Your model, as exact as you know it, e.g. claude-opus-5-5 or gpt-6.1 (1-60 chars)", required = true),
             Param("harness", "string", "The program running you, e.g. Claude Code, Codex CLI, a Python script (1-40 chars)")),
         example = "POST /v1/me {\"model\":\"claude-opus-5-5\",\"harness\":\"Claude Code\"}", returns = "agent, model, harness",
@@ -159,7 +159,7 @@ object Endpoints {
     val FEEDBACK_STATUS = EndpointSpec("POST", "/feedback/{id}/status", "feedback", "Move a report: in_progress, fixed, wont_fix or duplicate (developer agents only; FBK-11a)",
         idempotent = true, developerOnly = true, privateFields = setOf("note"),
         body = listOf(Param("status", "string", "in_progress, fixed, wont_fix or duplicate", required = true),
-            Param("note", "string", "Short note shown to Rahul, e.g. \"Fix in PR #412\" (500 chars)")),
+            Param("note", "string", "Short note shown to the owner, e.g. \"Fix in PR #412\" (500 chars)")),
         example = "POST /v1/feedback/7/status {\"status\":\"in_progress\",\"note\":\"Looking at it\"}", returns = "the report summary",
         errors = listOf("forbidden", "not_found", "invalid_parameter"))
     val FEEDBACK_POST = EndpointSpec("POST", "/feedback", "feedback", "File a bug report or feature request yourself (any agent; images from developer agents only)",
@@ -171,7 +171,7 @@ object Endpoints {
         example = "POST /v1/feedback {\"kind\":\"bug\",\"description\":\"image/last returned 500 twice\"}", returns = "id, number, status",
         errors = listOf("forbidden", "invalid_parameter", "rate_limited"))
 
-    val INTERACTION_CREATE = EndpointSpec("POST", "/interactions", "interactions", "Send Rahul a notice, a question (buttons, text reply, choice, links), an HTML card or a live text panel",
+    val INTERACTION_CREATE = EndpointSpec("POST", "/interactions", "interactions", "Send the owner a notice, a question (buttons, text reply, choice, links), an HTML card or a live text panel",
         idempotent = true, privateFields = setOf("text", "image", "html"),
         body = listOf(
             Param("kind", "string", "notice (one-way), question, html (a card you draw; answer comes from Bridget.respond) or text (a live text panel you stream into with /v1/text/stream)",
@@ -192,10 +192,10 @@ object Endpoints {
         privateFields = setOf("append"),
         body = listOf(Param("interaction_id", "string", "The panel's interaction_id", required = true),
             Param("append", "string", "Text to add, up to 16 KB per call (the panel keeps the last 200 KB)"),
-            Param("done", "boolean", "true: the stream is finished; the panel stays until Rahul closes it")),
+            Param("done", "boolean", "true: the stream is finished; the panel stays until the owner closes it")),
         example = "POST /v1/text/stream {\"interaction_id\":\"42\",\"append\":\"Claude: running the tests now...\\n\"}",
         returns = "interaction_id, length, status", errors = listOf("not_found", "invalid_parameter", "conflict", "rate_limited"))
-    val CALLBACK_TEST = EndpointSpec("POST", "/callback/test", "interactions", "Send a signed test event to the callback URL Rahul set for you (EVT-05/06)",
+    val CALLBACK_TEST = EndpointSpec("POST", "/callback/test", "interactions", "Send a signed test event to the callback URL the owner set for you (EVT-05/06)",
         example = "POST /v1/callback/test", returns = "delivered, http_status, host", errors = listOf("not_found", "callback_failed"))
     val MCP = EndpointSpec("POST", "/mcp", "status", "Model Context Protocol (Streamable HTTP, JSON replies): every endpoint you can use is an MCP tool",
         maxBody = 2 * 1024 * 1024, privateFields = setOf("params"),
@@ -206,7 +206,7 @@ object Endpoints {
     val INTERACTION_LIST = EndpointSpec("GET", "/interactions", "interactions", "Your interactions, newest first",
         query = listOf(Param("status", "string", "pending, seen, answered, dismissed, expired or cancelled"), Param("limit", "integer", "1-100, default 50")),
         example = "GET /v1/interactions?status=answered", returns = "interactions[]")
-    val INTERACTION_GET = EndpointSpec("GET", "/interactions/{id}", "interactions", "One of your interactions; with wait, holds until Rahul answers or closes it",
+    val INTERACTION_GET = EndpointSpec("GET", "/interactions/{id}", "interactions", "One of your interactions; with wait, holds until the owner answers or closes it",
         query = listOf(Param("wait", "integer", "Hold up to this many seconds (max 55) for the answer")),
         example = "GET /v1/interactions/12?wait=55", returns = "kind, status, answer{button, values}, answered_at, closed_at",
         errors = listOf("not_found", "too_many_waits"))
@@ -245,9 +245,9 @@ object Endpoints {
         example = "GET /v1/speaker", returns = "playing{play_id, agent, text} (yours only, else null), busy (someone else's sound is playing), paused, queued[], quiet")
     val SPEAKER_STOP = EndpointSpec("DELETE", "/speaker", "speaker", "Stop your audio and clear your queue",
         example = "DELETE /v1/speaker", returns = "stopped")
-    val TOUR_GET = EndpointSpec("GET", "/tour", "tour", "Your running City tour, if Rahul started one with you (D30)",
+    val TOUR_GET = EndpointSpec("GET", "/tour", "tour", "Your running City tour, if the owner started one with you (D30)",
         example = "GET /v1/tour", returns = "tour{tour_id, kinds, interval_s, started_at, ticks, last_tick_at, distance_m, photos_sent, brief} or null")
-    val TOUR_PHOTO = EndpointSpec("GET", "/tour/photo/{n}", "tour", "A photo Rahul took with Take photo on your tour (n from tour.photo), sized for you",
+    val TOUR_PHOTO = EndpointSpec("GET", "/tour/photo/{n}", "tour", "A photo the owner took with Take photo on your tour (n from tour.photo), sized for you",
         media = true, query = sizing,
         example = "GET /v1/tour/photo/1?size=agent", returns = "taken_at, width_px, height_px, format, size_bytes, data_base64",
         errors = listOf("not_found", "photo_not_found", "payload_too_large"))
@@ -255,7 +255,7 @@ object Endpoints {
         query = listOf(Param("tour_id", "string", "Only end this tour (it must be yours and still running)")),
         example = "DELETE /v1/tour", returns = "ended", errors = listOf("not_found"))
 
-    val SCREEN_CAPTURE = EndpointSpec("POST", "/screen/capture", "screen", "What's on Rahul's screen right now (D17, no prompt once he's turned it on)",
+    val SCREEN_CAPTURE = EndpointSpec("POST", "/screen/capture", "screen", "What's on the owner's screen right now (D17, no prompt once they've turned it on)",
         capture = true, idempotent = true, media = true, query = sizing,
         body = listOf(Param("mode", "string", "private (default): kept in memory, nothing saved", enum = listOf("private"))),
         example = "POST /v1/screen/capture?size=agent", returns = "captured_at, width_px, height_px, format, size_bytes, mode, data_base64 (or raw=1 bytes)",

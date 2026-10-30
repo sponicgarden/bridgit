@@ -41,7 +41,7 @@ class MainActivity : AppCompatActivity() {
     private val app get() = application as BridgeApp
     lateinit var nav: NavController; private set
     private lateinit var panel: TextPanel
-    /** D26: the text panel Rahul picked (list or notification); null = the newest open one, if any. */
+    /** D26: the text panel the owner picked (list or notification); null = the newest open one, if any. */
     private var panelChosen: Long? = null
     private val panelSeen = HashSet<Long>()
     private var navInset = 0
@@ -225,7 +225,7 @@ class MainActivity : AppCompatActivity() {
         val cm = getSystemService(ClipboardManager::class.java) ?: return
         val label = runCatching { cm.primaryClipDescription?.label?.toString() }.getOrNull() ?: return
         if (label == CLIP_LABEL) runCatching { cm.clearPrimaryClip() }
-        // The secret's Copy button closes a dialog, which refocuses this window at once: wait until Rahul has been away.
+        // The secret's Copy button closes a dialog, which refocuses this window at once: wait until the owner has been away.
         if (label == CLIP_LABEL_SECRET && leftApp) runCatching { cm.clearPrimaryClip() }
     }
 

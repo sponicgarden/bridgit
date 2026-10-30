@@ -14,7 +14,7 @@ Settings come from ~/.config/bridgit/env (or environment variables).
 Legacy ~/.config/bridget/env and BRIDGET_* variables remain supported.
 BRIDGIT_ENV (or legacy BRIDGET_ENV) selects one config file exclusively:
   BRIDGIT_KEY=<your agent key>     required (brg_...), never printed
-  BRIDGIT_HOST=100.94.27.79        optional
+  BRIDGIT_HOST=<phone address>     required: the phone's Tailscale IP or MagicDNS name
   BRIDGIT_PORT=8734                optional (debug builds listen on 8735)
   BRIDGET_ENV=<path>               optional: another env file, so several agents
                                    on one computer can each keep their own key
@@ -138,7 +138,10 @@ def main(argv):
     if not key:
         print("bridgit: set BRIDGIT_KEY in ~/.config/bridgit/env", file=sys.stderr)
         return 2
-    host, port = cfg.get("BRIDGET_HOST", "100.94.27.79"), cfg.get("BRIDGET_PORT", "8734")
+    host, port = cfg.get("BRIDGET_HOST"), cfg.get("BRIDGET_PORT", "8734")
+    if not host:
+        print("bridgit: set BRIDGIT_HOST (the phone's Tailscale IP or MagicDNS name) in ~/.config/bridgit/env", file=sys.stderr)
+        return 2
     data = (body or "").encode()
     idem = f"Idempotency-Key: {uuid.uuid4()}\r\n" if method == "POST" else ""
     req = (f"{method} {path} HTTP/1.1\r\nHost: {host}:{port}\r\nAuthorization: Bearer {key}\r\n"

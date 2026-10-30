@@ -192,6 +192,7 @@ class SettingsFragment : Fragment() {
     /** D32: crash reports are on unless turned off, so this switch reads the inverted pref. */
     private fun crashSwitch() {
         val r = b.crashReports
+        if (!net.finleg.bridget.core.CrashReports.configured) { r.root.visibility = View.GONE; return }
         val key = net.finleg.bridget.core.CrashReports.PREF
         r.title.setText(R.string.settings_crash_reports)
         r.value.setText(R.string.settings_crash_reports_desc)
