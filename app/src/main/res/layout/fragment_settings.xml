@@ -58,6 +58,7 @@
                 <include android:id="@+id/notifCapture" layout="@layout/settings_row" />
                 <include android:id="@+id/notifQuestions" layout="@layout/settings_row" />
                 <include android:id="@+id/notifNotices" layout="@layout/settings_row" />
+                <include android:id="@+id/openOnArrival" layout="@layout/settings_switch_row" />
 
                 <TextView style="@style/SettingsHeader" android:text="@string/settings_alerts" />
                 <include android:id="@+id/alertFrequency" layout="@layout/settings_row" />

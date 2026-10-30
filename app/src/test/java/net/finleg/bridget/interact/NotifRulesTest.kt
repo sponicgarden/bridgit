@@ -62,6 +62,14 @@ class NotifRulesTest {
         assertFalse(NotifRules.shouldSpeak(true, true, false, true, true))
     }
 
+    @Test fun openGate() {
+        // (prefOn, overlayAllowed, bridgitInFront): CAP-56 opens only when set, granted and Bridgit isn't in front.
+        assertTrue(NotifRules.shouldOpen(true, true, false))
+        assertFalse(NotifRules.shouldOpen(false, true, false))
+        assertFalse(NotifRules.shouldOpen(true, false, false))
+        assertFalse(NotifRules.shouldOpen(true, true, true))
+    }
+
     @Test fun linkOpen() {
         assertEquals(NotifRules.LinkOpen.VIEW, NotifRules.linkOpen("https://example.com/a", null))
         assertEquals(NotifRules.LinkOpen.VIEW, NotifRules.linkOpen("geo:52.1,4.3", null))
