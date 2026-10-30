@@ -271,8 +271,15 @@ object Endpoints {
         media = true, example = "GET /v1/listen/clip/c0123abcd", returns = "heard_at, duration_seconds, format (wav), sample_rate_hz, size_bytes, data_base64 (or raw=1 bytes)",
         errors = listOf("not_found"))
 
+    val SOUNDS = EndpointSpec("GET", "/sounds", "sounds", "Listen for any sounds: whether the phone tells you when the room gets loud (8.23)",
+        example = "GET /v1/sounds", returns = "enabled, for_you, state (off|listening|paused), reason, sensitivity (quiet|normal|loud), send_clip, cooldown_seconds, max_seconds. " +
+            "Each sound arrives as a sound.heard event: heard_at, duration_seconds, peak_dbfs, mean_dbfs, sensitivity, clip_id")
+    val SOUNDS_CLIP = EndpointSpec("GET", "/sounds/clip/{id}", "sounds", "The audio of a sound (up to 10 s, from just before it started), when the owner lets sounds send audio (kept 10 minutes)",
+        media = true, example = "GET /v1/sounds/clip/c0123abcd", returns = "heard_at, duration_seconds, format (wav), sample_rate_hz, size_bytes, data_base64 (or raw=1 bytes)",
+        errors = listOf("not_found"))
+
     val all = listOf(HEALTH, CAPABILITIES, GUIDE, DEMO, OPENAPI, CHANGES, HELPER, PAIR, SNAPSHOT, MIC, GALLERY_RECENT, GALLERY_PHOTO,
         IMAGE_LAST, SCREEN_CAPTURE, LOG, LOG_ENTRY, LOG_STATS, LOG_EXPORT, LOG_NOTE, AUDIT, FEEDBACK_LIST, FEEDBACK_GET, FEEDBACK_STATUS, FEEDBACK_POST,
         INTERACTION_CREATE, INTERACTION_LIST, INTERACTION_GET, INTERACTION_CANCEL, EVENTS, TEXT_STREAM, CALLBACK_TEST, MCP,
-        LOCATION, SPEAKER_PLAY, SPEAKER_SAY, SPEAKER_STATUS, SPEAKER_STOP, TOUR_GET, TOUR_PHOTO, TOUR_END, ME, LISTEN, LISTEN_CLIP) + net.finleg.bridget.planned.PlannedEndpoints.all
+        LOCATION, SPEAKER_PLAY, SPEAKER_SAY, SPEAKER_STATUS, SPEAKER_STOP, TOUR_GET, TOUR_PHOTO, TOUR_END, ME, LISTEN, LISTEN_CLIP, SOUNDS, SOUNDS_CLIP) + net.finleg.bridget.planned.PlannedEndpoints.all
 }

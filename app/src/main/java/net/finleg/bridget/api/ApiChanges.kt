@@ -81,6 +81,10 @@ object ApiChanges {
             Item("Wake words: the owner maps words like \"hey bridget\" to you; what they say next arrives as a listen.heard event. Your wake words and whether the phone is listening", "/v1/listen"),
             Item("The audio after a wake word, when the owner chose to send it", "/v1/listen/clip/{id}"),
         )),
+        Revision(11, "1.6.0", "2026-10-30", listOf(
+            Item("Listen for any sounds: the owner can have the phone tell you when the room gets loud (sound.heard events), and how it's set", "/v1/sounds"),
+            Item("The audio of a sound, when the owner lets sounds send audio", "/v1/sounds/clip/{id}"),
+        )),
     )
 
     val CURRENT: Int = revisions.maxOf { it.revision }

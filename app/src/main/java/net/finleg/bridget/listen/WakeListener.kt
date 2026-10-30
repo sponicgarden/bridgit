@@ -61,35 +61,55 @@ class WakeListener(private val app: BridgeApp) {
         scope.launch { model.state.collect { sync() } }
     }
 
-    /** Null when the listener can run; otherwise why not (also the module's blocked reason, minus the switch). */
-    fun missing(): String? = when {
+    /** "Listen for any sounds", if the owner set it up for an agent that still exists. */
+    fun soundConfig(): SoundConfig? = SoundConfig.fromJson(app.settings.soundsConfig)?.takeIf { app.agents.get(it.agentId) != null }
+    fun saveSoundConfig(c: SoundConfig?) { app.settings.soundsConfig = c?.toJson()?.toString() ?: "" }
+
+    private fun micMissing(): String? = when {
         !app.granted(Manifest.permission.RECORD_AUDIO) -> "permission:RECORD_AUDIO"
         !app.captureNotificationsOn() -> "notifications_off"
         !app.listener.value.running -> "listener_off"
         !app.listener.value.micReady -> "open_app_once"
+        else -> null
+    }
+
+    /** Null when wake words can run; otherwise why not (also the module's blocked reason, minus the switch). */
+    fun missing(): String? = micMissing() ?: when {
         !model.ready -> "model_missing"
         activeWords().isEmpty() -> "no_wake_words"
         else -> null
     }
 
+    /** The same for "listen for any sounds": no speech model needed, only an agent. */
+    fun soundsMissing(): String? = micMissing() ?: if (soundConfig() == null) "no_agent" else null
+
+    /** What the microphone loop is doing: wake words (empty when off) and sounds (null when off). */
+    data class Run(val words: List<WakeWord>, val sound: SoundConfig?)
+
     @Synchronized fun sync() {
-        val reason = if (!app.settings.isOn(SWITCH)) "switch_off" else missing()
-        val words = activeWords()
-        if (reason != null) {
-            job?.cancel(); job = null
+        val wakeOn = app.settings.isOn(SWITCH) && missing() == null
+        val soundOn = app.settings.isOn(SOUND_SWITCH) && soundsMissing() == null
+        if (!wakeOn && !soundOn) {
+            val reason = when {
+                app.settings.isOn(SWITCH) -> missing() ?: "error"
+                app.settings.isOn(SOUND_SWITCH) -> soundsMissing() ?: "error"
+                else -> "switch_off"
+            }
+            job?.cancel(); job = null; running = null
             if (_state.value != State.Off(reason)) setState(State.Off(reason))
             return
         }
-        if (job?.isActive == true && running == words) return
+        val run = Run(if (wakeOn) activeWords() else emptyList(), if (soundOn) soundConfig() else null)
+        if (job?.isActive == true && running == run) return
         job?.cancel()
-        running = words
-        job = scope.launch { runCatching { loop(words) }.onFailure { e ->
+        running = run
+        job = scope.launch { runCatching { loop(run) }.onFailure { e ->
             if (e is CancellationException) throw e
-            app.log.system("diagnostic", "wakewords", "Wake words stopped: ${e.javaClass.simpleName}: ${e.message}", level = "error")
+            app.log.system("diagnostic", "wakewords", "Listening stopped: ${e.javaClass.simpleName}: ${e.message}", level = "error")
             setState(State.Off("error"))
         } }
     }
-    private var running: List<WakeWord>? = null
+    @Volatile var running: Run? = null; private set
 
     fun mute(ms: Long = WakeRules.MUTE_MS) {
         mutedUntil = System.currentTimeMillis() + ms
@@ -124,18 +144,19 @@ class WakeListener(private val app: BridgeApp) {
         BridgeService.running?.refreshNotification()
     }
 
-    private suspend fun loop(words: List<WakeWord>) {
-        val m = withContext(Dispatchers.IO) { model.load() }
+    private suspend fun loop(run: Run) {
+        val m = if (run.words.isEmpty()) null else withContext(Dispatchers.IO) { model.load() }
         while (currentCoroutineContext().isActive) {
             val why = pausedReason()
             if (why != null) { if (_state.value != State.Paused(why)) setState(State.Paused(why)); delay(1_000); continue }
-            if (!listenUntilPaused(m, words)) delay(5_000)
+            if (!listenUntilPaused(m, run)) delay(5_000)
         }
     }
 
-    /** Spots wake words until something wants the microphone back. False when the microphone couldn't be opened. */
+    /** Spots wake words and sounds until something wants the microphone back. False when the microphone couldn't be opened. */
     @SuppressLint("MissingPermission")
-    private suspend fun listenUntilPaused(m: Model, words: List<WakeWord>): Boolean {
+    private suspend fun listenUntilPaused(m: Model?, run: Run): Boolean {
+        val words = run.words
         val min = AudioRecord.getMinBufferSize(RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)
         val rec = runCatching { AudioRecord(MediaRecorder.AudioSource.VOICE_RECOGNITION, RATE, AudioFormat.CHANNEL_IN_MONO,
             AudioFormat.ENCODING_PCM_16BIT, maxOf(min, FRAME * 4)) }.getOrNull()
@@ -144,7 +165,10 @@ class WakeListener(private val app: BridgeApp) {
             app.log.system("diagnostic", "wakewords", "Couldn't open the microphone for wake words", level = "warn")
             return false
         }
-        val spotter = Recognizer(m, RATE.toFloat(), WakeRules.grammar(words)).apply { setWords(true); setPartialWords(true) }
+        val spotter = m?.let { Recognizer(it, RATE.toFloat(), WakeRules.grammar(words)).apply { setWords(true); setPartialWords(true) } }
+        val sounds = run.sound?.let { WakeRules.SoundDetector(it.sensitivity) }
+        var soundPcm: ByteArrayOutputStream? = null
+        var soundAt = 0L
         val ring = Ring(RATE * 2 * 2)
         var fed = 0L
         val gate = WakeRules.SoundGate()
@@ -159,8 +183,18 @@ class WakeListener(private val app: BridgeApp) {
                 if (n < 0) return false
                 if (n == 0) continue
                 ring.write(buf, n)
+                val level = WakeRules.rms(buf, n)
+                if (sounds != null) when (sounds.feed(level)) {
+                    // The clip starts 500 ms back so the start of the sound is in it.
+                    WakeRules.SoundDetector.Ev.START -> { soundAt = System.currentTimeMillis() - 200
+                        soundPcm = ByteArrayOutputStream().apply { write(ring.last(5 * FRAME)) } }
+                    WakeRules.SoundDetector.Ev.END -> { val p = soundPcm?.toByteArray() ?: ByteArray(0); soundPcm = null
+                        val (dur, peak, mean) = Triple(sounds.durationMs / 1000.0, sounds.peakRms, sounds.meanRms)
+                        scope.launch { deliverSound(run.sound, p, dur, peak, mean, soundAt) } }
+                    null -> soundPcm?.write(buf, 0, n)
+                }
                 // Silence never reaches Vosk; when sound starts, it gets up to 300 ms of what came just before.
-                if (!gate.feed(WakeRules.rms(buf, n))) {
+                if (spotter == null || !gate.feed(level)) {
                     quiet++
                     if (app.registry.micLock.isLocked || (++frames % 10 == 0 && pausedReason() != null)) return true
                     continue
@@ -175,7 +209,8 @@ class WakeListener(private val app: BridgeApp) {
                     val endByte = hit.endS?.let { (it * RATE * 2).toLong() and 1L.inv() } ?: fed
                     val tail = ring.last((fed - endByte).coerceIn(0, ring.size.toLong()).toInt())
                     ring.clear(); spotter.reset(); fed = 0
-                    follow(rec, m, hit.wake, tail)
+                    soundPcm = null
+                    follow(rec, m!!, hit.wake, tail)
                     setState(State.Listening)
                 }
                 // The mic lock is checked every frame so a recording agent isn't kept waiting; the rest once a second.
@@ -183,7 +218,7 @@ class WakeListener(private val app: BridgeApp) {
             }
             return true
         } finally {
-            runCatching { rec.stop() }; rec.release(); spotter.close(); ring.clear()
+            runCatching { rec.stop() }; rec.release(); spotter?.close(); ring.clear()
         }
     }
 
@@ -244,6 +279,28 @@ class WakeListener(private val app: BridgeApp) {
         BridgeService.running?.refreshNotification()
     }
 
+    private val soundTimes = ArrayDeque<Long>()
+
+    /** "Listen for any sounds": a `sound.heard` event, at most 60 an hour on top of the detector's 30 s gap. */
+    private fun deliverSound(cfg: SoundConfig, pcm: ByteArray, seconds: Double, peak: Double, mean: Double, heardAt: Long) {
+        val agent = app.agents.get(cfg.agentId) ?: return
+        synchronized(soundTimes) {
+            while (soundTimes.isNotEmpty() && soundTimes.first() < heardAt - 3_600_000L) soundTimes.removeFirst()
+            if (soundTimes.size >= 60) return
+            soundTimes.addLast(heardAt)
+        }
+        val clipId = if (cfg.sendClip && pcm.isNotEmpty()) newId().also { id ->
+            synchronized(clips) { pruneClips(); clips[id] = Clip(agent.id, WakeRules.wav(pcm), heardAt, pcm.size / (RATE * 2.0)) }
+        } else null
+        val e = WakeRules.soundEvent(isoAt(heardAt), seconds, peak, mean, cfg.sensitivity, clipId)
+        app.interactions.event(agent.id, "sound.heard", e)
+        app.log.system("audit", "sounds", "Heard a sound for ${agent.name}: ${e.getDouble("duration_seconds")} s, peak ${e.getDouble("peak_dbfs")} dBFS",
+            data = JSONObject().put("agent_id", agent.id).put("clip", clipId != null))
+        lastSound = LastSound(agent.name, e.getDouble("peak_dbfs"), seconds, heardAt)
+    }
+    data class LastSound(val agentName: String, val peakDbfs: Double, val seconds: Double, val at: Long)
+    @Volatile var lastSound: LastSound? = null; private set
+
     /** The clip [id] if it belongs to [agentId] and is under 10 minutes old. */
     fun clip(id: String, agentId: String): Clip? = synchronized(clips) { pruneClips(); clips[id]?.takeIf { it.agentId == agentId } }
     private fun pruneClips() {
@@ -254,7 +311,9 @@ class WakeListener(private val app: BridgeApp) {
 
     /** JSON for GET /v1/listen: the state, and only this agent's wake words. */
     fun status(agentId: String): JSONObject {
-        val s = _state.value
+        val s = _state.value.let { st ->
+            // Sounds alone keep the mic open; for wake words that still counts as off.
+            if (st !is State.Off && running?.words.isNullOrEmpty()) State.Off(if (app.settings.isOn(SWITCH)) missing() ?: "error" else "switch_off") else st }
         return JSONObject().put("enabled", app.settings.isOn(SWITCH))
             .put("state", when (s) { is State.Off -> "off"; State.Listening -> "listening"; is State.Hearing -> "hearing"; is State.Paused -> "paused" })
             .put("reason", when (s) { is State.Off -> s.reason; is State.Paused -> s.reason; else -> JSONObject.NULL })
@@ -267,8 +326,22 @@ class WakeListener(private val app: BridgeApp) {
                 JSONObject().put("phrase", WakeRules.normalize(it.phrase)).put("send_clip", it.sendClip) }))
     }
 
-    /** Names of the agents with wake words, for the notification. */
-    fun agentNames(): String = activeWords().mapNotNull { app.agents.get(it.agentId)?.name }.distinct().joinToString(", ")
+    /** JSON for GET /v1/sounds: whether the phone listens for sounds for this agent. */
+    fun soundStatus(agentId: String): JSONObject {
+        val cfg = soundConfig()
+        val mine = cfg?.agentId == agentId
+        val st = _state.value
+        val on = running?.sound != null
+        return JSONObject().put("enabled", app.settings.isOn(SOUND_SWITCH)).put("for_you", mine)
+            .put("state", when { !on -> "off"; st is State.Paused -> "paused"; else -> "listening" })
+            .put("reason", when { !on -> (if (app.settings.isOn(SOUND_SWITCH)) soundsMissing() ?: "error" else "switch_off"); st is State.Paused -> st.reason; else -> JSONObject.NULL })
+            .put("sensitivity", if (mine) cfg!!.sensitivity else JSONObject.NULL).put("send_clip", mine && cfg!!.sendClip)
+            .put("cooldown_seconds", WakeRules.SOUND_COOLDOWN_MS / 1000).put("max_seconds", WakeRules.SOUND_MAX_MS / 1000)
+    }
+
+    /** Names of the agents that get wake words or sounds, for the notification. */
+    fun agentNames(): String = ((running?.words.orEmpty().map { it.agentId }) + listOfNotNull(running?.sound?.agentId))
+        .mapNotNull { app.agents.get(it)?.name }.distinct().joinToString(", ")
 
     private fun tick() = runCatching {
         app.getSystemService(VibratorManager::class.java)?.defaultVibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
@@ -288,6 +361,7 @@ class WakeListener(private val app: BridgeApp) {
 
     companion object {
         const val SWITCH = "wakewords"
+        const val SOUND_SWITCH = "sounds"
         const val RATE = WakeRules.SAMPLE_RATE
         const val FRAME_MS = 100L
         const val FRAME = (RATE / 10) * 2

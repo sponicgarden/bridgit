@@ -77,7 +77,7 @@ class FeaturesFragment : Fragment() {
             setOnClickListener { startActivity(android.content.Intent(requireContext(), net.finleg.bridget.planned.OwnerToolsActivity::class.java)) }
         })
         b.list.addView(com.google.android.material.button.MaterialButton(requireContext()).apply {
-            text = getString(R.string.cap_wakewords)
+            text = getString(R.string.listening_button)
             setOnClickListener { openWakeWords() }
         })
         val groups = app.registry.switchable().groupBy { it.group }
@@ -127,6 +127,7 @@ class FeaturesFragment : Fragment() {
                 }
                 reason == "listener_off" -> Triple(getString(R.string.features_listener_off), null, null)
                 reason == "model_missing" -> Triple(getString(R.string.wake_needs_model), getString(R.string.wake_set_up)) { openWakeWords() }
+                reason == "no_agent" -> Triple(getString(R.string.sounds_needs_agent), getString(R.string.wake_set_up)) { openWakeWords() }
                 reason == "no_wake_words" -> Triple(getString(R.string.wake_needs_words), getString(R.string.wake_set_up)) { openWakeWords() }
                 else -> Triple(reason, null, null)
             }

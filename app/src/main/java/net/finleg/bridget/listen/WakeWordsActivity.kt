@@ -47,6 +47,14 @@ class WakeWordsActivity : AppCompatActivity() {
         b.phrase.doAfterTextChanged { b.phraseLayout.error = null }
         b.agent.setOnItemClickListener { _, _, pos, _ -> agentIndex = pos }
         b.add.setOnClickListener { add() }
+        b.soundRow.setOnClickListener { toggleSounds() }
+        b.soundAgent.setOnItemClickListener { _, _, pos, _ -> app.agents.all().getOrNull(pos)?.let { saveSound { c -> c.copy(agentId = it.id) } } }
+        b.sensitivity.addOnButtonCheckedListener { _, id, checked ->
+            if (!checked || binding) return@addOnButtonCheckedListener
+            val s = when (id) { R.id.sensQuiet -> "quiet"; R.id.sensLoud -> "loud"; else -> "normal" }
+            saveSound { it.copy(sensitivity = s) }
+        }
+        b.soundClip.setOnCheckedChangeListener { _, c -> if (!binding) saveSound { it.copy(sendClip = c) } }
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 launch { app.wake.state.collect { render() } }
@@ -93,6 +101,60 @@ class WakeWordsActivity : AppCompatActivity() {
     }
 
     private fun color(attr: Int) = MaterialColors.getColor(b.root, attr)
+    private var binding = false
+
+    /** Changes the sounds setup, starting from the first agent when there's none yet. */
+    private fun saveSound(change: (SoundConfig) -> SoundConfig) {
+        val base = app.wake.soundConfig() ?: app.agents.all().firstOrNull()?.let { SoundConfig(it.id) } ?: return
+        val next = change(base)
+        if (next == app.wake.soundConfig()) return
+        app.wake.saveSoundConfig(next)
+        app.agents.get(next.agentId)?.takeIf { !it.allows("sounds") }?.let { a ->
+            app.agents.update(a.id) { it.copy(caps = it.caps.orEmpty() + "sounds") }
+            app.log.system("audit", "agent", "Owner changed ${a.name}'s grants: added sounds")
+        }
+        app.log.system("audit", "setting", "You set sounds to go to ${app.agents.get(next.agentId)?.name} (${next.sensitivity}, clip ${if (next.sendClip) "on" else "off"})")
+        render()
+    }
+
+    private fun toggleSounds() {
+        val module = app.registry.byId("sounds")!!
+        val on = !module.enabled
+        if (on && app.wake.soundConfig() == null) saveSound { it }
+        UiActions.setSwitch(app, module, on)
+        if (on && !granted(Manifest.permission.RECORD_AUDIO)) askMic.launch(Manifest.permission.RECORD_AUDIO)
+        else if (on && !app.listener.value.micReady) runCatching { BridgeService.start(this) }
+        render()
+    }
+
+    private fun renderSounds() {
+        binding = true
+        val on = app.registry.byId("sounds")!!.enabled
+        b.soundToggle.isChecked = on
+        b.soundRow.contentDescription = getString(R.string.cap_sounds) + ", " + if (on) "on" else "off"
+        val st = app.wake.state.value
+        val running = app.wake.running?.sound != null
+        val (text, dot) = when {
+            !on -> "Off." to com.google.android.material.R.attr.colorOutline
+            running && st is WakeListener.State.Paused -> "Paused." to com.google.android.material.R.attr.colorSecondary
+            running -> "Listening for sounds." to R.attr.colorSuccess
+            else -> "On, but not listening yet: " + when (app.wake.soundsMissing()) {
+                "no_agent" -> "pick an agent."
+                "permission:RECORD_AUDIO" -> "allow the microphone."
+                "open_app_once", "listener_off" -> "the listener needs a restart."
+                else -> app.wake.soundsMissing() ?: "…"
+            } to androidx.appcompat.R.attr.colorError
+        }
+        b.soundStatus.text = app.wake.lastSound?.let { "$text Last: ${DateUtils.getRelativeTimeSpanString(it.at)}, ${it.seconds.let { s -> Math.round(s * 10) / 10.0 }} s, peak ${it.peakDbfs} dBFS." } ?: text
+        b.soundDot.backgroundTintList = ColorStateList.valueOf(color(dot))
+        val agents = app.agents.all()
+        val cfg = app.wake.soundConfig()
+        b.soundAgent.setSimpleItems(agents.map { it.name }.toTypedArray())
+        (cfg?.let { c -> app.agents.get(c.agentId)?.name } ?: "").let { if (b.soundAgent.text.toString() != it) b.soundAgent.setText(it, false) }
+        b.sensitivity.check(when (cfg?.sensitivity) { "quiet" -> R.id.sensQuiet; "loud" -> R.id.sensLoud; else -> R.id.sensNormal })
+        b.soundClip.isChecked = cfg?.sendClip ?: true
+        binding = false
+    }
 
     private fun render() {
         if (!::b.isInitialized) return
@@ -102,7 +164,9 @@ class WakeWordsActivity : AppCompatActivity() {
         b.switchRow.contentDescription = getString(R.string.wake_listen_switch) + ", " + if (on) "on" else "off"
 
         // Status: green while listening, gold when it heard something or is paused, red when something's missing.
-        val s = app.wake.state.value
+        // Sounds alone keep the mic open; for wake words that still counts as off.
+        val s = app.wake.state.value.let {
+            if (it !is WakeListener.State.Off && app.wake.running?.words.isNullOrEmpty()) WakeListener.State.Off(app.wake.missing() ?: "error") else it }
         val gold = com.google.android.material.R.attr.colorSecondary
         val (text, dot) = when {
             !on -> "Off. Nothing is listening." to com.google.android.material.R.attr.colorOutline
@@ -145,6 +209,7 @@ class WakeWordsActivity : AppCompatActivity() {
         b.mute.setOnClickListener { if (muted) app.wake.unmute() else app.wake.mute(); app.wake.sync(); render() }
 
         renderWords()
+        renderSounds()
         renderModel()
     }
 

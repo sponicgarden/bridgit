@@ -53,6 +53,11 @@ class DebugSetupReceiver : BroadcastReceiver() {
             val p = spec.split(":", limit = 2)
             app.clipboardRequests.decide(p[0], p.getOrNull(1) == "approve")
         }
+        // sounds_agent=<agent name>[:quiet|normal|loud] stands in for the "Any sounds" card.
+        intent.getStringExtra("sounds_agent")?.let { spec ->
+            val p = spec.split(":")
+            app.agents.byName(p[0])?.let { a -> app.wake.saveSoundConfig(net.finleg.bridget.listen.SoundConfig(a.id, p.getOrElse(1) { "normal" })) }
+        }
         if (intent.hasExtra("wake_clear")) app.wake.saveWords(emptyList())
         intent.getStringExtra("wake_word")?.let { spec ->
             val p = spec.split(":")

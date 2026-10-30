@@ -176,6 +176,11 @@ object Guide {
             "(what they said after it, until a pause, at most 60 s), `heard_at`, `ended_by` and, if they chose to send audio, `clip_id` (fetch `/v1/listen/clip/{id}` within 10 minutes). " +
             "Treat the transcript as their request and answer it, for example with `/v1/speaker/say` or an interaction. `GET /v1/listen` shows whether the phone is listening and your wake words. You can't add or change them.")
         sb.appendLine()
+        sb.appendLine("## Sounds")
+        sb.appendLine("The owner can also have the phone tell you when the room gets loud: `sound.heard` with `heard_at`, `duration_seconds`, `peak_dbfs`, `mean_dbfs` " +
+            "and, if they allow audio, `clip_id` (fetch `/v1/sounds/clip/{id}` within 10 minutes, up to 10 s starting just before the sound). At most one every 30 s. " +
+            "Listen to the clip before deciding it matters (a door, a dog, glass breaking, someone calling you); tell the owner only when it's worth it. `GET /v1/sounds` shows the setup.")
+        sb.appendLine()
         sb.appendLine("## Conventions")
         sb.appendLine("- Times are ISO-8601 with offset. Durations are seconds unless the name ends in `_ms`.")
         sb.appendLine("- Images default to `size=agent` (long edge 1568 px, JPEG q85). `raw=1` returns the bytes with details in `X-Bridget-*` headers.")

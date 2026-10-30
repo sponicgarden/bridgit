@@ -216,7 +216,10 @@ class BridgeService : LifecycleService() {
                 "muted" -> "muted until " + android.text.format.DateFormat.getTimeFormat(this).format(java.util.Date(app.wake.mutedUntil))
                 "call" -> "on a call"
                 else -> "the microphone is recording" })
-            wake != null -> getString(R.string.wake_notif_title)
+            wake != null -> getString(when {
+                app.wake.running?.words.isNullOrEmpty() -> R.string.wake_notif_title_sounds
+                app.wake.running?.sound != null -> R.string.wake_notif_title_both
+                else -> R.string.wake_notif_title })
             boundTo.isEmpty() -> getString(R.string.notif_waiting_tailscale)
             else -> getString(R.string.notif_listening)
         }

@@ -11,6 +11,18 @@ data class WakeWord(val phrase: String, val agentId: String, val sendClip: Boole
     }
 }
 
+/** "Listen for any sounds" (8.23): which agent hears about sounds, how loud they must be, and whether a clip goes too. */
+data class SoundConfig(val agentId: String, val sensitivity: String = "normal", val sendClip: Boolean = true) {
+    fun toJson(): JSONObject = JSONObject().put("agent_id", agentId).put("sensitivity", sensitivity).put("send_clip", sendClip)
+    companion object {
+        val SENSITIVITIES = listOf("quiet", "normal", "loud")
+        fun fromJson(s: String?): SoundConfig? = runCatching {
+            val o = JSONObject(s ?: return null)
+            SoundConfig(o.getString("agent_id"), o.optString("sensitivity", "normal").takeIf { it in SENSITIVITIES } ?: "normal", o.optBoolean("send_clip", true))
+        }.getOrNull()
+    }
+}
+
 /**
  * Wake-word rules (8.23, CAP-47/48), pure Kotlin and unit-tested: which phrases are allowed, the spotter's
  * grammar, matching a spotter result, when the follow-up ends, and what `listen.heard` carries.
@@ -23,6 +35,8 @@ object WakeRules {
     /** Nobody spoke after the wake word: stop here and send an empty transcript. */
     const val NO_SPEECH_MS = 6_000L
     const val CLIP_KEEP_MS = 10 * 60_000L
+    const val SOUND_COOLDOWN_MS = 30_000L
+    const val SOUND_MAX_MS = 10_000L
     const val MUTE_MS = 15 * 60_000L
     const val LOG_CHARS = 200
     const val SAMPLE_RATE = 16_000
@@ -132,6 +146,59 @@ object WakeRules {
         }
         companion object { const val MIN_SOUND_RMS = 150.0 }
     }
+
+    /**
+     * "Listen for any sounds": a sound starts when the room gets [factor] times louder than its quiet level (and
+     * above an absolute floor) for 200 ms, and ends after 1 s of quiet or at [maxMs]. After one, the next can't
+     * start for [cooldownMs], so a noisy room doesn't flood the agent.
+     */
+    class SoundDetector(sensitivity: String, private val frameMs: Long = 100, private val cooldownMs: Long = SOUND_COOLDOWN_MS,
+                        private val maxMs: Long = SOUND_MAX_MS) {
+        enum class Ev { START, END }
+        private val factor = when (sensitivity) { "quiet" -> 3.0; "loud" -> 8.0; else -> 5.0 }
+        private val minRms = when (sensitivity) { "quiet" -> 300.0; "loud" -> 3000.0; else -> 800.0 }
+        private var floor = -1.0
+        private var t = 0L
+        private var loudFrames = 0
+        private var quietMs = 0L
+        private var startT = 0L
+        private var lastEnd = Long.MIN_VALUE / 2
+        private var sum = 0.0
+        private var frames = 0
+        var active = false; private set
+        var peakRms = 0.0; private set
+        val meanRms get() = if (frames == 0) 0.0 else sum / frames
+        val durationMs get() = (if (active) t else lastEnd) - startT
+
+        fun feed(rms: Double): Ev? {
+            t += frameMs
+            if (floor < 0) floor = rms
+            val loud = rms > maxOf(floor * factor, minRms)
+            if (!active) {
+                if (rms < floor) floor = rms else if (!loud) floor += (rms - floor) * 0.05
+                loudFrames = if (loud) loudFrames + 1 else 0
+                if (loudFrames >= 2 && t - lastEnd >= cooldownMs) {
+                    active = true; startT = t - 2 * frameMs; quietMs = 0; peakRms = rms; sum = rms; frames = 1
+                    return Ev.START
+                }
+                return null
+            }
+            peakRms = maxOf(peakRms, rms); sum += rms; frames++
+            if (loud) quietMs = 0 else quietMs += frameMs
+            if (quietMs >= 1_000 || t - startT >= maxMs) { active = false; lastEnd = t; loudFrames = 0; return Ev.END }
+            return null
+        }
+    }
+
+    /** dB relative to full scale for a 16-bit RMS value (0 is the loudest possible). */
+    fun dbfs(rms: Double): Double = if (rms <= 0) -96.0 else Math.round(20 * Math.log10(rms / 32768.0) * 10) / 10.0
+
+    /** The `sound.heard` event. */
+    fun soundEvent(heardAt: String, durationS: Double, peakRms: Double, meanRms: Double, sensitivity: String, clipId: String?): JSONObject = JSONObject()
+        .put("heard_at", heardAt).put("duration_seconds", Math.round(durationS * 10) / 10.0)
+        .put("peak_dbfs", dbfs(peakRms)).put("mean_dbfs", dbfs(meanRms)).put("sensitivity", sensitivity)
+        .put("clip_id", clipId ?: JSONObject.NULL)
+        .apply { if (clipId != null) put("clip_url", "/v1/sounds/clip/$clipId") }
 
     fun rms(pcm: ByteArray, n: Int): Double {
         var sum = 0.0

@@ -61,6 +61,11 @@ class Settings(context: Context) {
         get() = prefs.getString("wake_words", "[]") ?: "[]"
         set(v) { prefs.edit().putString("wake_words", v).apply(); changed() }
 
+    /** "Listen for any sounds" as JSON {agent_id, sensitivity, send_clip}, or empty. */
+    var soundsConfig: String
+        get() = prefs.getString("sounds_config", "") ?: ""
+        set(v) { prefs.edit().putString("sounds_config", v).apply(); changed() }
+
     var firstRunDone: Boolean
         get() = prefs.getBoolean("first_run_done", false)
         set(v) { prefs.edit().putBoolean("first_run_done", v).apply() }

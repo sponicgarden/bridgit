@@ -89,6 +89,42 @@ class WakeRulesTest {
         assertEquals(0, open)
     }
 
+    @Test fun soundDetectorStartsEndsAndCoolsDown() {
+        val d = WakeRules.SoundDetector("normal", cooldownMs = 5_000)
+        repeat(20) { assertNull(d.feed(100.0)) }                       // quiet room
+        assertNull(d.feed(5000.0))                                       // one loud frame isn't enough
+        assertEquals(WakeRules.SoundDetector.Ev.START, d.feed(6000.0)) // 200 ms of it is
+        repeat(5) { assertNull(d.feed(4000.0)) }
+        repeat(9) { assertNull(d.feed(100.0)) }
+        assertEquals(WakeRules.SoundDetector.Ev.END, d.feed(100.0))    // after 1 s of quiet
+        assertEquals(6000.0, d.peakRms, 1e-9)
+        assertEquals(1700L, d.durationMs)
+        repeat(2) { assertNull(d.feed(6000.0)) }                         // cooling down: no new sound
+        repeat(60) { d.feed(100.0) }
+        d.feed(6000.0); assertEquals(WakeRules.SoundDetector.Ev.START, d.feed(6000.0))
+        // A sound that never stops is cut at 10 s.
+        val l = WakeRules.SoundDetector("normal")
+        l.feed(100.0); l.feed(6000.0); l.feed(6000.0)
+        var n = 0; while (l.feed(6000.0) == null) n++
+        assertEquals(97, n) // 10 s from the first loud frame
+        // Only loud: a voice at 1500 doesn't count, a bang at 9000 does.
+        val loud = WakeRules.SoundDetector("loud")
+        repeat(10) { loud.feed(100.0) }
+        assertNull(loud.feed(1500.0)); assertNull(loud.feed(1500.0))
+        loud.feed(9000.0); assertEquals(WakeRules.SoundDetector.Ev.START, loud.feed(9000.0))
+    }
+
+    @Test fun soundEventAndConfig() {
+        val e = WakeRules.soundEvent("t", 1.74, 16384.0, 3276.8, "normal", "c9")
+        assertEquals(-6.0, e.getDouble("peak_dbfs"), 0.05)
+        assertEquals(-20.0, e.getDouble("mean_dbfs"), 0.05)
+        assertEquals(1.7, e.getDouble("duration_seconds"), 1e-9)
+        assertEquals("/v1/sounds/clip/c9", e.getString("clip_url"))
+        assertEquals(SoundConfig("a1", "loud", false), SoundConfig.fromJson(SoundConfig("a1", "loud", false).toJson().toString()))
+        assertEquals("normal", SoundConfig.fromJson("""{"agent_id":"a1","sensitivity":"deafening"}""")!!.sensitivity)
+        assertNull(SoundConfig.fromJson("")); assertNull(SoundConfig.fromJson("{oops"))
+    }
+
     @Test fun rmsOfPcm() {
         val pcm = ByteArray(4); pcm[0] = 0xE8.toByte(); pcm[1] = 0x03; pcm[2] = 0x18; pcm[3] = 0xFC.toByte() // +1000, -1000
         assertEquals(1000.0, WakeRules.rms(pcm, 4), 1e-9)
