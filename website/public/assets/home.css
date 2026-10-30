@@ -68,3 +68,8 @@
 @media(max-width:900px){.hero-agents{margin-top:0;order:2}.hero .heroart{order:3}.hero-logos{grid-template-columns:repeat(4,minmax(0,1fr))}.hero-logos span{font-size:11px}.hero-logos li{flex-direction:column;gap:4px}}
 .hero{padding-top:52px;padding-bottom:28px}@media(max-width:680px){.hero{padding-top:36px}}
 .hero-logos li{min-height:0;padding:9px 8px}.hero-logos span small{display:none}
+
+/* Hero phone shows a real interaction card instead of the concept mock-up */
+.screen.screen-shot{padding:0;overflow:hidden;min-height:0;aspect-ratio:392/640;background:#1c1220}
+.screen.screen-shot img{display:block;width:100%;height:auto}
+.conceptlabel{z-index:2;background:#f0e7f7;padding:3px 7px;border-radius:4px}
