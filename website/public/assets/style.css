@@ -127,3 +127,4 @@
 
 /* Website build label beside the hero tagline */
 .web-version{font:500 12px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:0;text-transform:none;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:2px 9px;white-space:nowrap}
+.hero-tagline{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin-top:20px}.hero-tagline .hero-descriptor{margin-top:0}
