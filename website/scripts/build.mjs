@@ -2,10 +2,12 @@ import { renderFeatureCatalog } from './feature-catalog.mjs';
 import { readFile, writeFile, cp, mkdir, readdir, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { buildFeatures } from './features.mjs';
+import { renderReleases } from './releases.mjs';
 import { fileURLToPath } from 'node:url';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const config = JSON.parse(await readFile(path.join(root, 'site.config.json'), 'utf8'));
 const homepageCatalog = JSON.parse(await readFile(path.join(root, 'content/features.json'), 'utf8'));
+const releaseHistory = JSON.parse(await readFile(path.join(root, 'content/releases.json'), 'utf8'));
 const suppliedOrigin = process.env.SITE_ORIGIN || config.origin;
 let origin = '';
 if (suppliedOrigin) {
@@ -31,7 +33,7 @@ async function prepare(dir) {
     if (!entry.name.endsWith('.html')) continue;
     const relative = path.relative(out, target).split(path.sep).join('/');
     const route = '/' + relative.replace(/index\.html$/, '');
-    let html = (await readFile(target, 'utf8')).replaceAll('{{SITE_ORIGIN}}', origin).replace('{{FEATURE_CATALOG}}', renderFeatureCatalog(homepageCatalog));
+    let html = (await readFile(target, 'utf8')).replaceAll('{{SITE_ORIGIN}}', origin).replace('{{FEATURE_CATALOG}}', renderFeatureCatalog(homepageCatalog)).replace('{{RELEASES}}', () => renderReleases(releaseHistory));
     html = html.replaceAll('{{TURNSTILE_SITE_KEY}}', config.turnstileSiteKey || '').replaceAll('{{DOWNLOAD_URL}}', config.downloadUrl || '').replaceAll('{{DOWNLOAD_VERSION}}', config.downloadVersion || '').replaceAll('{{DOWNLOAD_SHA256}}', config.downloadSha256 || '');
     html = html.replace('<meta name="robots" content="noindex,nofollow">', `<meta name="robots" content="${config.indexable ? 'index,follow' : 'noindex,nofollow'}">`);
     if (origin) {

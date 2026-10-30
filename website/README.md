@@ -20,7 +20,7 @@ Set `origin` in `site.config.json` to the real HTTPS origin when chosen, or supp
 
 Deploy the contents of `dist/` to any static host with HTTPS and directory-index support. Build command: `npm --prefix website run build`. Publish directory: `website/dist`. For a host rooted directly at `website/`, use `npm run build` and publish `dist`. The `_headers` file supplies basic headers on hosts that support that convention; configure equivalent headers on other hosts. Use the site's ordinary trailing-slash URLs; no SPA fallback is needed.
 
-Routes: `/`, `/how-it-works/`, `/developers/`, `/support/`, `/privacy/`, `/terms/`, `/delete-data/`, `/features/`, `/download/`.
+Routes: `/`, `/how-it-works/`, `/developers/`, `/support/`, `/privacy/`, `/terms/`, `/delete-data/`, `/features/`, `/download/`, `/releases/`. The releases page renders `content/releases.json`, a snapshot of the GitHub releases; refresh it with `node scripts/fetch-releases.mjs` after publishing a release.
 
 There are no hosted BRIDGIT device accounts. Website email signup data can be deleted using the link in the download email. Keep unsupported features labeled as planned; adding a domain does not change feature readiness. The literal "any Android device" tagline describes the product direction; compatibility copy states the current Android 14+ requirement and proposed older-device support.
 
