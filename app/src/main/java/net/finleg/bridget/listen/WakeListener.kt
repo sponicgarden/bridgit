@@ -147,6 +147,8 @@ class WakeListener(private val app: BridgeApp) {
         val spotter = Recognizer(m, RATE.toFloat(), WakeRules.grammar(words)).apply { setWords(true); setPartialWords(true) }
         val ring = Ring(RATE * 2 * 2)
         var fed = 0L
+        val gate = WakeRules.SoundGate()
+        var quiet = 0
         try {
             rec.startRecording()
             setState(State.Listening)
@@ -157,8 +159,16 @@ class WakeListener(private val app: BridgeApp) {
                 if (n < 0) return false
                 if (n == 0) continue
                 ring.write(buf, n)
-                val full = spotter.acceptWaveForm(buf, n)
-                fed += n
+                // Silence never reaches Vosk; when sound starts, it gets up to 300 ms of what came just before.
+                if (!gate.feed(WakeRules.rms(buf, n))) {
+                    quiet++
+                    if (app.registry.micLock.isLocked || (++frames % 10 == 0 && pausedReason() != null)) return true
+                    continue
+                }
+                val chunk = if (quiet > 0) ring.last(minOf(quiet, PREROLL_FRAMES) * FRAME + n) else buf.copyOf(n)
+                quiet = 0
+                val full = spotter.acceptWaveForm(chunk, chunk.size)
+                fed += chunk.size
                 val hit = WakeRules.match(if (full) spotter.result else spotter.partialResult, words)
                 if (hit != null) {
                     // Keep only what came after the wake word ended.
@@ -281,5 +291,6 @@ class WakeListener(private val app: BridgeApp) {
         const val RATE = WakeRules.SAMPLE_RATE
         const val FRAME_MS = 100L
         const val FRAME = (RATE / 10) * 2
+        const val PREROLL_FRAMES = 3
     }
 }

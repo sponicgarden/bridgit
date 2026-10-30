@@ -115,6 +115,24 @@ object WakeRules {
         companion object { const val MIN_SPEECH_RMS = 300.0 }
     }
 
+    /**
+     * The cheap stage in front of the spotter (CAP-47): Vosk only hears frames with sound in them, plus a short
+     * hangover, so a quiet room costs almost nothing. The floor adapts like [PauseDetector]'s.
+     */
+    class SoundGate(private val hangoverFrames: Int = 8) {
+        private var floor = -1.0
+        private var hangover = 0
+        /** True when this frame should go to the spotter. */
+        fun feed(rms: Double): Boolean {
+            if (floor < 0) floor = rms
+            val loud = rms > maxOf(floor * 2.0, MIN_SOUND_RMS)
+            if (rms < floor) floor = rms else if (!loud) floor += (rms - floor) * 0.05
+            if (loud) hangover = hangoverFrames else if (hangover > 0) hangover-- else return false
+            return true
+        }
+        companion object { const val MIN_SOUND_RMS = 150.0 }
+    }
+
     fun rms(pcm: ByteArray, n: Int): Double {
         var sum = 0.0
         var count = 0

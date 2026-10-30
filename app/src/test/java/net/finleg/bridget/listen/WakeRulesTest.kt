@@ -77,6 +77,18 @@ class WakeRulesTest {
         assertEquals(WakeRules.PauseDetector.End.NO_SPEECH, end)
     }
 
+    @Test fun soundGateSkipsSilence() {
+        val g = WakeRules.SoundGate(hangoverFrames = 3)
+        repeat(20) { assertFalse(g.feed(80.0)) }      // quiet room: nothing reaches the spotter
+        assertTrue(g.feed(2000.0))                    // speech opens it
+        repeat(3) { assertTrue(g.feed(80.0)) }        // hangover keeps word endings
+        assertFalse(g.feed(80.0))
+        val fan = WakeRules.SoundGate()
+        var open = 0
+        repeat(100) { if (fan.feed(600.0)) open++ }   // a steady fan from the start never opens it
+        assertEquals(0, open)
+    }
+
     @Test fun rmsOfPcm() {
         val pcm = ByteArray(4); pcm[0] = 0xE8.toByte(); pcm[1] = 0x03; pcm[2] = 0x18; pcm[3] = 0xFC.toByte() // +1000, -1000
         assertEquals(1000.0, WakeRules.rms(pcm, 4), 1e-9)
