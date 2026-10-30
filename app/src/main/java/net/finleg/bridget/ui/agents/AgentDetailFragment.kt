@@ -99,6 +99,9 @@ class AgentDetailFragment : Fragment() {
                     if (n == 1) net.finleg.bridget.ui.power.PowersFragment.confirmMaximum(this, a.id)
                     else b.capabilityPermissions.performClick()
                 }
+                .setNeutralButton(R.string.settings_everything_off) { _, _ ->
+                    net.finleg.bridget.ui.power.PowersFragment.confirmAllOff(this) { bindAgent() }
+                }
                 .setNegativeButton(R.string.cancel, null).show()
         }
         b.rotate.setOnClickListener { confirmRotate() }
