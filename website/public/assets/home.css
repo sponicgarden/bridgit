@@ -54,3 +54,17 @@
 
 /* Development interaction examples, grouped by a complete question-to-answer flow. */
 .interaction-screenshots{border-bottom:1px solid var(--line)}.interaction-screenshots .sectionhead h2{margin-top:18px}.interaction-badge{display:inline-block;background:#e8d3fa;color:#402052;padding:5px 10px;border-radius:4px;font-size:11px;font-weight:700;letter-spacing:.03em}.interaction-intro{max-width:780px;margin:12px 0 38px;font-size:14px;color:#67576d}.interaction-sequence+.interaction-sequence{margin-top:56px}.interaction-heading{display:flex;justify-content:space-between;align-items:baseline;gap:24px;border-top:1px solid var(--line);padding:20px 0 24px}.interaction-heading h3{font:400 30px/1.2 Georgia,serif;letter-spacing:-.6px}.interaction-heading p{font-size:14px;color:#67576d}.interaction-screenshots figcaption h4{font:400 23px/1.2 Georgia,serif;letter-spacing:-.5px;margin:0}.interaction-screenshots figcaption p{max-width:300px}@media(max-width:680px){.interaction-heading{display:block}.interaction-heading p{margin-top:8px}.interaction-sequence+.interaction-sequence{margin-top:46px}}
+
+/* Website version after the header tagline */
+.wordmark .web-version{display:inline-block;margin-left:8px;font:500 11px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;color:#705e73;border:1px solid var(--line);border-radius:20px;padding:0 7px;white-space:nowrap;vertical-align:1px}
+
+/* Agent logos above the fold, right under the hero */
+.hero-agents{grid-column:1/-1;margin:-26px 0 0}
+.hero-agents-label{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;margin:0 0 10px}
+.hero-logos{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px;margin:0}
+.hero-logos li{padding:9px 8px;gap:8px;flex-direction:row;justify-content:center}
+.hero-logos img{width:26px;height:26px}
+.hero-logos span{font-size:13px}
+@media(max-width:900px){.hero-agents{margin-top:0;order:2}.hero .heroart{order:3}.hero-logos{grid-template-columns:repeat(4,minmax(0,1fr))}.hero-logos span{font-size:11px}.hero-logos li{flex-direction:column;gap:4px}}
+.hero{padding-top:52px;padding-bottom:28px}@media(max-width:680px){.hero{padding-top:36px}}
+.hero-logos li{min-height:0;padding:9px 8px}.hero-logos span small{display:none}
