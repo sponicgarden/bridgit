@@ -1,5 +1,5 @@
 {
-  "retrieved": "2026-10-29",
+  "retrieved": "2026-10-30",
   "usage": "Unmodified vendor marks identify agent/model connection options, not endorsements or a verified native integration.",
   "assets": {
     "grok.svg": "https://grok.com/images/favicon.svg",
@@ -7,9 +7,8 @@
     "openrouter.svg": "https://openrouter.ai/brand/logos/transparent/glyph/svg/glyph-grape.svg",
     "gemini.png": "https://www.gstatic.com/lamda/images/gemini_sparkle_4g_512_lt_f94943af3be039176192d.png",
     "chatgpt.svg": "https://raw.githubusercontent.com/openai/openai-cookbook/main/examples/voice_solutions/realtime_translation_guide/livekit-translation-demo/public/brand/chatgpt-blossom-black.svg",
-    "opencode.png": "https://opencode.ai/favicon-96x96-v3.png"
-  },
-  "removed": {
-    "muse.svg": "Removed from provider row: muse.ai provenance does not establish a Meta Muse identity."
+    "opencode.png": "https://opencode.ai/favicon-96x96-v3.png",
+    "muse.svg": "https://muse.ai/images/landing/brand/muse-logo.svg (Muse, Meta's personal AI agent, per owner 2026-10-30)",
+    "instinct.png": "https://instinct.com/apple-touch-icon.png"
   }
 }
