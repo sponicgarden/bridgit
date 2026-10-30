@@ -106,8 +106,8 @@ class AddAgentFragment : Fragment() {
         b.toolbar.inflateMenu(R.menu.addagent_menu)
         b.toolbar.setOnMenuItemClickListener {
             when (it.itemId) {
-                R.id.addagent_copy_key -> { copy(vm.key ?: return@setOnMenuItemClickListener true); true }
-                R.id.addagent_pair -> { openPairing(); true }
+                R.id.addagent_copy_key -> { vm.key?.let { k -> warnFirst { copy(k) } }; true }
+                R.id.addagent_pair -> { warnFirst { openPairing() }; true }
                 else -> false
             }
         }
@@ -398,7 +398,7 @@ class AddAgentFragment : Fragment() {
             MaterialAlertDialogBuilder(requireContext())
                 .setTitle(R.string.addagent_leave_title)
                 .setMessage(R.string.addagent_leave_body)
-                .setPositiveButton(R.string.addagent_leave_copy) { _, _ -> copy(vm.prompt ?: "", quiet = true); leave() }
+                .setPositiveButton(R.string.addagent_leave_copy) { _, _ -> warnFirst { copy(vm.prompt ?: "", quiet = true); leave() } }
                 .setNegativeButton(R.string.addagent_leave_stay, null)
                 .setNeutralButton(R.string.addagent_leave) { _, _ -> leave() }
                 .show()
@@ -422,9 +422,9 @@ class AddAgentFragment : Fragment() {
         b.promptScroll.layoutParams = b.promptScroll.layoutParams.apply {
             height = (resources.displayMetrics.heightPixels * 0.45f).toInt()
         }
-        b.copyPrompt.setOnClickListener { vm.prompt?.let { copy(it) } }
-        b.share.setOnClickListener { share() }
-        b.qr.setOnClickListener { showQr() }
+        b.copyPrompt.setOnClickListener { vm.prompt?.let { warnFirst { copy(it) } } }
+        b.share.setOnClickListener { warnFirst { share() } }
+        b.qr.setOnClickListener { warnFirst { showQr() } }
         b.troubleshoot.setOnClickListener { showTroubleshooting() }
         b.keyGoneRotate.setOnClickListener {
             MaterialAlertDialogBuilder(requireContext())
@@ -537,6 +537,17 @@ class AddAgentFragment : Fragment() {
     }
 
     private fun stopPulse() { pulse?.cancel(); pulse = null }
+
+    /** Before the key first leaves the phone (copy, share, QR, pairing), say what handing it over means. Once per key. */
+    private fun warnFirst(then: () -> Unit) {
+        if (vm.trustWarned) return then()
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.addagent_trust_title)
+            .setMessage(R.string.addagent_trust_body)
+            .setPositiveButton(R.string.addagent_trust_confirm) { _, _ -> vm.trustWarned = true; then() }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
 
     private fun copy(text: String, quiet: Boolean = false) {
         if (text.isEmpty()) return
