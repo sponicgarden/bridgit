@@ -33,4 +33,8 @@
     <string name="settings_speak_urgent_desc">Only when the agent marks it urgent and asks for it to be read.</string>
     <string name="settings_changed_lockscreen">You turned question text on the lock screen %1$s</string>
     <string name="settings_changed_speak_urgent">You turned reading urgent questions aloud in Do Not Disturb %1$s</string>
+    <string name="settings_open_on_arrival">Open Bridgit when an agent sends something</string>
+    <string name="settings_open_on_arrival_desc">Brings Bridgit to the front on that card. If the phone is locked, the card is waiting when you unlock. Not while you\'re already in Bridgit.</string>
+    <string name="settings_open_on_arrival_needs">Needs \"Display over other apps\". Tap to allow it.</string>
+    <string name="settings_changed_open_on_arrival">You turned opening Bridgit when an agent sends something %1$s</string>
 </resources>

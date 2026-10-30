@@ -111,6 +111,7 @@ class SettingsFragment : Fragment() {
         b.notifQuestions.value.setText(R.string.channel_questions_desc)
         row(b.notifNotices, R.string.channel_notices) { UiActions.openChannelSettings(requireContext(), InteractionNotifier.CHANNEL_NOTICES) }
         b.notifNotices.value.setText(R.string.channel_notices_desc)
+        openOnArrivalSwitch()
 
         // Email alerts: one confirmed address for every agent, sent through bridgit.cc.
         row(b.alertFrequency, R.string.alerts_frequency) { askAlertFrequency() }
@@ -153,6 +154,8 @@ class SettingsFragment : Fragment() {
         if (app.settings.alertEmail != null && app.settings.alertState == Alerts.STATE_PENDING) checkAlertStatus(manual = false)
     }
     override fun onStop() { app.settings.removeListener(onSettings); super.onStop() }
+    /** Back from Android's "Display over other apps" page (CAP-56). */
+    override fun onResume() { super.onResume(); bind() }
     override fun onDestroyView() { super.onDestroyView(); _b = null }
 
     private fun row(r: SettingsRowBinding, title: Int, mono: Boolean = false, onClick: (() -> Unit)?) {
@@ -172,6 +175,10 @@ class SettingsFragment : Fragment() {
         if (b.alwaysOn.toggle.isChecked != st.listenerEnabled) b.alwaysOn.toggle.isChecked = st.listenerEnabled
         b.lockscreenText.toggle.isChecked = prefs().getBoolean(InteractionNotifier.PREF_LOCKSCREEN_TEXT, false)
         b.speakUrgent.toggle.isChecked = prefs().getBoolean(InteractionNotifier.PREF_SPEAK_URGENT_IN_DND, false)
+        val overlay = android.provider.Settings.canDrawOverlays(requireContext())
+        b.openOnArrival.toggle.isChecked = overlay && prefs().getBoolean(InteractionNotifier.PREF_OPEN_ON_ARRIVAL, false)
+        b.openOnArrival.value.setText(if (overlay) R.string.settings_open_on_arrival_desc else R.string.settings_open_on_arrival_needs)
+        b.openOnArrival.root.contentDescription = "${b.openOnArrival.title.text}, ${b.openOnArrival.value.text}"
         b.port.value.text = st.port.toString()
         b.bind.value.text = if (s.running && s.boundTo.isNotEmpty())
             s.boundTo.joinToString(", ") { if (it.contains(':')) "[$it]:${s.port}" else "$it:${s.port}" }
@@ -216,6 +223,28 @@ class SettingsFragment : Fragment() {
             prefs().edit().putBoolean(key, on).apply()
             r.toggle.isChecked = on
             audit(getString(changed, getString(if (on) R.string.home_on else R.string.home_off)))
+        }
+    }
+
+    /**
+     * CAP-56: on only when the pref is set and "Display over other apps" is granted. Turning it on without
+     * the grant sets the pref and opens Android's page for Bridgit; [onResume] shows the result.
+     */
+    private fun openOnArrivalSwitch() {
+        val r = b.openOnArrival
+        val key = InteractionNotifier.PREF_OPEN_ON_ARRIVAL
+        r.title.setText(R.string.settings_open_on_arrival)
+        UiActions.asSwitch(r.root) { android.provider.Settings.canDrawOverlays(requireContext()) && prefs().getBoolean(key, false) }
+        r.root.setOnClickListener {
+            val granted = android.provider.Settings.canDrawOverlays(requireContext())
+            val on = !(granted && prefs().getBoolean(key, false))
+            prefs().edit().putBoolean(key, on).apply()
+            if (on && !granted) runCatching {
+                startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    android.net.Uri.parse("package:${requireContext().packageName}")))
+            }
+            bind()
+            audit(getString(R.string.settings_changed_open_on_arrival, getString(if (on) R.string.home_on else R.string.home_off)))
         }
     }
 

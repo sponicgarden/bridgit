@@ -1181,6 +1181,12 @@ On**, one tap from the Access screen).
   actions, a text control becomes inline reply, and tapping opens the full
   card. Lock screen shows only "<Agent> has a question" unless the owner allows
   full text on the lock screen.
+- **CAP-56** Optional (Settings, off by default): a new interaction also
+  brings Bridgit to the front on that card and turns the screen on. Needs
+  Android's "Display over other apps", since Android blocks background
+  starts otherwise. Not while Bridgit is already in front (the badge and
+  notification cover that). Never shown over the lock screen: a locked
+  phone keeps its lock, and the card is waiting once the owner unlocks.
 - **CAP-34 [P2, moved from P5 by D23] HTML cards**, built with the fast template.
   `"html": "<…>"` instead of text/controls. The WebView is configured in
   code, never by the page, and the page is treated as untrusted:

@@ -248,6 +248,11 @@ details or keys.
     updates" rows (`SettingsFragment.kt:117`, `MoreFragment.kt:50`).
   - Today's gates are inconsistent: `UpdateDialog.kt:40` checks for a `.debug` suffix,
     `AccessFragment.kt:166` checks `BuildConfig.DEBUG`.
+- [ ] **Review `SYSTEM_ALERT_WINDOW` for the Play build.**
+  - Used only by CAP-56 (open Bridgit when an agent sends something), so a background
+    start is allowed. Play treats it as a sensitive permission; either declare it with
+    that reason or drop it in the `play` flavor (`tools:node="remove"`), which leaves
+    the switch showing "Needs Display over other apps".
 - [ ] **[BLOCKER] Move screenshots off the AccessibilityService.**
   - Play's Accessibility API policy prohibits accessibility use that lets an app
     "autonomously initiate, plan, and execute actions". It names general-purpose

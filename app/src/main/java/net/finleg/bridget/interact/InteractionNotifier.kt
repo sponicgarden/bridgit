@@ -54,6 +54,14 @@ object NotifRules {
     }
 
     /**
+     * CAP-56: a new interaction opens Bridgit only if the owner turned it on and granted "Display over other
+     * apps" (Android blocks background starts otherwise). Never while Bridgit is already in front, so a card
+     * the owner is answering isn't swapped for the new one; the badge and notification cover that case.
+     */
+    fun shouldOpen(prefOn: Boolean, overlayAllowed: Boolean, bridgitInFront: Boolean): Boolean =
+        prefOn && overlayAllowed && !bridgitInFront
+
+    /**
      * CAP-31 speak: never unless the agent asked; never during a phone call (SPK-03), urgent or not; when the
      * phone is silent, vibrate or DND only an urgent one, and only if the owner allowed it in Settings.
      */
@@ -80,6 +88,10 @@ object InteractionNotifier {
     const val EXTRA_CONTROL_ID = "control_id"
     const val PREF_LOCKSCREEN_TEXT = "lockscreen_text"
     const val PREF_SPEAK_URGENT_IN_DND = "speak_urgent_in_dnd"
+    /** CAP-56: open Bridgit on a new interaction (needs "Display over other apps"). */
+    const val PREF_OPEN_ON_ARRIVAL = "open_on_arrival"
+    /** Boolean extra: this launch came from an arriving interaction, so it may wake the screen (CAP-56). */
+    const val EXTRA_ARRIVAL = "interaction_arrival"
 
     fun notifId(interactionId: Long) = 7000 + interactionId.toInt()
 
@@ -90,7 +102,7 @@ object InteractionNotifier {
         val app = ctx.applicationContext as BridgeApp
         runCatching {
             when (what) {
-                "created" -> { post(ctx, i); maybeSpeak(ctx, i) }
+                "created" -> { post(ctx, i); maybeSpeak(ctx, i); maybeOpen(ctx, i) }
                 "answered", "dismissed", "expired", "cancelled" -> cancel(ctx, i.id)
                 "seen" -> if (i.kind == IKind.NOTICE || i.kind == IKind.TEXT) cancel(ctx, i.id)
             }
@@ -173,6 +185,18 @@ object InteractionNotifier {
         ctx.getSystemService(NotificationManager::class.java).notify(nid, b.build())
     }
 
+    /** CAP-56: brings Bridgit to the front on the new interaction; the notification posted above stays as the fallback. */
+    private fun maybeOpen(ctx: Context, i: Interaction) {
+        val app = ctx.applicationContext as BridgeApp
+        if (!NotifRules.shouldOpen(prefs(ctx).getBoolean(PREF_OPEN_ON_ARRIVAL, false),
+                android.provider.Settings.canDrawOverlays(ctx), MainActivityState.inFront)) return
+        runCatching {
+            ctx.startActivity(Intent().setClassName(ctx, "net.finleg.bridget.ui.MainActivity")
+                .putExtra(EXTRA_INTERACTION_ID, i.id).putExtra(EXTRA_ARRIVAL, true)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT))
+        }.onFailure { app.log.system("diagnostic", "interaction", "Couldn't open Bridgit for interaction ${i.id}: ${it.javaClass.simpleName}", level = "warn") }
+    }
+
     private fun maybeSpeak(ctx: Context, i: Interaction) {
         if (!i.speak) return
         val app = ctx.applicationContext as BridgeApp
@@ -214,4 +238,9 @@ object InteractionNotifier {
         R.color.avatar_bg_4, R.color.avatar_bg_5, R.color.avatar_bg_6, R.color.avatar_bg_7)
     private val AVATAR_FG = intArrayOf(R.color.avatar_fg_0, R.color.avatar_fg_1, R.color.avatar_fg_2, R.color.avatar_fg_3,
         R.color.avatar_fg_4, R.color.avatar_fg_5, R.color.avatar_fg_6, R.color.avatar_fg_7)
+}
+
+/** Set by MainActivity: true while it is resumed, so an arriving interaction doesn't take over the screen (CAP-56). */
+object MainActivityState {
+    @Volatile var inFront = false
 }

@@ -1,5 +1,6 @@
 package net.finleg.bridget.ui
 
+import android.app.KeyguardManager
 import android.content.ClipboardManager
 import android.content.Intent
 import android.os.Bundle
@@ -28,6 +29,8 @@ import net.finleg.bridget.databinding.ActivityMainBinding
 import net.finleg.bridget.interact.IKind
 import net.finleg.bridget.interact.IStatus
 import net.finleg.bridget.interact.Interaction
+import net.finleg.bridget.interact.InteractionNotifier
+import net.finleg.bridget.interact.MainActivityState
 import net.finleg.bridget.ui.interactions.InteractionUi
 import net.finleg.bridget.ui.interactions.TextPanel
 import net.finleg.bridget.update.UpdateDialog
@@ -66,7 +69,7 @@ class MainActivity : AppCompatActivity() {
             navInset = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
             v.updatePadding(bottom = navInset); applyPanelInset(); insets
         }
-        if (savedInstanceState == null) { route(); openReportFrom(intent); openInteractionFrom(intent); openTourFrom(intent) }
+        if (savedInstanceState == null) { route(); openReportFrom(intent); wakeFor(intent); openInteractionFrom(intent); openTourFrom(intent) }
         watchInteractionsBadge()
         watchTextPanel()
     }
@@ -146,8 +149,20 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         openReportFrom(intent)
+        wakeFor(intent)
         openInteractionFrom(intent)
         openTourFrom(intent)
+    }
+
+    /**
+     * CAP-56: an arriving interaction turns the screen on and asks Android to lift the lock screen. Never shown
+     * over the lock screen, so nobody answers a card without unlocking. Lasts only for this launch.
+     */
+    private fun wakeFor(intent: Intent?) {
+        if (intent?.getBooleanExtra(InteractionNotifier.EXTRA_ARRIVAL, false) != true) return
+        intent.removeExtra(InteractionNotifier.EXTRA_ARRIVAL)
+        setTurnScreenOn(true)
+        getSystemService(KeyguardManager::class.java)?.requestDismissKeyguard(this, null)
     }
 
     /** The City tour notification opens the tour screen. */
@@ -204,10 +219,17 @@ class MainActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
         leftApp = true
+        setTurnScreenOn(false)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        MainActivityState.inFront = false
     }
 
     override fun onResume() {
         super.onResume()
+        MainActivityState.inFront = true
         // A visible start lets Android grant the camera and microphone service types (ARC-03).
         if (app.settings.listenerEnabled && app.agents.count > 0) {
             val s = app.listener.value
