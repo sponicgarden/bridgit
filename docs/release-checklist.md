@@ -28,7 +28,16 @@ details or keys.
   - Point the local `origin` remote at the new repo and keep the archive as a second
     remote.
 
-  Do §2's scrub of docs and tools first, so the first public commit is clean.
+  Order:
+  1. Merge the scrub branch to `main`.
+  2. Merge or drop `codex/agent-appliance-launch-kit`.
+  3. Re-run the personal-string sweep on the merged tree, because that branch predates
+     the scrub and edits README and the website.
+  4. Rename, create, push.
+
+  **[DECIDE]** Pick the author for the first public commit (for example the publisher
+  org with a noreply address) and pass it with `-c user.name=… -c user.email=…`. The
+  current local identity is a machine name.
 - [ ] **[DECIDE] ⚖️ Publishing legal entity.** Everything says "Sponic Garden, Inc."
   (LICENSE/NOTICE, README:3, the site footer, privacy and terms). The Sentry org slug
   spells the name differently (README:179). One entity must be all of these: copyright
