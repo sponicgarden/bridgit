@@ -20,10 +20,13 @@ android {
         applicationId = "net.finleg.bridget"
         minSdk = 34
         targetSdk = 35
-        // -PbridgetVersionCode / -PbridgetVersionName build an older-looking copy, used only to test
-        // the in-app update path (UPD-03/04) against the published release. Never published.
-        versionCode = (project.findProperty("bridgetVersionCode") as String?)?.toInt() ?: 18
-        versionName = (project.findProperty("bridgetVersionName") as String?) ?: "1.6.0"
+        // Every build is numbered from git: versionCode = commits in HEAD's history, versionName = 1.6.<code>,
+        // so a newer commit always installs over an older build. (Squashing history would lower the count:
+        // pass -PbridgetVersionCode then.) -PbridgetVersionCode / -PbridgetVersionName still override, e.g. to
+        // build an older-looking copy for testing the in-app update path (UPD-03/04).
+        val gitCode = gitCommitCount()
+        versionCode = (project.findProperty("bridgetVersionCode") as String?)?.toInt() ?: gitCode
+        versionName = (project.findProperty("bridgetVersionName") as String?) ?: "1.6.$gitCode"
         buildConfigField("int", "DEFAULT_PORT", "8734")
         buildConfigField("String", "GIT_COMMIT", "\"${gitCommit()}\"")
         buildConfigField("boolean", "DIRTY_BUILD", "${gitDirty()}")
@@ -108,6 +111,9 @@ tasks.named("preBuild") { dependsOn(copyHelper, writeProvenance) }
 fun gitCommit(): String = runCatching {
     providers.exec { commandLine("git", "rev-parse", "--short=12", "HEAD") }.standardOutput.asText.get().trim()
 }.getOrDefault("unknown")
+
+fun gitCommitCount(): Int =
+    providers.exec { commandLine("git", "rev-list", "--count", "HEAD") }.standardOutput.asText.get().trim().toInt()
 
 fun gitDirty(): Boolean = runCatching {
     providers.exec { commandLine("git", "status", "--porcelain") }.standardOutput.asText.get().isNotBlank()
