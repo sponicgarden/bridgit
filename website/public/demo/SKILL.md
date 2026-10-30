@@ -86,7 +86,9 @@ change), and move on to the next step card. Don't retry blindly.
 
 If any `speaker/say` reply has `"status":"silenced"`, the phone is on silent or Do Not Disturb and nothing was
 heard. Tell them once (chat, or a notice card): "Your phone is on silent, so you won't hear me. Turn the sound
-on to hear the rest." Then carry on.
+on to hear the rest." Then carry on. Items 5 and 6 time the photo to your spoken countdown, so while the phone is
+silenced their step card starts with "Turn your sound on first", and if `GET /speaker` still shows `"quiet":true`
+after **Do it**, skip the item.
 
 ## Item 1: Flash the light
 
@@ -101,7 +103,8 @@ POST /flashlight {"on":true,"auto_off_seconds":1}       wait about 1.2 s; three 
 The torch always switches itself off; that's a safety rule. Then one line: "That was me. I can use your light,
 say to help you find something in the dark."
 
-No torch on this device: step card text "I'll say hello through your phone's speaker", then
+No torch on this device: call the item "Say hello" in the agenda and its step card, with step card text
+"I'll say hello through your phone's speaker", then
 `POST /speaker/say {"text":"Hello! It's <your name>, talking from your phone."}`.
 
 ## Item 2: Take a photo
