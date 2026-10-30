@@ -35,9 +35,9 @@ details or keys.
      the scrub and edits README and the website.
   4. Rename, create, push.
 
-  **[DECIDE]** Pick the author for the first public commit (for example the publisher
-  org with a noreply address) and pass it with `-c user.name=… -c user.email=…`. The
-  current local identity is a machine name.
+  **Decided 30 Oct 2026:** the first public commit is authored as GitHub user `rsonnad`
+  with its noreply address (`-c user.name=rsonnad
+  -c user.email=5198821+rsonnad@users.noreply.github.com`).
 - [ ] **[DECIDE] ⚖️ Publishing legal entity.** Everything says "Sponic Garden, Inc."
   (LICENSE/NOTICE, README:3, the site footer, privacy and terms). The Sentry org slug
   spells the name differently (README:179). One entity must be all of these: copyright
