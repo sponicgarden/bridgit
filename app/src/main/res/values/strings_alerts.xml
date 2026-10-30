@@ -33,6 +33,6 @@
     <string name="alerts_what">What\'s sent</string>
     <string name="alerts_what_desc">Agent names, API endpoints, times, result codes and each call\'s one-line log summary (for a question, its first 60 characters). They go to bridgit.cc, which emails them with Resend. No keys, parameters, photos or audio.</string>
     <string name="settings_changed_alerts_frequency">You set email alerts to %1$s</string>
-    <string name="settings_changed_alerts_email">You set the email alerts address to %1$s</string>
+    <string name="settings_changed_alerts_email">You set a new email alerts address (waiting for confirmation)</string>
     <string name="settings_changed_alerts_removed">You removed the email alerts address</string>
 </resources>

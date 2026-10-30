@@ -79,6 +79,14 @@ class Alerts(private val app: BridgeApp) {
     /** One dispatcher pass. Afterwards the next arriving call queues a fresh one-time job. */
     internal fun runOnce(): AlertDispatcher.Outcome {
         queued = false
+        // The owner may confirm from the email without reopening Settings, so the job checks too.
+        if (app.settings.alertState == STATE_PENDING && AlertFrequency.of(app.settings.alertFrequency) != AlertFrequency.NONE) {
+            when (relay.status()) {
+                AlertRelay.State.CONFIRMED -> app.settings.alertState = STATE_CONFIRMED
+                AlertRelay.State.NONE -> app.settings.alertState = STATE_NONE
+                else -> {}
+            }
+        }
         return dispatcher.run()
     }
 

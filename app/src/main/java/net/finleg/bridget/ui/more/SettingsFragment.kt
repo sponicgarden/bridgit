@@ -425,7 +425,7 @@ class SettingsFragment : Fragment() {
         if (r == AlertRelay.Subscribe.PENDING) {
             app.settings.alertEmail = email
             app.settings.alertState = Alerts.STATE_PENDING
-            audit(getString(R.string.settings_changed_alerts_email, email))
+            audit(getString(R.string.settings_changed_alerts_email)) // not the address: agents can read the log
         }
         _b?.let { Snackbar.make(it.root, when (r) {
             AlertRelay.Subscribe.PENDING -> getString(R.string.alerts_confirm_sent, email)
