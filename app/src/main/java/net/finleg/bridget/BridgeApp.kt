@@ -31,6 +31,7 @@ class BridgeApp : Application() {
     lateinit var hardware: net.finleg.bridget.planned.Hardware
     lateinit var transfers: net.finleg.bridget.planned.Transfers
     lateinit var clipboardRequests: net.finleg.bridget.planned.ClipboardRequests
+    lateinit var alerts: net.finleg.bridget.alerts.Alerts
     lateinit var wake: net.finleg.bridget.listen.WakeListener
     val pairing = Pairing()
     val requests = net.finleg.bridget.api.RequestState()
@@ -64,6 +65,9 @@ class BridgeApp : Application() {
         settings = Settings(this)
         agents = AgentRegistry(settings.agentStorage(this))
         log = LogStore(this) { settings.retention() }
+        alerts = net.finleg.bridget.alerts.Alerts(this)
+        log.onAppended = alerts::onLog
+        runCatching { alerts.poke() }
         createChannels()
         java.io.File(cacheDir, "uploads").listFiles()?.forEach { it.delete() }
         registry = Registry(this)

@@ -1,0 +1,141 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pet monitor card test</title>
+<style>body{margin:0;background:#2b1834;font:14px system-ui,sans-serif;display:flex;gap:28px;justify-content:center;align-items:flex-start;padding:24px}
+.phone{width:392px;background:#120a17;border-radius:40px;padding:12px}.screen{background:#1c1220;border-radius:30px;overflow:hidden}
+.bar{display:flex;justify-content:space-between;color:#fff;font-size:12px;padding:10px 20px 4px}.head{display:flex;justify-content:space-between;align-items:center;color:#fff;padding:8px 16px 10px;font-size:13px;border-bottom:1px solid #ffffff22}
+iframe{display:block;width:100%;height:1010px;border:0;background:#fff8ed}
+#log{color:#fff;width:300px}#log pre{white-space:pre-wrap;background:#ffffff14;padding:10px;border-radius:8px;font-size:12px}</style></head><body>
+<div class="phone"><div class="screen"><div class="bar"><span>2:41</span><span>100%</span></div><div class="head"><span>From Pet Watch · custom card</span><span>✕</span></div>
+<iframe id="card" sandbox="allow-scripts" title="Pet monitor card" srcdoc="&lt;!doctype html&gt;
+&lt;!--
+  Pet monitor: an HTML interaction card (kind &quot;html&quot;) an agent sends with POST /v1/interactions.
+  Card rules (docs/spec-agent-inbox.md, CardRules.CSP): no network, inline styles and script only,
+  images as inline SVG or data: URLs, one answer through Bridget.respond(json).
+  The agent fills in the snapshot, bark log and counts from its own monitoring loop:
+  camera snapshots or short clips (GET /v1/camera/snapshot, /v1/video/clip) and short audio
+  clips (POST /v1/audio/record) that its model classifies as barking.
+--&gt;
+&lt;html lang=&quot;en&quot;&gt;
+&lt;head&gt;&lt;meta http-equiv=&quot;Content-Security-Policy&quot; content=&quot;default-src &#x27;none&#x27;; img-src data:; style-src &#x27;unsafe-inline&#x27;; script-src &#x27;unsafe-inline&#x27;; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;; frame-src &#x27;none&#x27;; object-src &#x27;none&#x27;&quot;&gt;&lt;script&gt;window.Bridget={respond:function(j){parent.postMessage(j,&quot;*&quot;);}};&lt;/script&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width,initial-scale=1&quot;&gt;
+&lt;style&gt;
+  :root{--ink:#2b1834;--paper:#fff8ed;--card:#ffffff;--line:#e6dbe9;--muted:#6f5f75;--accent:#704394;--lav:#efe4f7;--alert:#b4471f;--alertbg:#fde9df;--ok:#2f7a4f;--okbg:#e2f3e8}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.4 system-ui,-apple-system,&quot;Segoe UI&quot;,Roboto,sans-serif}
+  main{padding:16px 16px 20px}
+  .eyebrow{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0 0 4px}
+  h1{font:600 24px/1.15 Georgia,serif;margin:0 0 4px;letter-spacing:-.3px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 12px}
+  .feed{position:relative;border-radius:14px;overflow:hidden;background:#d9cbbd;aspect-ratio:4/3}
+  .feed svg{display:block;width:100%;height:100%}
+  .live{position:absolute;left:10px;top:10px;display:flex;gap:6px;align-items:center;background:#2b1834cc;color:#fff;font-size:11px;font-weight:600;padding:4px 8px;border-radius:20px}
+  .live i{width:7px;height:7px;border-radius:50%;background:#ff5a4e;display:inline-block}
+  .stamp{position:absolute;right:10px;bottom:10px;background:#2b1834cc;color:#fff;font-size:11px;padding:3px 8px;border-radius:20px}
+  .tag{position:absolute;left:31%;top:44%;border:2px solid #ffd166;border-radius:8px;width:38%;height:40%}
+  .tag span{position:absolute;top:-22px;left:-2px;background:#ffd166;color:var(--ink);font-size:11px;font-weight:700;padding:2px 6px;border-radius:6px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 10px}
+  .stat b{display:block;font-size:20px;line-height:1.1}
+  .stat small{color:var(--muted);font-size:11px}
+  .alert{display:flex;gap:10px;align-items:flex-start;background:var(--alertbg);border-radius:12px;padding:10px 12px;margin-bottom:12px}
+  .alert .wave{flex:none;width:34px;height:34px;border-radius:10px;background:#fff;display:grid;place-items:center}
+  .alert p{margin:0;font-size:13.5px}
+  .alert strong{color:var(--alert)}
+  h2{font-size:13px;margin:0 0 6px;color:var(--muted);font-weight:600}
+  ol{list-style:none;margin:0 0 14px;padding:0;border-top:1px solid var(--line)}
+  li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  li em{font-style:normal;font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;align-self:center}
+  .loud{background:var(--alertbg);color:var(--alert)}
+  .soft{background:var(--lav);color:var(--accent)}
+  .calm{background:var(--okbg);color:var(--ok)}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  button{font:600 14px system-ui,-apple-system,sans-serif;border-radius:12px;padding:12px 10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+  button.primary{grid-column:1/-1;background:var(--ink);color:#fff;border-color:var(--ink)}
+  button:disabled{opacity:.5}
+  .note{font-size:11.5px;color:var(--muted);margin:10px 0 0;text-align:center}
+  #sent{display:none;margin-top:10px;background:var(--okbg);color:var(--ok);border-radius:12px;padding:10px 12px;font-size:13.5px;font-weight:600}
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;main&gt;
+  &lt;p class=&quot;eyebrow&quot;&gt;Pet monitor · Living room&lt;/p&gt;
+  &lt;h1&gt;Biscuit barked 3 times&lt;/h1&gt;
+  &lt;p class=&quot;sub&quot;&gt;Watching video and listening for barks since 1:30 pm.&lt;/p&gt;
+
+  &lt;div class=&quot;feed&quot; aria-label=&quot;Latest camera snapshot of the living room with the dog by the window&quot;&gt;
+    &lt;svg viewBox=&quot;0 0 400 300&quot; xmlns=&quot;http://www.w3.org/2000/svg&quot; aria-hidden=&quot;true&quot;&gt;
+      &lt;rect width=&quot;400&quot; height=&quot;300&quot; fill=&quot;#e8d9c7&quot;/&gt;
+      &lt;rect x=&quot;0&quot; y=&quot;215&quot; width=&quot;400&quot; height=&quot;85&quot; fill=&quot;#c9a98a&quot;/&gt;
+      &lt;rect x=&quot;236&quot; y=&quot;34&quot; width=&quot;132&quot; height=&quot;132&quot; rx=&quot;6&quot; fill=&quot;#bcd7ea&quot; stroke=&quot;#f6efe6&quot; stroke-width=&quot;8&quot;/&gt;
+      &lt;path d=&quot;M302 34v132M236 100h132&quot; stroke=&quot;#f6efe6&quot; stroke-width=&quot;6&quot;/&gt;
+      &lt;rect x=&quot;22&quot; y=&quot;140&quot; width=&quot;150&quot; height=&quot;80&quot; rx=&quot;16&quot; fill=&quot;#8e6fb0&quot;/&gt;
+      &lt;rect x=&quot;30&quot; y=&quot;118&quot; width=&quot;134&quot; height=&quot;40&quot; rx=&quot;14&quot; fill=&quot;#a083c0&quot;/&gt;
+      &lt;ellipse cx=&quot;200&quot; cy=&quot;246&quot; rx=&quot;70&quot; ry=&quot;10&quot; fill=&quot;#b38f70&quot;/&gt;
+      &lt;g transform=&quot;translate(150 150)&quot;&gt;
+        &lt;ellipse cx=&quot;50&quot; cy=&quot;66&quot; rx=&quot;46&quot; ry=&quot;30&quot; fill=&quot;#c98b4a&quot;/&gt;
+        &lt;circle cx=&quot;94&quot; cy=&quot;38&quot; r=&quot;24&quot; fill=&quot;#d39a5a&quot;/&gt;
+        &lt;path d=&quot;M80 18 70 0l18 10z&quot; fill=&quot;#9a6230&quot;/&gt;
+        &lt;path d=&quot;M104 16 110 -2l6 20z&quot; fill=&quot;#9a6230&quot;/&gt;
+        &lt;ellipse cx=&quot;114&quot; cy=&quot;44&quot; rx=&quot;10&quot; ry=&quot;7&quot; fill=&quot;#e3b07a&quot;/&gt;
+        &lt;circle cx=&quot;119&quot; cy=&quot;42&quot; r=&quot;3&quot; fill=&quot;#2b1834&quot;/&gt;
+        &lt;circle cx=&quot;98&quot; cy=&quot;32&quot; r=&quot;3&quot; fill=&quot;#2b1834&quot;/&gt;
+        &lt;path d=&quot;M114 52q4 6 10 2&quot; stroke=&quot;#2b1834&quot; stroke-width=&quot;2&quot; fill=&quot;none&quot;/&gt;
+        &lt;rect x=&quot;18&quot; y=&quot;84&quot; width=&quot;12&quot; height=&quot;20&quot; rx=&quot;5&quot; fill=&quot;#b37a40&quot;/&gt;
+        &lt;rect x=&quot;70&quot; y=&quot;84&quot; width=&quot;12&quot; height=&quot;20&quot; rx=&quot;5&quot; fill=&quot;#b37a40&quot;/&gt;
+        &lt;path d=&quot;M6 58q-16-10-8-26&quot; stroke=&quot;#c98b4a&quot; stroke-width=&quot;9&quot; stroke-linecap=&quot;round&quot; fill=&quot;none&quot;/&gt;
+      &lt;/g&gt;
+    &lt;/svg&gt;
+    &lt;span class=&quot;live&quot;&gt;&lt;i&gt;&lt;/i&gt;Watching · camera + mic&lt;/span&gt;
+    &lt;span class=&quot;tag&quot;&gt;&lt;span&gt;Dog · 97%&lt;/span&gt;&lt;/span&gt;
+    &lt;span class=&quot;stamp&quot;&gt;Snapshot 2:41 pm&lt;/span&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;stats&quot;&gt;
+    &lt;div class=&quot;stat&quot;&gt;&lt;b&gt;3&lt;/b&gt;&lt;small&gt;barks today&lt;/small&gt;&lt;/div&gt;
+    &lt;div class=&quot;stat&quot;&gt;&lt;b&gt;12&lt;/b&gt;&lt;small&gt;motion events&lt;/small&gt;&lt;/div&gt;
+    &lt;div class=&quot;stat&quot;&gt;&lt;b&gt;18m&lt;/b&gt;&lt;small&gt;calm now&lt;/small&gt;&lt;/div&gt;
+  &lt;/div&gt;
+
+  &lt;div class=&quot;alert&quot;&gt;
+    &lt;div class=&quot;wave&quot; aria-hidden=&quot;true&quot;&gt;&lt;svg width=&quot;22&quot; height=&quot;22&quot; viewBox=&quot;0 0 22 22&quot;&gt;&lt;path d=&quot;M2 11h3l2-6 3 12 3-9 2 3h5&quot; fill=&quot;none&quot; stroke=&quot;#b4471f&quot; stroke-width=&quot;2&quot; stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot;/&gt;&lt;/svg&gt;&lt;/div&gt;
+    &lt;p&gt;&lt;strong&gt;Loud barking at 2:23 pm&lt;/strong&gt; for 40 seconds, facing the window. A courier was at the door on the clip.&lt;/p&gt;
+  &lt;/div&gt;
+
+  &lt;h2&gt;Bark log&lt;/h2&gt;
+  &lt;ol&gt;
+    &lt;li&gt;&lt;span&gt;2:23 pm · 40 s at the window&lt;/span&gt;&lt;em class=&quot;loud&quot;&gt;Loud&lt;/em&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;span&gt;1:58 pm · 6 s, toy squeak nearby&lt;/span&gt;&lt;em class=&quot;soft&quot;&gt;Short&lt;/em&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;span&gt;1:41 pm · 3 s&lt;/span&gt;&lt;em class=&quot;soft&quot;&gt;Short&lt;/em&gt;&lt;/li&gt;
+    &lt;li&gt;&lt;span&gt;Since 2:24 pm · lying by the sofa&lt;/span&gt;&lt;em class=&quot;calm&quot;&gt;Calm&lt;/em&gt;&lt;/li&gt;
+  &lt;/ol&gt;
+
+  &lt;div class=&quot;actions&quot;&gt;
+    &lt;button class=&quot;primary&quot; data-action=&quot;talk&quot;&gt;Talk to Biscuit through the phone&lt;/button&gt;
+    &lt;button data-action=&quot;clip&quot;&gt;Send me the clip&lt;/button&gt;
+    &lt;button data-action=&quot;snapshot&quot;&gt;New snapshot&lt;/button&gt;
+    &lt;button data-action=&quot;snooze&quot;&gt;Mute alerts 30 min&lt;/button&gt;
+    &lt;button data-action=&quot;stop&quot;&gt;Stop monitoring&lt;/button&gt;
+  &lt;/div&gt;
+  &lt;p id=&quot;sent&quot; role=&quot;status&quot;&gt;&lt;/p&gt;
+  &lt;p class=&quot;note&quot;&gt;Your agent watches camera snapshots and listens to short audio clips with your permission. Every capture is logged on this phone.&lt;/p&gt;
+&lt;/main&gt;
+&lt;script&gt;
+  // One answer per card: Bridget.respond(json) is accepted once (CardWebView RespondGate).
+  var labels = {talk:&#x27;Opening the speaker for Biscuit&#x27;, clip:&#x27;Sending the 2:23 pm clip&#x27;, snapshot:&#x27;Taking a new snapshot&#x27;, snooze:&#x27;Bark alerts muted for 30 minutes&#x27;, stop:&#x27;Monitoring stopped&#x27;};
+  document.querySelectorAll(&#x27;button[data-action]&#x27;).forEach(function (button) {
+    button.addEventListener(&#x27;click&#x27;, function () {
+      var answer = {action: button.dataset.action, at: new Date().toISOString()};
+      if (button.dataset.action === &#x27;snooze&#x27;) answer.minutes = 30;
+      if (window.Bridget &amp;&amp; Bridget.respond) Bridget.respond(JSON.stringify(answer));
+      document.querySelectorAll(&#x27;button[data-action]&#x27;).forEach(function (b) { b.disabled = true; });
+      var sent = document.getElementById(&#x27;sent&#x27;);
+      sent.textContent = &#x27;✓ &#x27; + labels[button.dataset.action] + &#x27;. Sent to your agent.&#x27;;
+      sent.style.display = &#x27;block&#x27;;
+    });
+  });
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+"></iframe></div></div>
+<div id="log"><b>Bridget.respond received</b><pre id="answers">(nothing yet)</pre></div>
+<script>window.addEventListener('message',function(e){document.getElementById('answers').textContent=e.data;document.title='ANSWER '+e.data;});</script></body></html>

@@ -59,6 +59,12 @@
                 <include android:id="@+id/notifQuestions" layout="@layout/settings_row" />
                 <include android:id="@+id/notifNotices" layout="@layout/settings_row" />
 
+                <TextView style="@style/SettingsHeader" android:text="@string/settings_alerts" />
+                <include android:id="@+id/alertFrequency" layout="@layout/settings_row" />
+                <include android:id="@+id/alertRecipient" layout="@layout/settings_row" />
+                <include android:id="@+id/alertTest" layout="@layout/settings_row" />
+                <include android:id="@+id/alertWhat" layout="@layout/settings_row" />
+
                 <TextView style="@style/SettingsHeader" android:text="@string/settings_appearance" />
                 <include android:id="@+id/theme" layout="@layout/settings_row" />
 
