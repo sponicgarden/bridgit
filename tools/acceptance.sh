@@ -6,7 +6,7 @@
 # UNVERIFIED per check. Captures (camera, mic) need the phone unlocked; when it
 # is locked they are marked UNVERIFIED, never passed.
 #
-#   tools/acceptance.sh                       # Pixel defaults, debug build on port 8735
+#   BRIDGIT_TEST_PHONE=<ip> BRIDGIT_TEST_ADB=<ip>:5555 tools/acceptance.sh   # debug build on port 8735
 #   tools/acceptance.sh --skip-captures
 #   tools/acceptance.sh --device <serial> --host <tailscale-ip> --port 8735
 #

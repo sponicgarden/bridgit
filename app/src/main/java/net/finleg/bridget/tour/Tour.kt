@@ -322,7 +322,7 @@ class TourManager(private val app: BridgeApp) {
         tour.update(tourId) { t -> t.copy(caption = text, said = (t.said + Said(System.currentTimeMillis(), t.agent, text)).takeLast(100)) }
     }
 
-    /** the owner's question (TOUR, owner request): typed, or the transcript of what they said. */
+    /** The owner's question (TOUR, owner request): typed, or the transcript of what they said. */
     suspend fun ask(text: String, spoken: Boolean) {
         val t = tour.current() ?: return
         val q = text.trim().take(1000).ifEmpty { return }
@@ -344,7 +344,7 @@ class TourManager(private val app: BridgeApp) {
         if (sent) app.log.system("audit", "agent", "You asked ${t.agent} a question on the tour")
     }
 
-    /** the owner took a photo with Take photo (TOUR-07): it goes to the agent now, not at the next tick. */
+    /** The owner took a photo with Take photo (TOUR-07): it goes to the agent now, not at the next tick. */
     suspend fun photoTaken(uri: android.net.Uri) {
         val t = tour.current() ?: return
         if (!locationStillOn(t.id)) return

@@ -4,7 +4,7 @@
 
 Status: proposed, 26 Oct 2026. Not built. Feature idea #8.
 
-## What Rahul gets
+## What the owner gets
 
 When an agent wants to see the screen, the phone asks:
 
@@ -23,12 +23,12 @@ Bridgit's notification reads "**Screen visible to Grok until 21:14**" with a
 ## Android rules this design follows
 
 - Android won't let an app keep permission to see the screen. Each approval
-  goes through Android's own dialog ("Start sharing with Bridgit?"), and Rahul
+  goes through Android's own dialog ("Start sharing with Bridgit?"), and the owner
   must pick **Entire screen** there, not a single app.
-- "Allow for 1 hour" therefore means: Rahul approves once, and Bridgit keeps
+- "Allow for 1 hour" therefore means: the owner approves once, and Bridgit keeps
   that screen-capture session open for an hour, taking a frame each time an
   agent asks. When the time is up, Bridgit ends the session. Android ends it
-  too if Rahul taps the status-bar icon, and may end it when the phone locks
+  too if the owner taps the status-bar icon, and may end it when the phone locks
   (to be checked on the Pixel). After that, the next request asks again.
 - Apps that block screenshots (banking apps, password managers, anything using
   Android's secure flag) come out black. That's expected and is never worked
@@ -46,7 +46,7 @@ Bridgit's notification reads "**Screen visible to Grok until 21:14**" with a
 3. If not: Bridgit shows an urgent **question** interaction (see
    `spec-agent-inbox.md`) with the four buttons. The agent's request waits up
    to 55 s:
-   - **Allow…** opens Android's screen-share dialog. Once Rahul confirms, the
+   - **Allow…** opens Android's screen-share dialog. Once the owner confirms, the
      screenshot is taken and returned to the waiting request.
    - **Deny** returns `screen_denied` (403).
    - No answer within 55 s returns `consent_pending` (202) with a `grant_id`.
@@ -65,7 +65,7 @@ GET /v1/screen/grant
 ## Rules
 
 - **Per agent:** an approval covers only the agent that asked. If Claude asks
-  during Grok's hour, Rahul is asked about Claude. The prompt offers
+  during Grok's hour, the owner is asked about Claude. The prompt offers
   **Allow for all agents** as a checkbox.
 - **Rate:** at most 1 screenshot every 5 seconds per agent while an approval
   is active, and 300 per approval. Further calls get `rate_limited`.
@@ -87,7 +87,7 @@ app once).
 
 ## Acceptance tests
 
-1. Grok asks with no approval; Rahul taps **Allow once** and confirms
+1. Grok asks with no approval; the owner taps **Allow once** and confirms
    Android's dialog; Grok's waiting request returns a readable screenshot; a
    second call asks again.
 2. **Allow for 1 hour:** ten captures over five minutes need no taps, each

@@ -24,7 +24,7 @@ class SpeakerRulesTest {
         fun ip(s: String) = InetAddress.getByName(s)
         assertTrue(SpeakerRules.publicAddress(ip("93.184.216.34")))
         assertTrue(SpeakerRules.publicAddress(ip("2606:2800:220:1:248:1893:25c8:1946")))
-        for (no in listOf("127.0.0.1", "10.0.0.5", "192.168.1.32", "172.16.0.1", "169.254.1.1", "100.94.27.79", "100.64.0.1",
+        for (no in listOf("127.0.0.1", "10.0.0.5", "192.168.1.32", "172.16.0.1", "169.254.1.1", "100.101.102.103", "100.64.0.1",
             "0.0.0.0", "::1", "fd7a:115c:a1e0::1", "fe80::1", "224.0.0.1"))
             assertFalse(no, SpeakerRules.publicAddress(ip(no)))
     }

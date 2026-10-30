@@ -35,7 +35,7 @@ class InteractionsAdapter(
     private val loadThumb: (Interaction, ImageView) -> Unit,
 ) : ListAdapter<Interaction, InteractionsAdapter.Holder>(DIFF) {
 
-    /** the owner's choice per id; ids not in here use [InteractionUi.defaultExpanded]. */
+    /** The owner's choice per id; ids not in here use [InteractionUi.defaultExpanded]. */
     val overrides = HashMap<Long, Boolean>()
 
     fun isExpanded(i: Interaction) = overrides[i.id] ?: InteractionUi.defaultExpanded(i)

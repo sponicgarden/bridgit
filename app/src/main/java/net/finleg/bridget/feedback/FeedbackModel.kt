@@ -43,7 +43,7 @@ object StatusMachine {
     /** Statuses a developer agent may set from [from], for error messages and the guide. */
     fun nextForDeveloper(from: ReportStatus) = ReportStatus.values().filter { allowed(from, it, Actor.DEVELOPER) }
 
-    /** the owner is told (FBK-11) when a report becomes one of these. */
+    /** The owner is told (FBK-11) when a report becomes one of these. */
     fun notifiesOwner(to: ReportStatus) = to == ReportStatus.FIXED || to == ReportStatus.WONT_FIX || to == ReportStatus.DUPLICATE
 
     /** Labels for My reports (ui-spec 5.12). */

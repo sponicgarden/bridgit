@@ -140,8 +140,10 @@ def expect(r, status, code=None):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--device", default="pixel-10-pro-xl.tail9c9221.ts.net:5555")
-    ap.add_argument("--host", default="100.94.27.79")
+    ap.add_argument("--device", default=os.environ.get("BRIDGIT_TEST_ADB"), required="BRIDGIT_TEST_ADB" not in os.environ,
+                    help="adb serial, e.g. <phone>:5555 (or BRIDGIT_TEST_ADB)")
+    ap.add_argument("--host", default=os.environ.get("BRIDGIT_TEST_PHONE"), required="BRIDGIT_TEST_PHONE" not in os.environ,
+                    help="phone Tailscale IP or name (or BRIDGIT_TEST_PHONE)")
     ap.add_argument("--port", type=int, default=8735)
     ap.add_argument("--pkg", default="net.finleg.bridget.debug")
     ap.add_argument("--out", default=None, help="results file (default docs/acceptance/<date>-<version>-<commit>.md)")
@@ -448,7 +450,7 @@ def main():
             {"type": "button", "id": "a", "label": "A"}, {"type": "link", "id": "l", "label": "L", "url": "javascript:alert(1)"}]}), 422, "invalid_parameter")
         expect(c.call("POST", "/interactions", T, {"kind": "notice", "title": "x", "controls": [{"type": "button", "id": "a", "label": "A"}]}), 422, "invalid_parameter")
 
-    @c.check("I03", "Rahul closes it: the agent sees dismissed and gets an interaction.dismissed event")
+    @c.check("I03", "The owner closes it: the agent sees dismissed and gets an interaction.dismissed event")
     def _():
         cur = c.call("GET", "/events?types=interaction.dismissed", T).json()["next_cursor"]
         r = question(T, "Acceptance: close me"); expect(r, 201); iid = r.json()["interaction_id"]

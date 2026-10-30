@@ -11,3 +11,6 @@ captures/
 # Local compiler and Python test caches.
 .kotlin/
 __pycache__/
+
+# Publisher settings for tools/publish-apk.sh.
+tools/publish.env

@@ -106,11 +106,11 @@ class KeysAndAgentsTest {
         val s = MemStorage()
         val r = registry(s)
         val (a, _) = r.add("Grok", Connection.DIRECT)
-        r.recordUse(a.id, "100.110.68.46")
-        r.recordUse(a.id, "100.110.68.46")
+        r.recordUse(a.id, "100.88.1.2")
+        r.recordUse(a.id, "100.88.1.2")
         assertEquals(2, r.get(a.id)!!.requestCount)
         r.flush()
-        assertEquals("100.110.68.46", registry(s).get(a.id)!!.lastSourceIp)
+        assertEquals("100.88.1.2", registry(s).get(a.id)!!.lastSourceIp)
     }
 
     @Test fun scrub() {
@@ -122,7 +122,7 @@ class KeysAndAgentsTest {
     }
 
     @Test fun tailnetAddresses() {
-        for (ok in listOf("100.64.0.1", "100.94.27.79", "100.127.255.255", "/100.110.68.46", "fd7a:115c:a1e0::1", "fd7a:115c:a1e0:ab12::5%tun0"))
+        for (ok in listOf("100.64.0.1", "100.101.102.103", "100.127.255.255", "/100.88.1.2", "fd7a:115c:a1e0::1", "fd7a:115c:a1e0:ab12::5%tun0"))
             assertTrue(ok, Net.isTailnet(ok))
         for (bad in listOf("100.63.255.255", "100.128.0.1", "192.168.1.32", "127.0.0.1", "10.0.0.1", "fd7a:115c:a1e1::1",
             "::1", "face", "pixel.ts.net", "", null))

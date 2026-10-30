@@ -126,7 +126,7 @@ class ApiLogicTest {
         for (e in Endpoints.all) e.errors.forEach { ErrorCatalog.http(it) }
     }
 
-    private val addr = Address("pixel-10-pro-xl.tail9c9221.ts.net", "100.94.27.79", 8735)
+    private val addr = Address("my-phone.tailnet-name.ts.net", "100.101.102.103", 8735)
     private fun caps(vararg on: String) = listOf("camera", "mic", "gallery").map {
         CapInfo(it, it, it, it in on, true, null)
     }
@@ -135,8 +135,8 @@ class ApiLogicTest {
         val key = Keys.generate()
         val p = SetupPrompt.build("Muse", key, Connection.DIRECT, addr, "Pixel 10 Pro XL", caps("gallery", "camera"), null)
         assertEquals("key exactly once", 1, Regex(Regex.escape(key)).findAll(p).count())
-        assertTrue(p.contains("http://pixel-10-pro-xl.tail9c9221.ts.net:8735/v1"))
-        assertTrue(p.contains("IP fallback: http://100.94.27.79:8735/v1"))
+        assertTrue(p.contains("http://my-phone.tailnet-name.ts.net:8735/v1"))
+        assertTrue(p.contains("IP fallback: http://100.101.102.103:8735/v1"))
         assertTrue(p.contains("Your agent name in Bridgit is \"Muse\""))
         assertTrue(p.contains("curl -s -m 30 -H @\$HOME/.config/bridget/header"))
         assertTrue(p.contains("/v1/camera/snapshot") && p.contains("/v1/image/last"))
@@ -166,7 +166,7 @@ class ApiLogicTest {
         assertFalse(p.contains("/v1/camera/snapshot"))
         val helper = "#!/usr/bin/env python3\nprint('helper')\n"
         val u = SetupPrompt.build("Grok", key, Connection.USERSPACE, addr, "Pixel", caps("camera"), helper)
-        assertTrue(u.contains("BRIDGET_HOST=100.94.27.79") && u.contains("BRIDGET_PORT=8735"))
+        assertTrue(u.contains("BRIDGET_HOST=100.101.102.103") && u.contains("BRIDGET_PORT=8735"))
         assertTrue(u.contains("----- BEGIN ~/bin/bridget -----\n$helper".trimEnd()))
         assertEquals(1, Regex(Regex.escape(key)).findAll(u).count())
         val qr = JSONObject(SetupPrompt.qrPayload("Muse", key, addr))

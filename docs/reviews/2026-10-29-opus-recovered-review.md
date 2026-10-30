@@ -38,9 +38,9 @@ Most of the security design is sound. These parts held up when I read them:
 
 **2. Callbacks ignore per-agent grants**
 - **Evidence:** `interact/CallbackDispatcher.kt:55-62` (`onEvent`) and `:82-85` (`attempt`) check only that a callback URL exists and the agent exists. `GET /v1/events` is refused without the `interactions` grant (`ApiServer.kt:335-338`), but pushes never check any grant.
-- **Trigger:** the owner sets a callback URL for an agent, then saves an explicit grant set without `interactions` (or without `tour`).
+- **Trigger:** The owner sets a callback URL for an agent, then saves an explicit grant set without `interactions` (or without `tour`).
 - **Result:** the agent keeps receiving signed POSTs. These include interaction answers with text values, `tour.tick` with precise location and photo ids, and `clipboard.completed`, `file.received`, `share.created`, `grant.ended`.
-- **Who is affected:** the owner's answers and location, sent to an agent whose access was revoked.
+- **Who is affected:** The owner's answers and location, sent to an agent whose access was revoked.
 - **Fix:** in `attempt()` and `onEvent()`, require `allows("interactions")`. Also require the event family's own capability (`tour.*` needs `tour`, `file.*` needs `files`, and so on). Drop the queued items when a grant changes.
 - **Test:** a dispatcher test with a fake store; set caps without `interactions` and assert nothing is delivered.
 
@@ -68,7 +68,7 @@ Most of the security design is sound. These parts held up when I read them:
   - `TourManager.start` checks only global switches through `missing()` (`Tour.kt:235-261`).
   - `tick()` sends precise location and new gallery photo ids and timestamps whenever the global `gallery` switch is on (`Tour.kt:286-305`).
   - The only per-agent check is `allows("tour")` (`BridgeApp.kt:77`).
-- **Trigger:** the owner restricts an agent to a set without `location` (or `gallery`) and then starts a tour with it.
+- **Trigger:** The owner restricts an agent to a set without `location` (or `gallery`) and then starts a tour with it.
 - **Result:** the agent gets precise location every interval, and gallery item ids, despite being denied those capabilities. The owner does choose the agent, but nothing on the Tour screen says the agent's grants are overridden.
 - **Fix:** add per-agent checks to `missing()`, or to the tick and photo builders: `allows("location")` for location, `allows("gallery")` for `new_photos` and `latest_photo`.
 - **Test:** a TourManager test with a denying agent, asserting that start is refused or the tick has no location.

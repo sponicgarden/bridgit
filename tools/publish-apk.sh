@@ -22,14 +22,17 @@
 #   4. Computes SHA-256 and size and writes latest.json:
 #      {"package","version_name","version_code","url","sha256","size_bytes","published_at","notes"}.
 #   5. Uploads bridget/bridget-<version>.apk and API docs, verifies the APK, then bridget/latest.json, to the public R2 bucket
-#      sponic-images via the Cloudflare API, and checks each reply says "success": true.
+#      via the Cloudflare API, and checks each reply says "success": true.
 #   5a. Generates the public API page (ApiDocsTest writes app/build/apidocs/api.html for this version)
 #      and uploads it as bridget/api.html; the What can Bridgit do? cards' Share buttons link to it.
 #   6. Downloads both back from the public host and checks the SHA-256.
 #   7. Creates the GitHub release bridget-v<version> with the APK attached (unless --no-github).
 #
-# The Cloudflare R2 token comes from Bitwarden item 0a573694-8b9d-44f1-9600-b43f011a48cf (login
-# password, or a field whose name contains "token"), using an active bwaccesser grant or BW_SESSION. The token is
+# Publisher settings (public host, R2 account and bucket, vault item) come from tools/publish.env, which is
+# gitignored; copy tools/publish.env.example and fill it in. Environment variables of the same name win.
+#
+# The Cloudflare R2 token comes from the Bitwarden item BRIDGIT_R2_TOKEN_ITEM (login password, or a field
+# whose name contains "token"), using an active bwaccesser grant or BW_SESSION. The token is
 # written straight from Bitwarden's JSON into a 0600 header file that curl reads with -H @file; it
 # is never printed, never in a shell variable and never on a command line. The file is deleted on exit.
 # --dry-run doesn't touch Bitwarden at all.
@@ -38,17 +41,19 @@ set -euo pipefail
 
 PACKAGE="net.finleg.bridget"
 EXPECTED_CERT="6bbd482d18efdc58ca28de8358405602ebb0405b479cabd36b37ff8242042f61"
-PUBLIC_HOST="pub-3a79691572bc4abc93fce31910fe320b.r2.dev"
-PUBLIC_BASE="https://${PUBLIC_HOST}/bridget"
-R2_ACCOUNT="394b5de665bbfdea54cdd57be9094762"
-R2_BUCKET="sponic-images"
-R2_API="https://api.cloudflare.com/client/v4/accounts/${R2_ACCOUNT}/r2/buckets/${R2_BUCKET}/objects"
-BW_ITEM="0a573694-8b9d-44f1-9600-b43f011a48cf"
-GH_REPO="sponicgarden/bridgit"
 UA="bridget-publish/1"
 MAX_BYTES=$((100 * 1024 * 1024))
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=/dev/null
+[[ -f "${ROOT}/tools/publish.env" ]] && source "${ROOT}/tools/publish.env"
+PUBLIC_HOST="${BRIDGIT_PUBLIC_HOST:-}"
+PUBLIC_BASE="https://${PUBLIC_HOST}/bridget"
+R2_ACCOUNT="${BRIDGIT_R2_ACCOUNT:-}"
+R2_BUCKET="${BRIDGIT_R2_BUCKET:-}"
+R2_API="https://api.cloudflare.com/client/v4/accounts/${R2_ACCOUNT}/r2/buckets/${R2_BUCKET}/objects"
+BW_ITEM="${BRIDGIT_R2_TOKEN_ITEM:-}"
+GH_REPO="${BRIDGIT_GH_REPO:-sponicgarden/bridgit}"
 NOTES=""
 APK=""
 BUILD=1
@@ -72,6 +77,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 [[ -n "${NOTES// /}" ]] || die "--notes is required"
+for v in BRIDGIT_PUBLIC_HOST BRIDGIT_R2_ACCOUNT BRIDGIT_R2_BUCKET BRIDGIT_R2_TOKEN_ITEM; do
+  [[ -n "${!v:-}" ]] || die "${v} is not set (tools/publish.env; see tools/publish.env.example)"
+done
 
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/bridget-publish.XXXXXX")"
 HDR=""

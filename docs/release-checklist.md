@@ -101,7 +101,24 @@ details or keys.
 ## 2. Open-source repository
 
 ### Must fix before announcing
-- [ ] **[BLOCKER] Remove personal and infrastructure details from tracked files:**
+- [x] **Scrubbed the working tree (30 Oct 2026).**
+  - The owner's name, surname and pronouns, the tailnet hostname and IPs, local paths,
+    vault item names and ids, R2 account and bucket, Azure endpoint and personal email
+    are gone from every tracked file. Test fixtures use `my-phone.tailnet-name.ts.net`
+    and `100.101.102.103`.
+  - Publisher settings moved to the gitignored `tools/publish.env` (see
+    `tools/publish.env.example`). The acceptance scripts read `BRIDGIT_TEST_PHONE` /
+    `BRIDGIT_TEST_ADB`; the image generator reads `AZURE_OPENAI_*`.
+  - Removed `docs/handover-p1b.md` and `docs/spec-v1.0.pdf`; the private archive keeps
+    them.
+  - README rewritten for public readers.
+  - Kept on purpose: the Cloudflare account and D1 ids in `website/wrangler.jsonc` (not
+    secret, needed to deploy), the public R2 download host (the updater uses it) and
+    the old product name "Almusca" in spec history.
+- [ ] **[SHOULD] Two website tests already fail on `main`.** `catalog.test.mjs` and
+  `features.test.mjs` expect 24 catalog entries, but the app now has 43. Update the
+  tests (or the catalog grouping) before adding CI.
+- [x] ~~Remove personal and infrastructure details from tracked files~~ (done; original list):
   - `README.md`:
     - line 5: owner and device
     - line 68: tailnet hostname
