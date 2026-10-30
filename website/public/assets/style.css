@@ -124,3 +124,6 @@
 .release-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
 .release-head h3{font:600 20px system-ui;margin:0}
 .release-list p{font-size:15px;margin:8px 0}
+
+/* Website build label beside the hero tagline */
+.web-version{font:500 12px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:0;text-transform:none;color:var(--muted);border:1px solid var(--line);border-radius:20px;padding:2px 9px;white-space:nowrap}
