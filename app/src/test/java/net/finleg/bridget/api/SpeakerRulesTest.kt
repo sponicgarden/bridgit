@@ -24,14 +24,14 @@ class SpeakerRulesTest {
         fun ip(s: String) = InetAddress.getByName(s)
         assertTrue(SpeakerRules.publicAddress(ip("93.184.216.34")))
         assertTrue(SpeakerRules.publicAddress(ip("2606:2800:220:1:248:1893:25c8:1946")))
-        for (no in listOf("127.0.0.1", "10.0.0.5", "192.168.1.32", "172.16.0.1", "169.254.1.1", "100.94.27.79", "100.64.0.1",
+        for (no in listOf("127.0.0.1", "10.0.0.5", "192.168.1.32", "172.16.0.1", "169.254.1.1", "100.101.102.103", "100.64.0.1",
             "0.0.0.0", "::1", "fd7a:115c:a1e0::1", "fe80::1", "224.0.0.1"))
             assertFalse(no, SpeakerRules.publicAddress(ip(no)))
     }
 
     /** GET /v1/speaker must not show another agent's caption or play id (it may be private narration). */
     @Test fun statusShowsOnlyYourOwnSound() {
-        val a = SpeakerRules.Entry("p1", "agentA", "Grok", "Secret narration for Rahul")
+        val a = SpeakerRules.Entry("p1", "agentA", "Grok", "Secret narration for the owner")
         val queued = listOf(SpeakerRules.Entry("p2", "agentA", "Grok", "next"), SpeakerRules.Entry("p3", "agentB", "Claude", "mine"))
         val forB = SpeakerRules.status("agentB", a, queued, quiet = false, paused = false)
         assertTrue(forB.isNull("playing"))
@@ -43,7 +43,7 @@ class SpeakerRulesTest {
 
         val forA = SpeakerRules.status("agentA", a, queued, quiet = true, paused = true)
         assertEquals("p1", forA.getJSONObject("playing").getString("play_id"))
-        assertEquals("Secret narration for Rahul", forA.getJSONObject("playing").getString("text"))
+        assertEquals("Secret narration for the owner", forA.getJSONObject("playing").getString("text"))
         assertFalse(forA.getBoolean("busy")); assertTrue(forA.getBoolean("paused")); assertTrue(forA.getBoolean("quiet"))
         assertEquals(1, forA.getJSONArray("queued").length())
 

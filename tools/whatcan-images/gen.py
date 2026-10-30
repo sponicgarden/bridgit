@@ -1,13 +1,14 @@
-"""Generate What can Bridgit do? card images via sponic's Azure gpt-image deployment."""
+"""Generate What can Bridgit do? card images through an Azure OpenAI gpt-image deployment.
+
+Set AZURE_OPENAI_ENDPOINT, AZURE_OPENAI_IMAGE_DEPLOYMENT and AZURE_OPENAI_API_KEY."""
 import base64, json, os, re, subprocess, sys, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 MD, OUT = sys.argv[1], sys.argv[2]
 only = set(sys.argv[3:])
-ENDPOINT = "https://sponic-openai-prod-eastus2.openai.azure.com/"
-DEPLOY = "gpt-image-2.5-sunburst"
-KEY = subprocess.run([os.path.expanduser("~/Documents/codingprojects/sponic/infra/bin/bw-sponic"), "field",
-                      "5ef0be7f-20b0-4fa0-874f-b49301246146", "key1"], capture_output=True, text=True, check=True).stdout.strip()
+ENDPOINT = os.environ["AZURE_OPENAI_ENDPOINT"].rstrip("/") + "/"
+DEPLOY = os.environ["AZURE_OPENAI_IMAGE_DEPLOYMENT"]
+KEY = os.environ["AZURE_OPENAI_API_KEY"]
 
 text = open(MD).read()
 style = re.search(r"## Style.*?```text\n(.*?)```", text, re.S).group(1).strip()

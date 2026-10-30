@@ -13,7 +13,7 @@ import org.junit.Test
 
 /**
  * Ways the FBK-11a status machine can fail:
- * a developer agent closes a report (confirmed) or reopens it; Rahul's Confirm works on a report nobody
+ * a developer agent closes a report (confirmed) or reopens it; the owner's Confirm works on a report nobody
  * fixed; a fixed report jumps back to in_progress; `reopened` doesn't behave as `new`; the automatic
  * first-read move fires on a report already in progress; a disallowed move is silently accepted.
  * The test enumerates every (from, to, actor) triple against the spec table.

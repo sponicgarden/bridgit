@@ -62,7 +62,7 @@ class CardWebView(context: Context, private val onRespond: (Any) -> Unit, privat
         webViewClient = Client()
         webChromeClient = Chrome()
         setDownloadListener { _, _, _, _, _ -> } // blob: and data: downloads go nowhere
-        importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS // Rahul's saved data is never offered to the page
+        importantForAutofill = View.IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS // The owner's saved data is never offered to the page
         isLongClickable = false
         setOnLongClickListener { true }
         isHapticFeedbackEnabled = false

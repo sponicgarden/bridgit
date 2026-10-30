@@ -44,19 +44,19 @@ abstract class Capability(protected val app: BridgeApp) {
 
     /** Throws the right error unless the switch is on and the module is ready (PRD-05: fail closed). */
     protected fun requireUsable() {
-        if (!enabled) throw ErrorCatalog.error("capability_disabled", "$title is switched off on the phone. Ask Rahul to turn it on in Features.",
+        if (!enabled) throw ErrorCatalog.error("capability_disabled", "$title is switched off on the phone. Ask the owner to turn it on in Features.",
             mapOf("setting" to switchKey))
         val b = blockedReason() ?: return
         when {
             b.startsWith("permission:") -> throw ErrorCatalog.error("permission_denied",
-                "Bridgit doesn't have the ${b.removePrefix("permission:")} permission. Rahul can grant it on the Access screen.",
+                "Bridgit doesn't have the ${b.removePrefix("permission:")} permission. The owner can grant it on the Access screen.",
                 mapOf("permission" to "android.permission." + b.removePrefix("permission:")))
             b == "notifications_off" -> throw ErrorCatalog.error("notifications_required",
-                "Bridgit's notifications are off, so captures are refused. Ask Rahul to turn them on.")
+                "Bridgit's notifications are off, so captures are refused. Ask the owner to turn them on.")
             b.endsWith("_access_off") || b == "location_off" -> throw ErrorCatalog.error("access_needed",
-                "$title needs Android access. Ask Rahul to enable $b on the Access or Device tools screen.", mapOf("setting" to b))
+                "$title needs Android access. Ask the owner to enable $b on the Access or Device tools screen.", mapOf("setting" to b))
             b == "open_app_once" -> throw ErrorCatalog.error("service_start_blocked",
-                "Android hasn't given Bridgit's listener the $title yet. Ask Rahul to open Bridgit once.")
+                "Android hasn't given Bridgit's listener the $title yet. Ask the owner to open Bridgit once.")
             else -> throw ErrorCatalog.error("service_start_blocked", "$title isn't ready: $b")
         }
     }
@@ -69,7 +69,7 @@ class Registry(app: BridgeApp) {
     val micLock = Mutex()
 
     val modules: List<Capability> = listOf(
-        StatusModule(app), CameraModule(app, this), MicModule(app, this), GalleryModule(app), ScreenModule(app), LogModule(app),
+        StatusModule(app), CameraModule(app, this), MicModule(app, this), net.finleg.bridget.listen.WakeWordsModule(app), GalleryModule(app), ScreenModule(app), LogModule(app),
         net.finleg.bridget.feedback.FeedbackModule(app),
         net.finleg.bridget.interact.InteractionModule(app),
         LocationModule(app), SpeakerModule(app), net.finleg.bridget.tour.TourModule(app),

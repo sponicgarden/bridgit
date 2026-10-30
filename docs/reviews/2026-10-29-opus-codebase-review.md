@@ -48,8 +48,8 @@ Limits of this review:
   2. The owner manually switches DND to "priority".
   3. An agent sets DND "alarms" for 10 minutes.
   4. When that runs out, `restoreDue` sees current == applied and restores **off**.
-- **Failure:** the owner's manual "priority" is silently lost, breaking "Later manual changes are preserved" (`WhatCanData.kt:86`). Source-confirmed.
-- **Affected:** the owner's DND, ringer, volume and brightness.
+- **Failure:** The owner's manual "priority" is silently lost, breaking "Later manual changes are preserved" (`WhatCanData.kt:86`). Source-confirmed.
+- **Affected:** The owner's DND, ringer, volume and brightness.
 - **Fix:** only reuse `previous.before` when `before[k] == previous.applied`; otherwise save the current value.
 - **Test:** move the lease merge/restore decision into a pure function and test this exact sequence.
 
@@ -57,13 +57,13 @@ Limits of this review:
 - **Evidence:** `PlannedEndpoints.kt:31` returns raw `video/mp4`. `McpTools.result` (`api/McpProtocol.kt:229`) turns any non-image/audio/JSON/text reply into "binary; use the HTTP endpoint", and `camera_video` is still listed in `tools/list`.
 - **Trigger:** an MCP agent calls `camera_video`.
 - **Failure:** the camera records for up to 30 s with the notification showing, and the MP4 is thrown away. `gallery_video` and `files_get` (non-image files) are unusable the same way, but they don't capture anything.
-- **Affected:** the owner (a pointless capture) and MCP agents.
+- **Affected:** The owner (a pointless capture) and MCP agents.
 - **Fix:** leave capture endpoints with binary results out of MCP, or return an MCP resource/blob.
 - **Test:** a `McpTest` check that every listed capture tool's result type is representable.
 
 ### P2-5. The owner's "Play aloud" stops whenever any agent makes a request
 - **Evidence:** Play aloud queues speech with agent id `"owner"` (`BridgeApp.kt:85-87`). The registry listener at `BridgeApp.kt:79` stops any current speech whose agent id isn't registered, so it stops `"owner"`. That listener runs on every authenticated request, because `ApiServer.kt:170` calls `recordUse`, which calls `changed()` (`core/Agents.kt:191`).
-- **Trigger:** the owner taps Play aloud while any agent is polling (`/v1/events`, a text stream, a tour).
+- **Trigger:** The owner taps Play aloud while any agent is polling (`/v1/events`, a text stream, a tour).
 - **Failure:** speech is cut off and the owner's queued items are dropped. Source-confirmed.
 - **Fix:** skip `"owner"` in that check, or only stop speech for agents that were actually removed.
 - **Test:** a unit test of that listener with a fake registry.

@@ -74,7 +74,7 @@ class TourFragment : Fragment() {
 
     private val perms = PermissionAsker(this) { requestRender() }
 
-    /** Take photo (TOUR-07): Android's camera saves into Rahul's gallery, then the photo goes to the agent. */
+    /** Take photo (TOUR-07): Android's camera saves into the owner's gallery, then the photo goes to the agent. */
     private var pendingShot: android.net.Uri? = null
     private val takePhoto = registerForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
         val uri = pendingShot ?: return@registerForActivityResult

@@ -97,7 +97,7 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
         return db.query("interactions", null, where, args, null, null, "id DESC", limit.toString()).use { c -> buildList { while (c.moveToNext()) add(row(c)) } }
     }
 
-    /** Rahul opened or saw it (a notice becomes "seen"; a question stays answerable). */
+    /** The owner opened or saw it (a notice becomes "seen"; a question stays answerable). */
     @Synchronized
     fun markSeen(id: Long): Interaction? {
         val i = get(id) ?: return null
@@ -107,7 +107,7 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
         return get(id)!!.also { tell(it, "seen") }
     }
 
-    /** Rahul answered on the phone or in the notification. */
+    /** The owner answered on the phone or in the notification. */
     @Synchronized
     fun answer(id: Long, button: String?, values: Map<String, String>, resubmission: Boolean = false): Interaction {
         val i = get(id) ?: throw InteractionError("not_found", "No interaction $id.")
@@ -156,14 +156,14 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
         return get(id)!!.also { if (done) tell(it, "stream_done") }
     }
 
-    /** The newest open text panel (D26), for the phone's panel when Rahul hasn't picked one. */
+    /** The newest open text panel (D26), for the phone's panel when the owner hasn't picked one. */
     fun latestOpenText(): Interaction? {
         expireDue()
         return db.query("interactions", null, "kind = 'text' AND status IN ('pending','seen')", null, null, null, "id DESC", "1")
             .use { c -> if (c.moveToFirst()) row(c) else null }
     }
 
-    /** Rahul closed it (D26); the agent is told `dismissed`. */
+    /** The owner closed it (D26); the agent is told `dismissed`. */
     @Synchronized
     fun dismiss(id: Long): Interaction? = close(id, IStatus.DISMISSED, "interaction.dismissed")
 

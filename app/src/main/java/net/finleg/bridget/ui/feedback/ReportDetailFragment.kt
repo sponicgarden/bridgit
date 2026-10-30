@@ -107,7 +107,7 @@ class ReportDetailFragment : Fragment() {
         b.status.contentDescription = "Status: " + StatusMachine.label(r.status)
         // Features are always held (FBK-04), so the flag only says something on bugs.
         b.noAutofix.isVisible = r.noAutofix && bug
-        b.filed.text = getString(R.string.feedback_detail_filed, Fmt.dateTime(r.createdAt), r.agent ?: "Rahul")
+        b.filed.text = getString(R.string.feedback_detail_filed, Fmt.dateTime(r.createdAt), r.agent ?: "owner")
         b.description.text = r.description
 
         bindImages(r)
@@ -248,7 +248,7 @@ class ReportDetailFragment : Fragment() {
         }
     }
 
-    /** FBK-11a: Rahul confirms or reopens; mirrors the notification actions. */
+    /** FBK-11a: the owner confirms or reopens; mirrors the notification actions. */
     private fun move(to: ReportStatus) {
         b.confirm.isEnabled = false; b.stillBroken.isEnabled = false
         val app = app
@@ -256,7 +256,7 @@ class ReportDetailFragment : Fragment() {
         viewLifecycleOwner.lifecycleScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    val r = app.feedback.move(id, to, Actor.OWNER, "Rahul", null)
+                    val r = app.feedback.move(id, to, Actor.OWNER, "owner", null)
                     app.log.system("audit", "feedback", app.getString(logRes, r.number))
                     // The notification for this report is out of date now (same id as FeedbackNotifier).
                     app.getSystemService(android.app.NotificationManager::class.java)?.cancel(5000 + id.toInt())

@@ -14,7 +14,7 @@ Run `npm run build`, then `npm run check`. The output is `website/dist/`, which 
 
 ## Domain and deployment
 
-Set `origin` in `site.config.json` to the real HTTPS origin when chosen, or supply `SITE_ORIGIN` to the build. Also set verified `supportEmail` and `privacyEmail` when those mailboxes exist. Build generates canonical URLs, Open Graph URLs, sitemap and robots rules from that origin. The selected domain is `bridgit.cc` and the configured origin is `https://bridgit.cc`. The zone is active in the Wingsiebird account; the repository includes its deployment configuration.
+Set `origin` in `site.config.json` to the real HTTPS origin when chosen, or supply `SITE_ORIGIN` to the build. Also set verified `supportEmail` and `privacyEmail` when those mailboxes exist. Build generates canonical URLs, Open Graph URLs, sitemap and robots rules from that origin. The selected domain is `bridgit.cc` and the configured origin is `https://bridgit.cc`. The zone is active; the repository includes its deployment configuration.
 
 `indexable` is enabled for the public site. The build emits `index,follow`, canonical HTTPS apex URLs and a nine-page sitemap, and robots.txt allows crawling. Run `npm run preflight` to see remaining launch inputs; privacy and terms describe the current app and website, with support/privacy requests sent to `support@bridgit.cc`. Reconcile these disclosures with the actual app release and Play declarations before store submission. A missing domain fails release preflight; unfinished contact/legal details are reported as notes, not fabricated.
 
@@ -30,19 +30,19 @@ BRIDGIT — “Turn any Android device into an agentic appliance.” Original SV
 
 ## Cloudflare
 
-The existing Wrangler login is `wingsiebird@gmail.com`. `wrangler.jsonc` pins account `9cd3a280a54ce2a5b382602f0247b577` and the `bridgit` Worker, serving this directory’s static build at `bridgit.cc` and `www.bridgit.cc` through Cloudflare Custom Domains. Cloudflare manages DNS and TLS for these bindings. The domain is already an active Free zone.
+`wrangler.jsonc` pins the Cloudflare account and the `bridgit` Worker, serving this directory’s static build at `bridgit.cc` and `www.bridgit.cc` through Cloudflare Custom Domains. Cloudflare manages DNS and TLS for these bindings. The domain is already an active Free zone.
 
 From `website/`, run `npm run deploy:check` to build, validate and dry-run the configuration; run `npm run deploy` only when publication is intended. Both commands require Wrangler on PATH, authenticated to the named account. No token belongs in this repository. `workers.dev` and version preview URLs are disabled. The Worker runs before assets and permanently redirects HTTP and www requests to `https://bridgit.cc`, preserving path and query. `npm test` covers redirects and canonical asset/404 behavior.
 
 Cloudflare reference: https://developers.cloudflare.com/workers/configuration/routing/custom-domains/
 
-Deployment verified 28 October 2026: https://bridgit.cc and https://www.bridgit.cc serve this preview through Worker `bridgit` in the Wingsiebird account. All seven pages, robots.txt and sitemap.xml respond successfully; unknown paths return 404. The site initially launched with indexing disabled; the search-indexing update below replaces that setting.
+Deployment verified 28 October 2026: https://bridgit.cc and https://www.bridgit.cc serve this preview through Worker `bridgit`. All seven pages, robots.txt and sitemap.xml respond successfully; unknown paths return 404. The site initially launched with indexing disabled; the search-indexing update below replaces that setting.
 
 ## Home page use cases
 
 The “What can you do with Bridgit?” carousel contains five concept illustrations in `public/assets/use-cases/`: baby monitor, family help station, desk scanner, pet camera and workshop eye. Edit the slide markup in `public/index.html` to add cases or replace images. Keep image alt text and current/planned feature labels accurate. Native horizontal scrolling works without JavaScript; arrow buttons and keyboard navigation are enhanced by `assets/app.js`. No autoplay is used.
 
-The home page and footer link to `https://github.com/sponicgarden/bridgit`. At verification the repository was private, so the page explains that GitHub access is needed. Recheck visibility before removing that note.
+The home page and footer link to `https://github.com/sponicgarden/bridgit`. The repository is public.
 
 Search-indexing update, 28 October 2026: all seven public pages allow indexing; HTTP/www variants return 301 to the HTTPS apex. Privacy and terms are dated public pages. The support contact receives mail through Cloudflare Email Routing. Cloudflare manages MX/SPF/DKIM DNS; destination verification and routing rules are account configuration and contain no repository secrets. The receive-only forwarding rule does not itself provision outbound SMTP.
 

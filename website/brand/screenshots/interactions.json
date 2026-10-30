@@ -1,0 +1,66 @@
+{
+  "title": "Full-screen interactions \u2014 development 1.6",
+  "device": "Pixel 10 Pro XL",
+  "package": "net.finleg.bridget.debug",
+  "appVersion": "1.6.0",
+  "versionCode": 17,
+  "releaseStatus": "Development review only; not part of release 1.5.4 or the Play Store upload set",
+  "captureMethod": "Fresh USB ADB screencap, unaltered 1080\u00d72404 PNGs",
+  "content": "Fictional Grokbot hotel and Muse restaurant examples. Grok uses the exact home-page mark sourced from https://grok.com/images/favicon.svg. Muse uses https://muse.ai/images/landing/brand/muse-logo.svg. The outdoor option displays requested static example weather: Partly cloudy \u00b7 83\u00b0. No live forecast, reservation/payment or real messages. SVG IDs namespaced per state.",
+  "screens": [
+    {
+      "file": "grokbot-question.png",
+      "title": "Grokbot \u00b7 hotel question",
+      "capturedAtUTC": "2026-10-28T23:59:52.510511+00:00",
+      "width": 1080,
+      "height": 2404,
+      "sha256": "b9e6820cfb50f7fb20f2e1486403130d39a9162e98d813123b3dc31f7ef692c2",
+      "reviewed": true
+    },
+    {
+      "file": "grokbot-selected.png",
+      "title": "Grokbot \u00b7 Park Hotel selected",
+      "capturedAtUTC": "2026-10-28T23:59:53.473891+00:00",
+      "width": 1080,
+      "height": 2404,
+      "sha256": "e862507393abf993b332aaa5a302cc478cfd6b6ca81a3d5ed4fad4109f3b73c7",
+      "reviewed": true
+    },
+    {
+      "file": "grokbot-confirmation.png",
+      "title": "Grokbot \u00b7 answer confirmed",
+      "capturedAtUTC": "2026-10-28T23:59:54.468364+00:00",
+      "width": 1080,
+      "height": 2404,
+      "sha256": "afe4af03b88e1dc8a52ecf1179a96bc1957aa763eaa022c5aea79b243a71669f",
+      "reviewed": true
+    },
+    {
+      "file": "muse-question.png",
+      "title": "Muse \u00b7 restaurant seating question",
+      "capturedAtUTC": "2026-10-29T00:00:09.493975+00:00",
+      "width": 1080,
+      "height": 2404,
+      "sha256": "760616083a37be1c409c50023dc5887f01b8172865333e3dc9bbdd90ced7ea22",
+      "reviewed": true
+    },
+    {
+      "file": "muse-selected.png",
+      "title": "Muse \u00b7 outdoors at 7:45 pm selected",
+      "capturedAtUTC": "2026-10-29T00:00:10.551280+00:00",
+      "width": 1080,
+      "height": 2404,
+      "sha256": "c4097a9bcb5d99f081660f1cd56790ebeef25f8126c7554148ca2cc9a7c00c0e",
+      "reviewed": true
+    },
+    {
+      "file": "muse-confirmation.png",
+      "title": "Muse \u00b7 seating preference confirmed",
+      "capturedAtUTC": "2026-10-29T00:00:11.765729+00:00",
+      "width": 1080,
+      "height": 2404,
+      "sha256": "f8c98409dc14ce1447fe4ec3932aad7ce9fa3a56117b54b5cf309f0a512a02a6",
+      "reviewed": true
+    }
+  ]
+}

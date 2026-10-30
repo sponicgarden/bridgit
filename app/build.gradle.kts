@@ -27,6 +27,11 @@ android {
         buildConfigField("int", "DEFAULT_PORT", "8734")
         buildConfigField("String", "GIT_COMMIT", "\"${gitCommit()}\"")
         buildConfigField("boolean", "DIRTY_BUILD", "${gitDirty()}")
+        // Crash reports (D32) go only where the builder points them: -PbridgitSentryDsn, BRIDGIT_SENTRY_DSN,
+        // or sentryDsn in keystore.properties. Empty (the default, and every fork) means no crash reports.
+        val sentryDsn = (project.findProperty("bridgitSentryDsn") as String?)
+            ?: System.getenv("BRIDGIT_SENTRY_DSN") ?: keystoreProps.getProperty("sentryDsn") ?: ""
+        buildConfigField("String", "SENTRY_DSN", "\"${sentryDsn.trim()}\"")
     }
 
     buildFeatures {
@@ -69,6 +74,8 @@ android {
         unitTests.all { it.systemProperty("bridget.version", (project.findProperty("bridgetDocsVersion") as String?) ?: defaultConfig.versionName!!) }
     }
     packaging {
+        // Wake words: Vosk's x86 builds only serve emulators (about 20 MB); there wake words report an error instead.
+        jniLibs { excludes += setOf("lib/x86/libvosk.so", "lib/x86_64/libvosk.so") }
         resources {
             excludes += setOf(
                 "META-INF/INDEX.LIST", "META-INF/io.netty.versions.properties",
@@ -135,6 +142,9 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     // Crash reports (D32). Core only: no NDK, replay or Gradle plugin, so nothing is uploaded at build time.
     implementation("io.sentry:sentry-android-core:7.18.1")
+    // Wake words (CAP-47): offline keyword spotting. The English model is downloaded on first use, not bundled.
+    implementation("com.alphacephei:vosk-android:0.3.75")
+    implementation("net.java.dev.jna:jna:5.18.1@aar")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")

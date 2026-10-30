@@ -11,7 +11,7 @@ import net.finleg.bridget.ui.common.dp
 /**
  * D26 live text panel, drawn in MainActivity's lower half (in-app only, no overlay). Shows one text
  * interaction: header with the agent and title, Pause scrolling / Resume, Close; monospace text that
- * follows new lines unless paused or Rahul scrolled up to read. [onClose] dismisses it (the agent is told)
+ * follows new lines unless paused or the owner scrolled up to read. [onClose] dismisses it (the agent is told)
  * or, for one that is already closed, just hides it.
  */
 class TextPanel(private val b: ViewTextPanelBinding, private val onClose: (Interaction) -> Unit) {
@@ -57,7 +57,7 @@ class TextPanel(private val b: ViewTextPanelBinding, private val onClose: (Inter
 
         val text = i.streamText
         if (text == shownText && !fresh) return
-        // Follow new text only while Rahul is at the bottom (he hasn't scrolled up to read) and not paused.
+        // Follow new text only while the owner is at the bottom (they haven't scrolled up to read) and not paused.
         val follow = fresh || isAtBottom()
         if (text.isEmpty()) {
             b.panelText.text = ctx.getString(R.string.text_panel_empty)

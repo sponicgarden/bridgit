@@ -141,6 +141,7 @@ object WhatCanData {
         "Videos and downloads" to listOf("GET /v1/gallery/videos/recent", "GET /v1/gallery/video/{id}", "GET /v1/downloads"),
         "Files to your phone" to listOf("POST /v1/files", "GET /v1/files"),
         "Share to an agent" to listOf("GET /v1/shares", "GET /v1/shares/{id}"),
+        "Wake words" to listOf("GET /v1/listen", "GET /v1/listen/clip/{id}", "GET /v1/events"),
         "Short video clips" to listOf("POST /v1/camera/video"),
         "Read text on the phone" to listOf("POST /v1/ocr"),
         "Transcribe clips on the phone" to listOf("POST /v1/mic/record"),
@@ -254,6 +255,7 @@ object WhatCanData {
             "Share a photo, link or text from any app straight to Grok or Claude.",
             "Share a restaurant link to your agent: \"Book this for Friday.\"", "8.12"),
         // ---- P5 ----------------------------------------------------------------------------------------
+        Feature(Stage.NOW, "Wake words", "Up to 10 words you choose, each sent to one agent. Recognised offline on the phone; only what you say after one leaves it. Off by default.", "\"Hey bridget, remind me to water the plants.\"", "8.23"),
         Feature(Stage.NOW, "Short video clips", "1 to 30 seconds of 720p or 1080p MP4. Audio is off by default and needs a microphone grant.", "\"Record the dishwasher noise so I can describe it to the repair shop.\"", "8.3"),
         Feature(Stage.NOW, "Read text on the phone",
             "Bundled Latin-script text recognition runs on the phone; only the result leaves it.", "Read the serial number from a photo without uploading the picture.", "8.15"),

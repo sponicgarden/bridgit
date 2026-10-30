@@ -60,10 +60,10 @@ class InteractionModule(app: BridgeApp) : Capability(app) {
                 if (h.length > CardRules.HTML_MAX_BYTES || h.toByteArray(Charsets.UTF_8).size > CardRules.HTML_MAX_BYTES)
                     throw ErrorCatalog.error("payload_too_large", "html is limited to 256 KB.")
             }
-            if (!enabled) throw ErrorCatalog.error("capability_disabled", "Interactions are switched off on the phone. Ask Rahul to turn them on in Features.",
+            if (!enabled) throw ErrorCatalog.error("capability_disabled", "Interactions are switched off on the phone. Ask the owner to turn them on in Features.",
                 mapOf("setting" to switchKey))
             if (!app.captureNotificationsOn()) throw ErrorCatalog.error("notifications_required",
-                "Bridgit's notifications are off, so Rahul wouldn't see your message. Ask him to turn them on.")
+                "Bridgit's notifications are off, so the owner wouldn't see your message. Ask them to turn notifications on.")
             val a = agent!!
             val d = try { InteractionRules.parse(body) } catch (e: InteractionError) { fail(e) }
             val jpeg: ByteArray? = when {

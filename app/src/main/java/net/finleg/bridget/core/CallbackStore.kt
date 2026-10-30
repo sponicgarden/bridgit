@@ -20,7 +20,7 @@ import javax.crypto.spec.GCMParameterSpec
 class CallbackStore(context: Context) {
     private val prefs = context.getSharedPreferences("callbacks", Context.MODE_PRIVATE)
 
-    /** What's safe to show and log: the URL (shown to Rahul only) and its host. */
+    /** What's safe to show and log: the URL (shown to the owner only) and its host. */
     data class Config(val agentId: String, val url: String) {
         val host get() = CallbackRules.hostOf(url)
     }

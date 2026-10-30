@@ -91,6 +91,7 @@
             <intent-filter><action android:name="android.intent.action.VIEW_PERMISSION_USAGE" /><category android:name="android.intent.category.HEALTH_PERMISSIONS" /></intent-filter>
         </activity-alias>
         <activity android:name=".planned.OwnerToolsActivity" android:exported="false" />
+        <activity android:name=".listen.WakeWordsActivity" android:exported="false" android:label="Wake words" />
         <activity android:name=".planned.ShareActivity" android:exported="true" android:label="Share to Bridgit">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />

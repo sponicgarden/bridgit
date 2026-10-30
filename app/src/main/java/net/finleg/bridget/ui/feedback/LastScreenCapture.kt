@@ -182,7 +182,7 @@ fun openReport(
             jpeg = null
         } finally {
             launching = false
-            // Skip if Rahul left the screen while we waited (the scope was cancelled).
+            // Skip if the owner left the screen while we waited (the scope was cancelled).
             if (isActive && fragment.isAdded) runCatching {
                 ReportCaptureHolder.put(jpeg)
                 fragment.findNavController().navigate(R.id.reportForm, bundleOf(

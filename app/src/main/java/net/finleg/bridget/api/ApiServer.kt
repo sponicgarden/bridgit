@@ -128,7 +128,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
         val rid = newRequestId()
         val source = sourceOf(call)
         call.response.header("X-Request-Id", rid)
-        val err = if (!Net.isTailnet(source)) ErrorCatalog.error("forbidden_source", "Only devices on Rahul's Tailscale network may call Bridgit.")
+        val err = if (!Net.isTailnet(source)) ErrorCatalog.error("forbidden_source", "Only devices on the owner's Tailscale network may call Bridgit.")
         else ErrorCatalog.error("not_found", "No such endpoint. GET /v1/guide lists them all.")
         call.respondText(err.toJson(rid).toString(), ContentType.Application.Json, HttpStatusCode.fromValue(err.http))
         app.log.append(LogEntry(ts = System.currentTimeMillis(), channel = "audit", kind = "request", level = "warn",
@@ -155,7 +155,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
         var idemKey: String? = null
         var rawFile: java.io.File? = null
         try {
-            if (!Net.isTailnet(source)) throw ErrorCatalog.error("forbidden_source", "Only devices on Rahul's Tailscale network may call Bridgit.")
+            if (!Net.isTailnet(source)) throw ErrorCatalog.error("forbidden_source", "Only devices on the owner's Tailscale network may call Bridgit.")
             if (spec.auth) {
                 val token = call.request.headers["Authorization"]?.takeIf { it.startsWith("Bearer ") }?.removePrefix("Bearer ")?.trim()
                 when (val r = app.agents.authenticate(token)) {
@@ -167,8 +167,8 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                         if (r is AuthResult.Revoked) {
                             revokedReason = r.reason
                             throw ErrorCatalog.error("unauthorized",
-                                if (r.reason == "key_rotated") "${r.agentName}'s key was rotated. Ask Rahul for the new setup prompt."
-                                else "${r.agentName} was removed from Bridgit. Ask Rahul to add you again.",
+                                if (r.reason == "key_rotated") "${r.agentName}'s key was rotated. Ask the owner for the new setup prompt."
+                                else "${r.agentName} was removed from Bridgit. Ask the owner to add you again.",
                                 mapOf("reason" to r.reason))
                         }
                         throw ErrorCatalog.error("unauthorized", "Missing or wrong key. Send Authorization: Bearer <your key>.")
@@ -179,7 +179,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                 if (agent!!.knownApiRevision < ApiChanges.CURRENT)
                     call.response.header("X-Bridget-Whats-New", "/v1/changes?since=${agent!!.knownApiRevision}")
                 if (spec.developerOnly && !agent!!.developer) throw ErrorCatalog.error("forbidden",
-                    "Only developer agents can read bug reports. Ask Rahul to turn on Developer for ${agent!!.name}.", mapOf("reason" to "developer_only"))
+                    "Only developer agents can read bug reports. Ask the owner to turn on Developer for ${agent!!.name}.", mapOf("reason" to "developer_only"))
             }
             // Pairing has no key, but wrong codes count as failed sign-ins (SEC-06).
             if (spec.path == "/pair" && limiter.count("auth:$source") >= RateLimiter.AUTH_FAILS_PER_IP) throw authBlockedError(source)
@@ -384,7 +384,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
             requireGrant(agent, spec)
             val block = handlers[handlerKey(spec)] ?: throw ErrorCatalog.error("not_found", "No such endpoint.")
             if (spec.developerOnly && !agent.developer) throw ErrorCatalog.error("forbidden",
-                "Only developer agents can read bug reports. Ask Rahul to turn on Developer for ${agent.name}.", mapOf("reason" to "developer_only"))
+                "Only developer agents can read bug reports. Ask the owner to turn on Developer for ${agent.name}.", mapOf("reason" to "developer_only"))
             idemKey = idempotencyKey?.trim()?.takeIf { spec.idempotent }
             if (idemKey != null) {
                 if (!IdempotencyCache.KEY_RE.matches(idemKey)) { idemKey = null

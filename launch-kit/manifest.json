@@ -1,0 +1,52 @@
+{
+  "prepared_on": "2026-10-28",
+  "baseline_commit": "6f2ecf0",
+  "brand": "BRIDGIT",
+  "domain": "bridgit.cc",
+  "publisher_confirmation_required": true,
+  "app_changed": true,
+  "store_submitted": false,
+  "artifacts": [
+    {
+      "path": "../docs/bridgit-appliance-spec-v3.md",
+      "status": "proposal"
+    },
+    {
+      "path": "../docs/plans/bridgit-appliances.packed.html",
+      "status": "interactive proposal"
+    },
+    {
+      "path": "brand/",
+      "status": "original vector and PNG brand assets"
+    },
+    {
+      "path": "play-store/listing-current.json",
+      "status": "copy prepared; build readiness blocked"
+    },
+    {
+      "path": "play-store/listing-future.json",
+      "status": "gated future copy; not upload-ready"
+    },
+    {
+      "path": "site/dist/",
+      "status": "preview with draft legal pages"
+    }
+  ],
+  "remaining_gates": [
+    "domain connection and verified contacts",
+    "owner scope decisions",
+    "implementation and device evidence",
+    "actual app screenshots and reviewer video",
+    "signed tested AAB",
+    "Console declarations and account eligibility",
+    "public legal pages matching final behavior"
+  ],
+  "website": {
+    "url": null,
+    "audience": "owner-private",
+    "deployment_status": "succeeded",
+    "source_commit": "06fc1fe1d7b0d6b058498de35ed5dba5233bd065"
+  },
+  "tagline": "Turn any Android device into an agentic appliance.",
+  "product_name": "BRIDGIT Device Manager for Android"
+}

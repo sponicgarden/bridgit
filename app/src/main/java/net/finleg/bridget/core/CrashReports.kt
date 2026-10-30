@@ -13,17 +13,20 @@ import net.finleg.bridget.BuildConfig
  * tracing; every message and exception text goes through [Keys.scrub] first. The project also drops
  * the IP and the city Sentry would infer from it. On by default, with a Settings switch.
  * Auto-init is off in the manifest so the switch is honoured before anything is sent.
+ * The DSN comes from the build (BuildConfig.SENTRY_DSN); builds without one never send anything.
  */
 object CrashReports {
     const val PREF = "crash_reports_off"
-    private const val DSN = "https://e367c30722ee1a5f17ff3bce4eaae8e5@o4511667182436352.ingest.de.sentry.io/4512329089941584"
+
+    /** False for builds made without a Sentry DSN (forks, local builds): no reports, no Settings switch. */
+    val configured get() = BuildConfig.SENTRY_DSN.isNotBlank()
 
     fun enabled(ctx: Context) = !ctx.getSharedPreferences("settings", Context.MODE_PRIVATE).getBoolean(PREF, false)
 
     fun start(ctx: Context) {
-        if (!enabled(ctx) || Sentry.isEnabled()) return
+        if (!configured || !enabled(ctx) || Sentry.isEnabled()) return
         SentryAndroid.init(ctx) { o ->
-            o.dsn = DSN
+            o.dsn = BuildConfig.SENTRY_DSN
             o.release = "${ctx.packageName}@${BuildConfig.VERSION_NAME}+${BuildConfig.VERSION_CODE}"
             o.environment = if (BuildConfig.DEBUG) "debug" else "release"
             o.dist = BuildConfig.VERSION_CODE.toString()

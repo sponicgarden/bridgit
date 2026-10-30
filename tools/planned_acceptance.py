@@ -1,9 +1,10 @@
 import subprocess,json,urllib.request,urllib.error,re,time,sys
-ADB='/Users/otter/Library/Android/sdk/platform-tools/adb'; DEV='100.94.27.79:5555'; PKG='net.finleg.bridget.planned'; BASE='http://100.94.27.79:8736/v1'
+import os,shutil
+ADB=os.environ.get('ADB') or shutil.which('adb') or 'adb'; PHONE=os.environ['BRIDGIT_TEST_PHONE'];DEV=os.environ.get('BRIDGIT_TEST_ADB',PHONE+':5555'); PKG='net.finleg.bridget.planned'; BASE=f'http://{PHONE}:8736/v1'
 def adb(*args):
  return subprocess.run([ADB,'-s',DEV,*args],capture_output=True,text=True,timeout=15).stdout
 if len(sys.argv) == 2 and sys.argv[1] == '--isolated-review-app':
- PKG='net.finleg.bridget.review'; BASE='http://100.94.27.79:8737/v1'
+ PKG='net.finleg.bridget.review'; BASE=f'http://{PHONE}:8737/v1'
 elif len(sys.argv) != 2 or sys.argv[1] != '--isolated-planned-app':
  print('Usage: python3 tools/planned_acceptance.py --isolated-planned-app or --isolated-review-app (dedicated test builds only, Pixel unlocked)');sys.exit(2)
 name='PlannedTestA'
