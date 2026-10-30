@@ -17,7 +17,7 @@ export function page(title, body, status = 200) {
 // All mail goes out through Cloudflare Email Sending (the EMAIL send_email binding in wrangler.jsonc).
 export async function sendMail(env, to, subject, text) {
  try { await env.EMAIL.send({ from: { email: 'support@bridgit.cc', name: 'bridgit' }, to, replyTo: 'support@bridgit.cc', subject, text }); return true; }
- catch { return false; }
+ catch (e) { console.error('email send failed', e?.code || e?.name || 'error'); return false; }
 }
 export async function cleanupSubscribers(env, now = Date.now()) {
  await env.SIGNUPS.batch([
