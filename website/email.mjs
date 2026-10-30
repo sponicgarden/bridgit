@@ -14,6 +14,11 @@ export async function privateHash(secret, value) {
 export function page(title, body, status = 200) {
  return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${escape(title)} — bridgit</title><link rel="stylesheet" href="/assets/style.css"></head><body><div class="wrap"><nav><a class="wordmark" href="/" aria-label="Bridgit home"><img class="brand-icon" src="/assets/logo-mark.svg" alt=""><img class="brand-name" src="/assets/logo-wordmark.svg" alt=""></a></nav><main class="article"><h1>${escape(title)}</h1>${body}</main><footer><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></footer></div></body></html>`, { status, headers: { ...replyHeaders, 'Referrer-Policy': 'strict-origin', 'Content-Type': 'text/html; charset=utf-8' } });
 }
+// All mail goes out through Cloudflare Email Sending (the EMAIL send_email binding in wrangler.jsonc).
+export async function sendMail(env, to, subject, text) {
+ try { await env.EMAIL.send({ from: { email: 'support@bridgit.cc', name: 'bridgit' }, to, replyTo: 'support@bridgit.cc', subject, text }); return true; }
+ catch { return false; }
+}
 export async function cleanupSubscribers(env, now = Date.now()) {
  await env.SIGNUPS.batch([
   env.SIGNUPS.prepare('DELETE FROM signup_rate_limits WHERE created_at < ?').bind(now - day),
@@ -44,7 +49,7 @@ export async function handleDownloads(request, env, dependencies = {}) {
  if (url.pathname === '/api/download-request') {
   if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
   if (!request.headers.get('Content-Type')?.startsWith('application/json')) return json({ error: 'JSON required.' }, 415);
-  if (!env.RESEND_API_KEY || !env.TURNSTILE_SECRET || !env.RATE_LIMIT_SALT) return json({ error: 'Email downloads are temporarily unavailable. Please try later.' }, 503);
+  if (!env.EMAIL || !env.TURNSTILE_SECRET || !env.RATE_LIMIT_SALT) return json({ error: 'Email downloads are temporarily unavailable. Please try later.' }, 503);
   let data;
   try { const raw = await limitedText(request, 4096); data = JSON.parse(raw); } catch (e) { return json({ error: e.message === 'body_too_large' ? 'Request too large.' : 'Invalid request.' }, e.message === 'body_too_large' ? 413 : 400); }
   if (!data || typeof data !== 'object' || Array.isArray(data)) return json({ error: 'Invalid request.' }, 400);
@@ -74,11 +79,8 @@ export async function handleDownloads(request, env, dependencies = {}) {
    pending_updates=excluded.pending_updates, token_used=0, consent_version=excluded.consent_version`).bind(crypto.randomUUID(), email, tokenHash, unsubscribeHash, now, now + day, data.updates === true ? 1 : 0, consentVersion).run();
   const confirm = `${origin}/confirm-download/?token=${token}`;
   const cancel = `${origin}/unsubscribe/?token=${unsubscribe}`;
-  let sent;
-  try {
-   sent = await fetcher('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, 'Content-Type': 'application/json', 'Idempotency-Key': `bridgit-download-${rateId}` }, body: JSON.stringify({ from: 'bridgit <support@bridgit.cc>', to: [email], reply_to: 'support@bridgit.cc', subject: 'Your bridgit Android download', text: `You requested the bridgit Android APK. Confirm your email and open the download page:\n\n${confirm}\n\nThis link expires in 24 hours. Android 14+ and Tailscale are required. This is a sideloaded development build, not a Google Play release.\n\n${data.updates === true ? 'You also asked for future release updates. The confirmation button confirms that preference.\n\n' : ''}If you did not request this, ignore this message or delete this signup: ${cancel}\n\nSponic Garden, Inc. · https://bridgit.cc/privacy/` }), signal: AbortSignal.timeout(10000) });
-  } catch { return json({ error: 'We could not send the email just now. Please try later or contact support@bridgit.cc.' }, 503); }
-  if (!sent.ok) return json({ error: 'We could not send the email just now. Please try later or contact support@bridgit.cc.' }, 503);
+  const sent = await sendMail(env, email, 'Your bridgit Android download', `You requested the bridgit Android APK. Confirm your email and open the download page:\n\n${confirm}\n\nThis link expires in 24 hours. Android 14+ and Tailscale are required. This is a sideloaded development build, not a Google Play release.\n\n${data.updates === true ? 'You also asked for future release updates. The confirmation button confirms that preference.\n\n' : ''}If you did not request this, ignore this message or delete this signup: ${cancel}\n\nSponic Garden, Inc. · https://bridgit.cc/privacy/`);
+  if (!sent) return json({ error: 'We could not send the email just now. Please try later or contact support@bridgit.cc.' }, 503);
   return json({ message: 'Check your inbox. Confirm your email there to open the APK download page.' });
  }
  if (url.pathname === '/confirm-download/' || url.pathname === '/unsubscribe/') {

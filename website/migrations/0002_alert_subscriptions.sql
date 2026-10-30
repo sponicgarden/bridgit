@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS alert_subscriptions (
   confirm_expires_at INTEGER NOT NULL,
   confirmed_at INTEGER,
   sent_day INTEGER NOT NULL DEFAULT 0,
-  sent_count INTEGER NOT NULL DEFAULT 0
+  sent_count INTEGER NOT NULL DEFAULT 0,
+  last_key TEXT
 );
 CREATE TABLE IF NOT EXISTS alert_rate_limits (
   id TEXT PRIMARY KEY,

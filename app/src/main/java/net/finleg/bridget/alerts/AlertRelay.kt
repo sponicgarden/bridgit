@@ -14,8 +14,8 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
- * Email alerts go through bridgit.cc (website/alerts.mjs), which sends them with Resend; the
- * Resend key never leaves the server. This phone proves who it is with a random install token,
+ * Email alerts go through bridgit.cc (website/alerts.mjs), which sends them with Cloudflare Email
+ * Sending; no mail credentials are on the phone. This phone proves who it is with a random install token,
  * kept encrypted with a non-exportable Android Keystore key. The server only ever mails the
  * address this install confirmed by clicking the link in its confirmation email.
  */

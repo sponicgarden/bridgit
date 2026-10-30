@@ -8,9 +8,9 @@ const install = 'a'.repeat(64), other = 'b'.repeat(64);
 function setup() {
  const sql = new DatabaseSync(':memory:'); sql.exec(schema);
  const DB = { prepare(query) { let values=[]; return { bind(...v) { values=v; return this; }, async first() { return sql.prepare(query).get(...values) || null; }, async run() { const result=sql.prepare(query).run(...values); return {meta:{changes:Number(result.changes)}}; } }; }, async batch(statements) { return Promise.all(statements.map(s=>s.run())); } };
- const env = { SIGNUPS:DB, RESEND_API_KEY:'test', RATE_LIMIT_SALT:'private-test-salt' };
  const messages=[];
- const fetch = async (url, init) => { messages.push(JSON.parse(init.body)); return Response.json({id:'sent'}); };
+ const env = { SIGNUPS:DB, EMAIL:{ async send(m) { messages.push(m); return {messageId:'sent'}; } }, RATE_LIMIT_SALT:'private-test-salt' };
+ const fetch = async (url, init) => { assert.fail('mail must go through the EMAIL binding, not fetch'); };
  return {sql,env,messages,fetch};
 }
 const app = (path, token, method='GET', body) => new Request('https://bridgit.cc'+path,{method,headers:{...(token?{Authorization:'Bearer '+token}:{}),...(body?{'Content-Type':'application/json'}:{}),'CF-Connecting-IP':'192.0.2.9'},body:body&&JSON.stringify(body)});
@@ -24,7 +24,7 @@ const confirmToken = m => /alerts\/confirm\/\?token=([a-f0-9]+)/.exec(m.text)[1]
 test('subscribe mails a confirm link; send is refused until the address confirms', async()=>{
  const s=setup(),now=Date.now();
  assert.equal((await subscribe(s,now)).status,200);
- assert.equal(s.messages[0].to[0],'owner@example.com');
+ assert.equal(s.messages[0].to,'owner@example.com');
  assert.equal((await (await handleAlerts(app('/api/alerts/status',install),s.env,{now:()=>now})).json()).state,'pending');
  assert.equal((await handleAlerts(app('/api/alerts/send',install,'POST',{subject:'x',text:'y'}),s.env,{fetch:s.fetch,now:()=>now})).status,409);
  const token=confirmToken(s.messages[0]);
@@ -35,7 +35,7 @@ test('subscribe mails a confirm link; send is refused until the address confirms
  assert.equal((await (await handleAlerts(app('/api/alerts/status',install),s.env,{now:()=>now})).json()).state,'confirmed');
  const sent=await handleAlerts(app('/api/alerts/send',install,'POST',{subject:'Bridgit: Claude used your phone',text:'3 calls',idempotency:'k1'}),s.env,{fetch:s.fetch,now:()=>now});
  assert.equal(sent.status,200);
- const mail=s.messages[1]; assert.equal(mail.to[0],'owner@example.com'); assert.match(mail.text,/^3 calls/); assert.match(mail.text,/alerts\/unsubscribe\/\?token=[a-f0-9]{64}/);
+ const mail=s.messages[1]; assert.equal(mail.to,'owner@example.com'); assert.match(mail.text,/^3 calls/); assert.match(mail.text,/alerts\/unsubscribe\/\?token=[a-f0-9]{64}/);
 });
 
 test('app endpoints need a well-formed Bearer token and another install cannot send', async()=>{
@@ -91,4 +91,16 @@ test('oversized and malformed messages are refused; cleanup drops stale pending 
  await subscribe(s,now,'pending@example.com',other);
  await cleanupAlerts(s.env,now+8*86400000);
  assert.equal(s.sql.prepare('SELECT COUNT(*) n FROM alert_subscriptions').get().n,1);
+});
+
+test('a retried batch is not mailed twice and a failing Email Sending binding returns 503', async()=>{
+ const s=setup(),now=Date.now(); await subscribe(s,now);
+ await handleAlerts(form('/api/alerts/confirm',confirmToken(s.messages[0])),s.env,{now:()=>now});
+ const send=()=>handleAlerts(app('/api/alerts/send',install,'POST',{subject:'x',text:'y',idempotency:'hourly-1-9'}),s.env,{now:()=>now});
+ assert.equal((await send()).status,200); assert.equal((await send()).status,200);
+ assert.equal(s.messages.length,2, 'confirmation + one alert');
+ s.env.EMAIL={ async send() { const e=new Error('limit'); e.code='E_DAILY_LIMIT_EXCEEDED'; throw e; } };
+ assert.equal((await handleAlerts(app('/api/alerts/send',install,'POST',{subject:'x',text:'y',idempotency:'hourly-10-12'}),s.env,{now:()=>now})).status,503);
+ delete s.env.EMAIL;
+ assert.equal((await send()).status,503, 'no binding means unavailable');
 });
