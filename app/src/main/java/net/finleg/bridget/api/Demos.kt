@@ -127,7 +127,7 @@ object Demos {
         sb.appendLine()
         sb.appendLine("## Demos")
         sb.appendLine()
-        sb.appendLine("Ready now: " + (if (ready.isEmpty()) "none yet. Ask the owner to switch on a few features in Bridgit first." else ready.joinToString(", ") { it.title }) + ".")
+        sb.appendLine("Ready now: " + (if (ready.isEmpty()) "none yet. Ask the owner to switch on a few features in Bridgit first." else ready.joinToString("; ") { it.title }) + ".")
         for (d in all) {
             sb.appendLine()
             val st = state(d)
