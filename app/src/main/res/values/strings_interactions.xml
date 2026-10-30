@@ -9,6 +9,8 @@
     </plurals>
 
     <string name="interactions_title">Interactions</string>
+    <!-- Subtabs (owner, 30 Oct 2026); the other one is nav_applets. -->
+    <string name="interactions_tab_inbox">Inbox</string>
     <string name="interactions_chip_all">All</string>
     <string name="interactions_chip_questions">Questions</string>
     <string name="interactions_chip_notices">Notices</string>

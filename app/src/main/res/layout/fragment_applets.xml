@@ -1,18 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Applets tab (owner, 27 Oct 2026): ready-made things to do with an agent. -->
+<!-- Applets (owner, 27 Oct 2026): ready-made things to do with an agent. Shown as a subtab of Interactions,
+     whose toolbar it uses (30 Oct 2026). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?android:attr/colorBackground"
+    android:background="?attr/colorSurface"
     android:orientation="vertical">
-
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:minHeight="64dp"
-        app:title="@string/applets_title" />
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
@@ -24,6 +18,7 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingStart="16dp"
+            android:paddingTop="16dp"
             android:paddingEnd="16dp"
             android:paddingBottom="16dp">
 

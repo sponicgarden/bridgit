@@ -239,7 +239,7 @@ class MainActivity : AppCompatActivity() {
         /** Long extra: open this interaction (from a question or notice notification). */
         const val EXTRA_INTERACTION_ID = "interaction_id"
         /** D26: Activity is no longer a tab; it is opened from More and shows a back arrow. */
-        val TOP_LEVEL = setOf(R.id.home, R.id.interactions, R.id.applets, R.id.more)
+        val TOP_LEVEL = setOf(R.id.home, R.id.interactions, R.id.agents, R.id.more)
         /** Setup screens nothing may open over. */
         private val SETUP = setOf(R.id.addAgent, R.id.pairCode, R.id.firstRun)
     }

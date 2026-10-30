@@ -55,18 +55,6 @@ class AgentsFragment : Fragment() {
         ViewCompat.setOnApplyWindowInsetsListener(b.toolbar) { v, insets ->
             v.updatePadding(top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top); insets
         }
-        // Not a tab since the Applets change (owner, 27 Oct 2026): opened from More, so back arrow
-        // and room for the navigation bar under the list and the FAB.
-        b.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
-        val listPad = b.list.paddingBottom
-        val fabMargin = (b.fab.layoutParams as ViewGroup.MarginLayoutParams).bottomMargin
-        ViewCompat.setOnApplyWindowInsetsListener(b.root) { _, insets ->
-            val nav = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
-            b.list.updatePadding(bottom = listPad + nav)
-            (b.fab.layoutParams as ViewGroup.MarginLayoutParams).bottomMargin = fabMargin + nav
-            b.fab.requestLayout()
-            insets
-        }
         b.toolbar.inflateMenu(R.menu.feedback_overflow) // Report a bug / Request a feature (FBK-01)
         b.toolbar.setOnMenuItemClickListener { handleFeedbackMenu(it, "Agents") }
         adapter = Adapter { a -> findNavController().navigate(R.id.agentDetail, bundleOf("agentId" to a.id)) }

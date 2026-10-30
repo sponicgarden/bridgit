@@ -18,7 +18,7 @@ object ApiDocs {
 
     fun link(title: String) = "$URL#${slug(title)}"
 
-    /** The Applets tab's "How to build a ready-made applet" card links here. */
+    /** The Interactions › Applets subtab's "How to build a ready-made applet" card links here. */
     const val APPLET_TITLE = "Build an applet"
 
     fun endpointKey(e: EndpointSpec) = "${e.method} ${e.fullPath}"

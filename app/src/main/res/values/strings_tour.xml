@@ -97,9 +97,8 @@
     <string name="tour_end_reason">you ended it</string>
     <string name="tour_ended">Tour ended.</string>
 
-    <!-- Applets tab (owner, 27 Oct 2026), More and Home -->
+    <!-- Applets (owner, 27 Oct 2026; an Interactions subtab since 30 Oct) and Home -->
     <string name="nav_applets">Applets</string>
-    <string name="applets_title">Applets</string>
     <string name="applets_intro">Ready-made things to do with an agent.</string>
     <string name="applets_city_tour_desc">A guided walk: your agent tells you about what\'s around you, and you can ask it questions out loud.</string>
     <string name="applets_build_title">How to build a ready-made applet</string>
@@ -110,7 +109,6 @@
     <string name="applets_build_share_text">Instructions for building a Bridgit applet: %1$s</string>
     <string name="applets_running_with">Running with %1$s</string>
     <string name="applets_paused_with">Paused with %1$s</string>
-    <string name="more_agents">Agents</string>
     <string name="tour_home_card">City tour with %1$s · %2$s</string>
     <string name="tour_home_open">Open</string>
     <string name="tour_home_paused">Paused</string>
