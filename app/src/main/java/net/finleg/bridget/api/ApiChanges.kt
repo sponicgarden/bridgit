@@ -77,6 +77,10 @@ object ApiChanges {
         Revision(9, "1.6.0", "2026-10-30", listOf(
             Item("A demo script: offer the owner a hands-on tour of what you can do, tailored by a few questions", "/v1/demo"),
         )),
+        Revision(10, "1.6.0", "2026-10-30", listOf(
+            Item("Wake words: the owner maps words like \"hey bridget\" to you; what they say next arrives as a listen.heard event. Your wake words and whether the phone is listening", "/v1/listen"),
+            Item("The audio after a wake word, when the owner chose to send it", "/v1/listen/clip/{id}"),
+        )),
     )
 
     val CURRENT: Int = revisions.maxOf { it.revision }

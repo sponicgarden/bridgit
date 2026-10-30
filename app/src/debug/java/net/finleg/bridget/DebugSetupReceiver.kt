@@ -11,7 +11,7 @@ import net.finleg.bridget.core.Connection
  *   am broadcast -a net.finleg.bridget.debug.SETUP --es agent Tester --ez camera true ...
  * Extras: camera/mic/gallery (bool switches), agent (add + open a pairing window),
  * rotate (agent name: new key + pairing window), remove (agent name), developer (agent name, "name=true|false"), log_visibility (all|own),
- * listener (bool, default true).
+ * listener (bool, default true), wake_word ("<agent name>:<phrase>[:clip]" adds a wake word), wake_clear (removes them all).
  * Result data is the pairing code for a new agent (never the key); the test
  * redeems it with POST /v1/pair, the same way an agent would.
  */
@@ -52,6 +52,11 @@ class DebugSetupReceiver : BroadcastReceiver() {
         intent.getStringExtra("clipboard_decide")?.let { spec ->
             val p = spec.split(":", limit = 2)
             app.clipboardRequests.decide(p[0], p.getOrNull(1) == "approve")
+        }
+        if (intent.hasExtra("wake_clear")) app.wake.saveWords(emptyList())
+        intent.getStringExtra("wake_word")?.let { spec ->
+            val p = spec.split(":")
+            app.agents.byName(p[0])?.let { a -> app.wake.saveWords(app.wake.words() + net.finleg.bridget.listen.WakeWord(p[1], a.id, p.getOrNull(2) == "clip")) }
         }
         var code = ""
         intent.getStringExtra("rotate")?.let { n ->

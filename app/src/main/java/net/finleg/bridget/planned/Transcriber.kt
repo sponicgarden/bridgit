@@ -24,34 +24,37 @@ object Transcriber {
         try {
             withContext(Dispatchers.IO) { source.writeBytes(bytes) }
             val format = withContext(Dispatchers.IO) { decode(source, pcm) }
-            return withContext(Dispatchers.Main) {
-                val recognizer = SpeechRecognizer.createOnDeviceSpeechRecognizer(ctx)
-                val fd = ParcelFileDescriptor.open(pcm, ParcelFileDescriptor.MODE_READ_ONLY)
-                try {
-                    withTimeout(45_000) { suspendCancellableCoroutine { c ->
-                        recognizer.setRecognitionListener(object : RecognitionListener {
-                            override fun onReadyForSpeech(b: Bundle?) {}
-                            override fun onBeginningOfSpeech() {}
-                            override fun onRmsChanged(v: Float) {}
-                            override fun onBufferReceived(b: ByteArray?) {}
-                            override fun onEndOfSpeech() {}
-                            override fun onPartialResults(b: Bundle?) {}
-                            override fun onEvent(t: Int, b: Bundle?) {}
-                            override fun onError(error: Int) { if (c.isActive) c.resumeWithException(ErrorCatalog.error("not_supported", "On-device recognizer refused file transcription (Android error $error). No audio was sent to a cloud recognizer.")) }
-                            override fun onResults(b: Bundle?) { if (c.isActive) c.resume(b?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()) }
-                        })
-                        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                            .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, fd).putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT, format.second)
-                            .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_ENCODING, android.media.AudioFormat.ENCODING_PCM_16BIT)
-                            .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE, format.first)
-                            .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-                        language?.let { intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, it) }
-                        recognizer.startListening(intent)
-                    } }
-                } finally { recognizer.cancel(); recognizer.destroy(); fd.close() }
-            }
+            return recognizePcm(ctx, pcm, format.first, format.second, language)
         } finally { source.delete(); pcm.delete() }
     }
+    /** 16-bit PCM already on disk (wake words record PCM directly). Same on-device recogniser, same no-cloud rule. */
+    suspend fun recognizePcm(ctx: Context, pcm: File, rate: Int, channels: Int, language: String?): String =
+        withContext(Dispatchers.Main) {
+            val recognizer = SpeechRecognizer.createOnDeviceSpeechRecognizer(ctx)
+            val fd = ParcelFileDescriptor.open(pcm, ParcelFileDescriptor.MODE_READ_ONLY)
+            try {
+                withTimeout(45_000) { suspendCancellableCoroutine { c ->
+                    recognizer.setRecognitionListener(object : RecognitionListener {
+                        override fun onReadyForSpeech(b: Bundle?) {}
+                        override fun onBeginningOfSpeech() {}
+                        override fun onRmsChanged(v: Float) {}
+                        override fun onBufferReceived(b: ByteArray?) {}
+                        override fun onEndOfSpeech() {}
+                        override fun onPartialResults(b: Bundle?) {}
+                        override fun onEvent(t: Int, b: Bundle?) {}
+                        override fun onError(error: Int) { if (c.isActive) c.resumeWithException(ErrorCatalog.error("not_supported", "On-device recognizer refused file transcription (Android error $error). No audio was sent to a cloud recognizer.")) }
+                        override fun onResults(b: Bundle?) { if (c.isActive) c.resume(b?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()) }
+                    })
+                    val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                        .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE, fd).putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_CHANNEL_COUNT, channels)
+                        .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_ENCODING, android.media.AudioFormat.ENCODING_PCM_16BIT)
+                        .putExtra(RecognizerIntent.EXTRA_AUDIO_SOURCE_SAMPLING_RATE, rate)
+                        .putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+                    language?.let { intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, it) }
+                    recognizer.startListening(intent)
+                } }
+            } finally { recognizer.cancel(); recognizer.destroy(); fd.close() }
+        }
     private suspend fun decode(source: File, target: File): Pair<Int, Int> {
         val extractor = MediaExtractor()
         var codec: MediaCodec? = null

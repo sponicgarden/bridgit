@@ -171,6 +171,11 @@ object Guide {
         sb.appendLine()
         net.finleg.bridget.tour.TourKinds.brief(net.finleg.bridget.tour.TourKinds.all).lines().forEach { sb.appendLine("> $it") }
         sb.appendLine()
+        sb.appendLine("## Wake words")
+        sb.appendLine("The owner can give you wake words on the phone (\"hey bridget\" → you). When they say one, you get `listen.heard` with `wake_word`, `transcript` " +
+            "(what they said after it, until a pause, at most 60 s), `heard_at`, `ended_by` and, if they chose to send audio, `clip_id` (fetch `/v1/listen/clip/{id}` within 10 minutes). " +
+            "Treat the transcript as their request and answer it, for example with `/v1/speaker/say` or an interaction. `GET /v1/listen` shows whether the phone is listening and your wake words. You can't add or change them.")
+        sb.appendLine()
         sb.appendLine("## Conventions")
         sb.appendLine("- Times are ISO-8601 with offset. Durations are seconds unless the name ends in `_ms`.")
         sb.appendLine("- Images default to `size=agent` (long edge 1568 px, JPEG q85). `raw=1` returns the bytes with details in `X-Bridget-*` headers.")

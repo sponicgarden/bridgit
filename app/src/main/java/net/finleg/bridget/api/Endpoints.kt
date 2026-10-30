@@ -264,8 +264,15 @@ object Endpoints {
         errors = listOf("capability_disabled", "access_needed", "notifications_required", "device_locked", "rate_limited", "sensor_busy",
             "not_supported", "capture_timeout", "service_start_blocked", "payload_too_large"))
 
+    val LISTEN = EndpointSpec("GET", "/listen", "wakewords", "Wake words: whether the phone is listening, and the wake words the owner gave you (CAP-47)",
+        example = "GET /v1/listen", returns = "enabled, state (off|listening|hearing|paused), reason, muted_until, model (ready|not_downloaded|downloading|failed), model_name, max_seconds, wake_words[{phrase, send_clip}]. " +
+            "Each hit arrives as a listen.heard event: wake_word, transcript, heard_at, ended_by (pause|max_seconds|no_speech|interrupted), duration_seconds, recogniser, clip_id")
+    val LISTEN_CLIP = EndpointSpec("GET", "/listen/clip/{id}", "wakewords", "The audio after a wake word, when the owner set that wake word to send it (kept 10 minutes)",
+        media = true, example = "GET /v1/listen/clip/c0123abcd", returns = "heard_at, duration_seconds, format (wav), sample_rate_hz, size_bytes, data_base64 (or raw=1 bytes)",
+        errors = listOf("not_found"))
+
     val all = listOf(HEALTH, CAPABILITIES, GUIDE, DEMO, OPENAPI, CHANGES, HELPER, PAIR, SNAPSHOT, MIC, GALLERY_RECENT, GALLERY_PHOTO,
         IMAGE_LAST, SCREEN_CAPTURE, LOG, LOG_ENTRY, LOG_STATS, LOG_EXPORT, LOG_NOTE, AUDIT, FEEDBACK_LIST, FEEDBACK_GET, FEEDBACK_STATUS, FEEDBACK_POST,
         INTERACTION_CREATE, INTERACTION_LIST, INTERACTION_GET, INTERACTION_CANCEL, EVENTS, TEXT_STREAM, CALLBACK_TEST, MCP,
-        LOCATION, SPEAKER_PLAY, SPEAKER_SAY, SPEAKER_STATUS, SPEAKER_STOP, TOUR_GET, TOUR_PHOTO, TOUR_END, ME) + net.finleg.bridget.planned.PlannedEndpoints.all
+        LOCATION, SPEAKER_PLAY, SPEAKER_SAY, SPEAKER_STATUS, SPEAKER_STOP, TOUR_GET, TOUR_PHOTO, TOUR_END, ME, LISTEN, LISTEN_CLIP) + net.finleg.bridget.planned.PlannedEndpoints.all
 }

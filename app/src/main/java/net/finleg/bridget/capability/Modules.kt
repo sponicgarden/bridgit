@@ -239,7 +239,10 @@ class MicModule(app: BridgeApp, private val registry: Registry) : Capability(app
             if (!returnAudio && !transcribe) throw ErrorCatalog.error("invalid_parameter", "return_audio=false requires transcribe=true.")
             if (transcribe && !net.finleg.bridget.planned.Transcriber.available(app)) throw ErrorCatalog.error("not_supported", "No on-device speech recognizer available; nothing was recorded.")
             val started = System.currentTimeMillis()
-            val clip = api.withSensor(registry.micLock, app.getString(R.string.notif_recording, agentName, secs)) { api.service.mic.record(secs) }
+            val clip = api.withSensor(registry.micLock, app.getString(R.string.notif_recording, agentName, secs)) {
+                app.wake.awaitMicReleased()
+                api.service.mic.record(secs)
+            }
             val transcript = if (transcribe) net.finleg.bridget.planned.transcribeKeepingAudio(returnAudio) {
                 net.finleg.bridget.planned.Transcriber.transcribe(app, clip.bytes, body.optString("language").ifBlank { null })
             } else null
