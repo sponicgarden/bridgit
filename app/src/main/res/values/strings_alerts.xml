@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Settings › Email alerts: email the owner when agents call the phone's API. -->
+<resources>
+    <string name="settings_alerts">Email alerts</string>
+    <string name="alerts_frequency">How often</string>
+    <string name="alerts_every">Every action (at most one email per 10 minutes)</string>
+    <string name="alerts_every_short">Every action</string>
+    <string name="alerts_hourly">Hourly digest</string>
+    <string name="alerts_daily">Daily digest (8:00)</string>
+    <string name="alerts_weekly">Weekly digest (Monday 8:00)</string>
+    <string name="alerts_none">None</string>
+    <string name="alerts_needs_address">%1$s · add a confirmed address below</string>
+    <string name="alerts_recipient">Send to</string>
+    <string name="alerts_recipient_hint">Email address</string>
+    <string name="alerts_recipient_none">Not set</string>
+    <string name="alerts_recipient_pending">%1$s · waiting for you to confirm (tap to check)</string>
+    <string name="alerts_recipient_confirmed">%1$s · confirmed</string>
+    <string name="alerts_recipient_invalid">Enter an email address</string>
+    <string name="alerts_send_confirm">Send confirmation</string>
+    <string name="alerts_remove">Remove</string>
+    <string name="alerts_confirm_sent">Confirmation email sent to %1$s. Tap the link in it to start alerts.</string>
+    <string name="alerts_rate_limited">Wait a few minutes before asking for another confirmation email.</string>
+    <string name="alerts_failed">Couldn\'t reach bridgit.cc. Check the connection and try again.</string>
+    <string name="alerts_removed">Email alerts address removed</string>
+    <string name="alerts_still_pending">Not confirmed yet. Tap the link in the email from bridgit.</string>
+    <string name="alerts_now_confirmed">Address confirmed. Alerts are on.</string>
+    <string name="alerts_test">Send a test email</string>
+    <string name="alerts_test_desc">Needs a confirmed address</string>
+    <string name="alerts_test_ready">Sends one email now to check it arrives</string>
+    <string name="alerts_test_sent">Test email sent</string>
+    <string name="alerts_test_subject">Bridgit: test alert</string>
+    <string name="alerts_test_text">This is a test email from Bridgit on %1$s. Agent-activity alerts will arrive at this address.\n\nHow often: %2$s</string>
+    <string name="alerts_what">What\'s sent</string>
+    <string name="alerts_what_desc">Agent names, API endpoints, times, result codes and each call\'s one-line log summary (for a question, its first 60 characters). They go to bridgit.cc, which emails them with Resend. No keys, parameters, photos or audio.</string>
+    <string name="settings_changed_alerts_frequency">You set email alerts to %1$s</string>
+    <string name="settings_changed_alerts_email">You set the email alerts address to %1$s</string>
+    <string name="settings_changed_alerts_removed">You removed the email alerts address</string>
+</resources>

@@ -56,6 +56,21 @@ class Settings(context: Context) {
         get() = prefs.getBoolean(PREF_INTERNET_CALLBACKS, false)
         set(v) { prefs.edit().putBoolean(PREF_INTERNET_CALLBACKS, v).apply(); changed() }
 
+    /** Email alerts: "every", "hourly", "daily", "weekly" or "none" (default), see alerts.AlertFrequency. */
+    var alertFrequency: String
+        get() = prefs.getString("alert_frequency", "none") ?: "none"
+        set(v) { prefs.edit().putString("alert_frequency", v).apply(); changed() }
+
+    /** The one address that gets email alerts for every agent, or null. */
+    var alertEmail: String?
+        get() = prefs.getString("alert_email", null)
+        set(v) { prefs.edit().putString("alert_email", v).apply(); changed() }
+
+    /** Whether bridgit.cc has [alertEmail] confirmed: "none", "pending" or "confirmed". */
+    var alertState: String
+        get() = prefs.getString("alert_state", "none") ?: "none"
+        set(v) { prefs.edit().putString("alert_state", v).apply(); changed() }
+
     var firstRunDone: Boolean
         get() = prefs.getBoolean("first_run_done", false)
         set(v) { prefs.edit().putBoolean("first_run_done", v).apply() }

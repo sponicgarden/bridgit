@@ -3,15 +3,15 @@ const day = 86400000;
 const consentVersion = '2026-10-28';
 const tokenPattern = /^[a-f0-9]{64}$/;
 const replyHeaders = { 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff', 'X-Robots-Tag': 'noindex, nofollow' };
-const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const json = (data, status = 200) => Response.json(data, { status, headers: replyHeaders });
-const randomToken = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), n => n.toString(16).padStart(2, '0')).join('');
+export const escape = value => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+export const json = (data, status = 200) => Response.json(data, { status, headers: replyHeaders });
+export const randomToken = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), n => n.toString(16).padStart(2, '0')).join('');
 export async function hash(value) { return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))), n => n.toString(16).padStart(2, '0')).join(''); }
-async function privateHash(secret, value) {
+export async function privateHash(secret, value) {
  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
  return Array.from(new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(value))), n => n.toString(16).padStart(2, '0')).join('');
 }
-function page(title, body, status = 200) {
+export function page(title, body, status = 200) {
  return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${escape(title)} — bridgit</title><link rel="stylesheet" href="/assets/style.css"></head><body><div class="wrap"><nav><a class="wordmark" href="/" aria-label="Bridgit home"><img class="brand-icon" src="/assets/logo-mark.svg" alt=""><img class="brand-name" src="/assets/logo-wordmark.svg" alt=""></a></nav><main class="article"><h1>${escape(title)}</h1>${body}</main><footer><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></footer></div></body></html>`, { status, headers: { ...replyHeaders, 'Referrer-Policy': 'strict-origin', 'Content-Type': 'text/html; charset=utf-8' } });
 }
 export async function cleanupSubscribers(env, now = Date.now()) {
@@ -20,7 +20,7 @@ export async function cleanupSubscribers(env, now = Date.now()) {
   env.SIGNUPS.prepare('DELETE FROM download_requests WHERE wants_updates = 0 AND expires_at < ?').bind(now - 6 * day)
  ]);
 }
-async function limitedText(request, limit) {
+export async function limitedText(request, limit) {
  const reader = request.body?.getReader();
  if (!reader) return '';
  const chunks = []; let size = 0;

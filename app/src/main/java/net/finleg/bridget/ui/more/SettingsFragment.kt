@@ -26,6 +26,11 @@ import net.finleg.bridget.BridgeApp
 import net.finleg.bridget.BridgeService
 import net.finleg.bridget.BuildConfig
 import net.finleg.bridget.R
+import net.finleg.bridget.alerts.AlertFrequency
+import net.finleg.bridget.alerts.AlertMessage
+import net.finleg.bridget.alerts.AlertRelay
+import net.finleg.bridget.alerts.AlertSender
+import net.finleg.bridget.alerts.Alerts
 import net.finleg.bridget.capability.appVersion
 import net.finleg.bridget.databinding.FragmentSettingsBinding
 import net.finleg.bridget.databinding.SettingsDialogFieldBinding
@@ -43,7 +48,7 @@ import java.text.NumberFormat
  * Settings (UI-19, ui-spec 5.10), built from our own rows. Sections:
  * Listener, Privacy (log visibility, lock-screen question text, urgent read-aloud in DND),
  * Log, Notifications, Appearance, About.
- * Allow internet callbacks (EVT-05) sits under Listener.
+ * Allow internet callbacks (EVT-05) sits under Listener. Email alerts sit after Notifications.
  * Send crash reports (D32) sits under Privacy.
  * Not shown yet (later phases): Screenshots, Feedback,
  * precise locations, address lookup, Licences, and the Files / Feedback notification channels.
@@ -107,6 +112,13 @@ class SettingsFragment : Fragment() {
         row(b.notifNotices, R.string.channel_notices) { UiActions.openChannelSettings(requireContext(), InteractionNotifier.CHANNEL_NOTICES) }
         b.notifNotices.value.setText(R.string.channel_notices_desc)
 
+        // Email alerts: one confirmed address for every agent, sent through bridgit.cc.
+        row(b.alertFrequency, R.string.alerts_frequency) { askAlertFrequency() }
+        row(b.alertRecipient, R.string.alerts_recipient) { onAlertRecipient() }
+        row(b.alertTest, R.string.alerts_test) { sendTestAlert() }
+        row(b.alertWhat, R.string.alerts_what, onClick = null)
+        b.alertWhat.value.setText(R.string.alerts_what_desc)
+
         // Appearance
         row(b.theme, R.string.settings_theme) { askAppearance() }
 
@@ -135,7 +147,11 @@ class SettingsFragment : Fragment() {
         }
     }
 
-    override fun onStart() { super.onStart(); app.settings.addListener(onSettings) }
+    override fun onStart() {
+        super.onStart()
+        app.settings.addListener(onSettings)
+        if (app.settings.alertEmail != null && app.settings.alertState == Alerts.STATE_PENDING) checkAlertStatus(manual = false)
+    }
     override fun onStop() { app.settings.removeListener(onSettings); super.onStop() }
     override fun onDestroyView() { super.onDestroyView(); _b = null }
 
@@ -167,7 +183,21 @@ class SettingsFragment : Fragment() {
             "dark" -> R.string.settings_theme_dark
             else -> R.string.settings_theme_system
         })
-        listOf(b.port, b.bind, b.logVisibility, b.keep, b.theme, b.version, b.checkUpdates, b.commit, b.cert, b.spec, b.export, b.clear,
+        val freq = AlertFrequency.of(st.alertFrequency)
+        val confirmed = st.alertState == Alerts.STATE_CONFIRMED
+        b.alertFrequency.value.text = getString(frequencyLabel(freq)).let {
+            if (freq != AlertFrequency.NONE && !confirmed) getString(R.string.alerts_needs_address, it) else it
+        }
+        val email = st.alertEmail
+        b.alertRecipient.value.text = when {
+            email == null || st.alertState == Alerts.STATE_NONE -> getString(R.string.alerts_recipient_none)
+            confirmed -> getString(R.string.alerts_recipient_confirmed, email)
+            else -> getString(R.string.alerts_recipient_pending, email)
+        }
+        b.alertTest.root.isEnabled = confirmed
+        b.alertTest.root.alpha = if (confirmed) 1f else 0.5f
+        b.alertTest.value.setText(if (confirmed) R.string.alerts_test_ready else R.string.alerts_test_desc)
+        listOf(b.port, b.bind, b.logVisibility, b.keep, b.theme, b.alertFrequency, b.alertRecipient, b.alertTest, b.alertWhat, b.version, b.checkUpdates, b.commit, b.cert, b.spec, b.export, b.clear,
             b.notifListener, b.notifCapture, b.notifQuestions, b.notifNotices).forEach { it.root.contentDescription = "${it.title.text}, ${it.value.text}" }
     }
 
@@ -334,6 +364,117 @@ class SettingsFragment : Fragment() {
             .setNegativeButton(R.string.cancel, null)
             .show()
     }
+
+    // ---- Email alerts ----
+
+    private fun frequencyLabel(f: AlertFrequency) = when (f) {
+        AlertFrequency.EVERY_ACTION -> R.string.alerts_every_short
+        AlertFrequency.HOURLY -> R.string.alerts_hourly
+        AlertFrequency.DAILY -> R.string.alerts_daily
+        AlertFrequency.WEEKLY -> R.string.alerts_weekly
+        AlertFrequency.NONE -> R.string.alerts_none
+    }
+
+    private fun askAlertFrequency() {
+        val values = AlertFrequency.values()
+        val labels = values.map { getString(if (it == AlertFrequency.EVERY_ACTION) R.string.alerts_every else frequencyLabel(it)) }.toTypedArray()
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.alerts_frequency)
+            .setSingleChoiceItems(labels, values.indexOf(AlertFrequency.of(app.settings.alertFrequency))) { d, which ->
+                val v = values[which]
+                d.dismiss()
+                if (v.id != app.settings.alertFrequency) {
+                    app.settings.alertFrequency = v.id
+                    audit(getString(R.string.settings_changed_alerts_frequency, getString(frequencyLabel(v))))
+                    background { app.alerts.poke() }
+                }
+                bind()
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
+    }
+
+    /** Pending: tapping checks whether the link was clicked. Otherwise: set, change or remove the address. */
+    private fun onAlertRecipient() {
+        if (app.settings.alertEmail != null && app.settings.alertState == Alerts.STATE_PENDING) { checkAlertStatus(manual = true); return }
+        val f = SettingsDialogFieldBinding.inflate(layoutInflater)
+        f.field1.hint = getString(R.string.alerts_recipient_hint)
+        f.input1.inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+        f.input1.filters = arrayOf(android.text.InputFilter.LengthFilter(254))
+        f.input1.setText(app.settings.alertEmail ?: "")
+        val builder = MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.alerts_recipient)
+            .setView(f.root)
+            .setPositiveButton(R.string.alerts_send_confirm, null)
+            .setNegativeButton(R.string.cancel, null)
+        if (app.settings.alertEmail != null) builder.setNeutralButton(R.string.alerts_remove) { _, _ -> removeAlertAddress() }
+        val d = builder.create()
+        d.setOnShowListener {
+            d.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val email = f.input1.text?.toString()?.trim()?.lowercase().orEmpty()
+                if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) { f.field1.error = getString(R.string.alerts_recipient_invalid); return@setOnClickListener }
+                d.dismiss()
+                subscribeAlerts(email)
+            }
+        }
+        d.show()
+    }
+
+    private fun subscribeAlerts(email: String) = viewLifecycleOwner.lifecycleScope.launch {
+        val r = withContext(Dispatchers.IO) { app.alerts.relay.subscribe(email) }
+        if (r == AlertRelay.Subscribe.PENDING) {
+            app.settings.alertEmail = email
+            app.settings.alertState = Alerts.STATE_PENDING
+            audit(getString(R.string.settings_changed_alerts_email, email))
+        }
+        _b?.let { Snackbar.make(it.root, when (r) {
+            AlertRelay.Subscribe.PENDING -> getString(R.string.alerts_confirm_sent, email)
+            AlertRelay.Subscribe.BAD_EMAIL -> getString(R.string.alerts_recipient_invalid)
+            AlertRelay.Subscribe.RATE_LIMITED -> getString(R.string.alerts_rate_limited)
+            AlertRelay.Subscribe.FAILED -> getString(R.string.alerts_failed)
+        }, Snackbar.LENGTH_LONG).show() }
+        bind()
+    }
+
+    private fun removeAlertAddress() = viewLifecycleOwner.lifecycleScope.launch {
+        if (!withContext(Dispatchers.IO) { app.alerts.relay.unsubscribe() }) {
+            _b?.let { Snackbar.make(it.root, R.string.alerts_failed, Snackbar.LENGTH_LONG).show() }
+            return@launch
+        }
+        app.settings.alertEmail = null
+        app.settings.alertState = Alerts.STATE_NONE
+        audit(getString(R.string.settings_changed_alerts_removed))
+        _b?.let { Snackbar.make(it.root, R.string.alerts_removed, Snackbar.LENGTH_SHORT).show() }
+        bind()
+    }
+
+    /** Asks bridgit.cc whether the confirmation link was clicked; called on start while pending, and on tap. */
+    private fun checkAlertStatus(manual: Boolean) = viewLifecycleOwner.lifecycleScope.launch {
+        val s = withContext(Dispatchers.IO) { app.alerts.relay.status() }
+        when (s) {
+            AlertRelay.State.CONFIRMED -> if (app.settings.alertState != Alerts.STATE_CONFIRMED) {
+                app.settings.alertState = Alerts.STATE_CONFIRMED
+                background { app.alerts.poke() }
+                _b?.let { Snackbar.make(it.root, R.string.alerts_now_confirmed, Snackbar.LENGTH_SHORT).show() }
+            }
+            AlertRelay.State.NONE -> app.settings.alertState = Alerts.STATE_NONE
+            AlertRelay.State.PENDING -> if (manual) _b?.let { Snackbar.make(it.root, R.string.alerts_still_pending, Snackbar.LENGTH_LONG).show() }
+            AlertRelay.State.UNKNOWN -> if (manual) _b?.let { Snackbar.make(it.root, R.string.alerts_failed, Snackbar.LENGTH_LONG).show() }
+        }
+        bind()
+    }
+
+    private fun sendTestAlert() = viewLifecycleOwner.lifecycleScope.launch {
+        val freq = getString(frequencyLabel(AlertFrequency.of(app.settings.alertFrequency)))
+        val msg = AlertMessage(getString(R.string.alerts_test_subject),
+            getString(R.string.alerts_test_text, android.os.Build.MODEL ?: "your phone", freq), "test-${System.currentTimeMillis()}")
+        val r = withContext(Dispatchers.IO) { app.alerts.relay.send(msg) }
+        if (r == AlertSender.Result.GONE) app.settings.alertState = Alerts.STATE_NONE
+        _b?.let { Snackbar.make(it.root, if (r == AlertSender.Result.SENT) R.string.alerts_test_sent else R.string.alerts_failed, Snackbar.LENGTH_SHORT).show() }
+        bind()
+    }
+
+    private fun background(block: () -> Unit) { viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) { runCatching(block) } }
 
     /** SHA-256 of the current signing certificate, as colon-separated upper-case hex. */
     private fun certificateSha256(): String? = runCatching {

@@ -25,6 +25,9 @@ class LogStore(context: Context, private val retention: () -> Retention) {
     private val _latest = MutableStateFlow(queryLatestId())
     private var writesSinceTrim = 0
 
+    /** Called on the writer thread after each entry is stored (email alerts listen here). */
+    @Volatile var onAppended: ((LogEntry) -> Unit)? = null
+
     /** Id of the newest stored entry. Collect it to follow the log live. */
     val latestId: StateFlow<Long> get() = _latest
 
@@ -33,6 +36,7 @@ class LogStore(context: Context, private val retention: () -> Retention) {
             runCatching {
                 val id = db.insert("log", null, values(e))
                 if (id > 0) _latest.value = id
+                if (id > 0) onAppended?.let { cb -> runCatching { cb(e) } }
                 if (++writesSinceTrim >= 200) { writesSinceTrim = 0; trim() }
             }
         }
