@@ -24,8 +24,6 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <!-- Owner, 27 Oct 2026: Agents moved here from the bottom bar (Applets took its tab). -->
-            <include android:id="@+id/open_agents" layout="@layout/more_row" />
             <!-- D26: Activity moved here from the bottom bar. -->
             <include android:id="@+id/open_activity" layout="@layout/more_row" />
             <include android:id="@+id/features" layout="@layout/more_row" />

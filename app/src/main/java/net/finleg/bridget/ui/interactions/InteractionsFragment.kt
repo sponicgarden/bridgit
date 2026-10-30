@@ -22,6 +22,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
 import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.tabs.TabLayout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
@@ -39,6 +40,7 @@ import net.finleg.bridget.ui.feedback.handleFeedbackMenu
 /**
  * Interactions tab (D26, UI-15): every question and notice from the agents, open ones first, then newest.
  * Rows expand or collapse to one line; open ones can be answered inline and closed (button or swipe left).
+ * Owner, 30 Oct 2026: two subtabs under the toolbar, Inbox (this list) and Applets (AppletsFragment, a child).
  */
 class InteractionsFragment : Fragment() {
     private var _b: FragmentInteractionsBinding? = null
@@ -50,6 +52,7 @@ class InteractionsFragment : Fragment() {
     private var all: List<Interaction> = emptyList()
     private var adapter: InteractionsAdapter? = null
     private var restoredOverrides: Map<Long, Boolean> = emptyMap()
+    private var tab = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,6 +61,7 @@ class InteractionsFragment : Fragment() {
             val open = s.getBooleanArray(KEY_OPEN) ?: return@let
             restoredOverrides = ids.indices.associate { ids[it] to open[it] }
         }
+        tab = savedInstanceState?.getInt(KEY_TAB) ?: 0
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
@@ -76,7 +80,14 @@ class InteractionsFragment : Fragment() {
             })
         }
         b.toolbar.inflateMenu(R.menu.feedback_overflow) // Report a bug / Request a feature (FBK-01)
-        b.toolbar.setOnMenuItemClickListener { handleFeedbackMenu(it, "Interactions") }
+        b.toolbar.setOnMenuItemClickListener { handleFeedbackMenu(it, if (tab == TAB_APPLETS) "Applets" else "Interactions") }
+        b.tabs.getTabAt(tab)?.select()
+        showTab()
+        b.tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(t: TabLayout.Tab) { tab = t.position; showTab() }
+            override fun onTabUnselected(t: TabLayout.Tab) {}
+            override fun onTabReselected(t: TabLayout.Tab) {}
+        })
 
         val a = InteractionsAdapter(
             drafts = drafts,
@@ -124,6 +135,12 @@ class InteractionsFragment : Fragment() {
                 }
             }
         }
+    }
+
+    private fun showTab() {
+        val bb = _b ?: return
+        bb.inbox.isVisible = tab != TAB_APPLETS
+        bb.applets.isVisible = tab == TAB_APPLETS
     }
 
     private fun render() {
@@ -210,6 +227,7 @@ class InteractionsFragment : Fragment() {
         val o = adapter?.overrides ?: restoredOverrides
         outState.putLongArray(KEY_IDS, o.keys.toLongArray())
         outState.putBooleanArray(KEY_OPEN, o.keys.map { o[it] == true }.toBooleanArray())
+        outState.putInt(KEY_TAB, tab)
     }
 
     override fun onDestroyView() {
@@ -222,5 +240,7 @@ class InteractionsFragment : Fragment() {
     private companion object {
         const val KEY_IDS = "interactions.expanded.ids"
         const val KEY_OPEN = "interactions.expanded.open"
+        const val KEY_TAB = "interactions.tab"
+        const val TAB_APPLETS = 1
     }
 }

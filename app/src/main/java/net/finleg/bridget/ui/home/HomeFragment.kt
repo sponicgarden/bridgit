@@ -110,8 +110,7 @@ class HomeFragment : Fragment() {
         b.address.setOnClickListener { copyAddress() }
         heroAccessibility()
 
-        // Agents is no longer a tab (Applets took its place), so a plain navigate with Back.
-        b.seeAll.setOnClickListener { findNavController().navigate(R.id.agents) }
+        b.seeAll.setOnClickListener { goTab(R.id.agents) }
         b.addAgent.setOnClickListener { findNavController().navigate(R.id.addAgent) }
         b.today.setOnClickListener { goTab(R.id.activity) }
         buildQuickSwitches()
