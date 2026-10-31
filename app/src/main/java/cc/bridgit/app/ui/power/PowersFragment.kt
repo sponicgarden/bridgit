@@ -259,7 +259,7 @@ class PowersFragment : Fragment() {
             val body = if (agent != null) fragment.getString(R.string.power_confirm_body, agent.name, features)
                 else fragment.getString(R.string.power_confirm_body_device, features)
             MaterialAlertDialogBuilder(fragment.requireContext())
-                .setTitle(if (agent != null) fragment.getString(R.string.power_confirm_title, agent.name) else fragment.getString(R.string.settings_everything_on))
+                .setTitle(if (agent != null) fragment.getString(R.string.power_confirm_title, agent.name) else fragment.getString(R.string.settings_max_control))
                 .setMessage(body)
                 .setPositiveButton(R.string.power_confirm_yes) { _, _ ->
                     val access = PowerAccess(app)

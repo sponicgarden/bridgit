@@ -49,6 +49,7 @@ import cc.bridgit.app.databinding.TourHomeCardBinding
 import cc.bridgit.app.interact.Interaction
 import cc.bridgit.app.tour.TourKinds
 import cc.bridgit.app.log.LogQuery
+import cc.bridgit.app.power.PowerAccess
 import cc.bridgit.app.ui.common.Fmt
 import cc.bridgit.app.ui.common.themeColor
 import cc.bridgit.app.ui.feedback.handleFeedbackMenu
@@ -471,6 +472,14 @@ class HomeFragment : Fragment() {
         switchCards.clear()
         val modules = app.registry.switchable().take(4)
         b.quickHeader.isVisible = modules.isNotEmpty()
+        b.maxControl.root.isVisible = modules.isNotEmpty()
+        b.maxControl.label.setText(R.string.settings_max_control)
+        b.maxControl.root.contentDescription = getString(R.string.settings_max_control)
+        UiActions.asSwitch(b.maxControl.root) { PowerAccess(app).everySwitchOn() }
+        b.maxControl.root.setOnClickListener {
+            if (PowerAccess(app).everySwitchOn()) cc.bridgit.app.ui.power.PowersFragment.confirmAllOff(this) { render() }
+            else cc.bridgit.app.ui.power.PowersFragment.confirmMaximum(this, null) { render() }
+        }
         for (m in modules) {
             val c = HomeSwitchCardBinding.inflate(layoutInflater, b.quickGrid, false)
             c.label.text = m.title
@@ -483,6 +492,7 @@ class HomeFragment : Fragment() {
     }
 
     private fun renderSwitches() {
+        b.maxControl.toggle.isChecked = PowerAccess(app).everySwitchOn()
         for ((m, c) in switchCards) if (c.toggle.isChecked != m.enabled) c.toggle.isChecked = m.enabled
     }
 

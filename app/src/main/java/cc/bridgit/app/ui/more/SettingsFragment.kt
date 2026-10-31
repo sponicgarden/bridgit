@@ -38,6 +38,7 @@ import cc.bridgit.app.databinding.SettingsRowBinding
 import cc.bridgit.app.databinding.SettingsSwitchRowBinding
 import cc.bridgit.app.interact.InteractionNotifier
 import cc.bridgit.app.log.LogQuery
+import cc.bridgit.app.power.PowerAccess
 import cc.bridgit.app.ui.common.themeColor
 import cc.bridgit.app.ui.home.UiActions
 import cc.bridgit.app.update.UpdateDialog
@@ -46,7 +47,7 @@ import java.text.NumberFormat
 
 /**
  * Settings (UI-19, ui-spec 5.10), built from our own rows. Sections:
- * Listener, Agent powers (Turn everything on / off), Privacy (log visibility, lock-screen question text, urgent read-aloud in DND),
+ * Max control (one switch: every feature and Android permission on, or every feature off), Listener, Privacy (log visibility, lock-screen question text, urgent read-aloud in DND),
  * Log, Notifications, Appearance, About.
  * Allow internet callbacks (EVT-05) sits under Listener. Email alerts sit after Notifications.
  * Send crash reports (D32) sits under Privacy.
@@ -72,6 +73,15 @@ class SettingsFragment : Fragment() {
         }
         b.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
+        // Max control: the same Maximum powers pass as Add agent when turned on, Turn everything off when turned off.
+        b.maxControl.title.setText(R.string.settings_max_control)
+        UiActions.asSwitch(b.maxControl.root) { PowerAccess(app).everySwitchOn() }
+        b.maxControl.root.setOnClickListener {
+            if (PowerAccess(app).everySwitchOn()) cc.bridgit.app.ui.power.PowersFragment.confirmAllOff(this) {
+                bind(); Snackbar.make(b.root, R.string.power_off_done, Snackbar.LENGTH_SHORT).show()
+            } else cc.bridgit.app.ui.power.PowersFragment.confirmMaximum(this, null) { bind() }
+        }
+
         // Listener
         b.alwaysOn.title.setText(R.string.settings_always_on)
         b.alwaysOn.value.setText(R.string.settings_always_on_desc)
@@ -82,14 +92,6 @@ class SettingsFragment : Fragment() {
         row(b.bind, R.string.settings_bind, mono = true, onClick = null)
         prefSwitch(b.internetCallbacks, R.string.settings_internet_callbacks, R.string.settings_internet_callbacks_desc,
             cc.bridgit.app.core.Settings.PREF_INTERNET_CALLBACKS, R.string.settings_changed_internet_callbacks)
-
-        // Agent powers: the same Maximum powers pass as Add agent, and its undo.
-        row(b.everythingOn, R.string.settings_everything_on) { cc.bridgit.app.ui.power.PowersFragment.confirmMaximum(this, null) }
-        b.everythingOn.value.setText(R.string.settings_everything_on_desc)
-        row(b.everythingOff, R.string.settings_everything_off) {
-            cc.bridgit.app.ui.power.PowersFragment.confirmAllOff(this) { Snackbar.make(b.root, R.string.power_off_done, Snackbar.LENGTH_SHORT).show() }
-        }
-        b.everythingOff.value.setText(R.string.settings_everything_off_desc)
 
         // Privacy
         row(b.logVisibility, R.string.settings_log_visibility) { askVisibility() }
@@ -180,6 +182,10 @@ class SettingsFragment : Fragment() {
         if (_b == null) return
         val st = app.settings
         val s = app.listener.value
+        val max = PowerAccess(app).everySwitchOn()
+        b.maxControl.toggle.isChecked = max
+        b.maxControl.value.setText(if (max) R.string.settings_max_control_on_desc else R.string.settings_max_control_off_desc)
+        b.maxControl.root.contentDescription = "${b.maxControl.title.text}, ${b.maxControl.value.text}"
         if (b.alwaysOn.toggle.isChecked != st.listenerEnabled) b.alwaysOn.toggle.isChecked = st.listenerEnabled
         b.lockscreenText.toggle.isChecked = prefs().getBoolean(InteractionNotifier.PREF_LOCKSCREEN_TEXT, false)
         b.speakUrgent.toggle.isChecked = prefs().getBoolean(InteractionNotifier.PREF_SPEAK_URGENT_IN_DND, false)
