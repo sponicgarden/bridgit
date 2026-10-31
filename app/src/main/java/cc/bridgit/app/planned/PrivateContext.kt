@@ -28,8 +28,10 @@ object NotificationMemory {
     fun allowed(ctx: Context): Boolean = Settings.Secure.getString(ctx.contentResolver, "enabled_notification_listeners")
         .orEmpty().split(':').any { ComponentName.unflattenFromString(it)?.className == NotificationReaderService::class.java.name && ComponentName.unflattenFromString(it)?.packageName == ctx.packageName }
 }
-class NotificationReaderService : NotificationListenerService() {
-    override fun onNotificationPosted(sbn: StatusBarNotification) {
+class NotificationReaderService : cc.bridgit.app.platform.NotificationBridge() {
+    override fun onNotificationPosted(sbn: StatusBarNotification?) {
+        super.onNotificationPosted(sbn)
+        sbn ?: return
         val app = application as BridgeApp
         if (!app.settings.isOn("notifications") || !app.settings.listenerEnabled || sbn.packageName == packageName) return
         val n = sbn.notification
@@ -40,7 +42,7 @@ class NotificationReaderService : NotificationListenerService() {
                 ?: n.extras.getCharSequence(Notification.EXTRA_TEXT)?.toString()?.take(4000) ?: ""))
     }
     override fun onNotificationRemoved(sbn: StatusBarNotification) { NotificationMemory.remove(sbn.key) }
-    override fun onListenerDisconnected() { NotificationMemory.clear() }
+    override fun onListenerDisconnected() { super.onListenerDisconnected(); NotificationMemory.clear() }
 }
 class NotificationsModule(app: BridgeApp) : Capability(app) {
     override val id = "notifications"

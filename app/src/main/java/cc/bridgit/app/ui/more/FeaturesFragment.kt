@@ -127,6 +127,7 @@ class FeaturesFragment : Fragment() {
                 }
                 reason == "no_hardware" -> Triple(getString(R.string.features_no_hardware), null, null)
                 reason == "listener_off" -> Triple(getString(R.string.features_listener_off), null, null)
+                reason == "android_version" -> Triple(getString(R.string.features_needs_newer_android), null, null)
                 reason == "model_missing" -> Triple(getString(R.string.wake_needs_model), getString(R.string.wake_set_up)) { openWakeWords() }
                 reason == "no_agent" -> Triple(getString(R.string.sounds_needs_agent), getString(R.string.wake_set_up)) { openWakeWords() }
                 reason == "no_wake_words" -> Triple(getString(R.string.wake_needs_words), getString(R.string.wake_set_up)) { openWakeWords() }

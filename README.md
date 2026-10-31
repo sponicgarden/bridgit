@@ -2,7 +2,7 @@
 
 Copyright 2026 Sponic Garden, Inc. Licensed under the [Apache License 2.0](LICENSE).
 
-**BRIDGIT Device Manager for Android** turns an Android phone (Android 14+)
+**BRIDGIT Device Manager for Android** turns an Android phone (Android 11+; Android 10 support is built but not yet device-tested)
 into a device your own AI agents can use: Claude, Grok, Codex or any agent that
 can make HTTP or MCP calls. With your OK, paired agents can take a photo, record
 a short clip, read the screen, send you questions and notices, and more (see
@@ -170,14 +170,26 @@ receiver didn't answer 2xx).
   a notification and Android's indicator shows. Agent photos never go into
   the gallery.
 - The log (SQLite on the phone) never stores keys, request headers, media or
-  long texts. No analytics or ads. Third-party libraries: Ktor (HTTP), CameraX,
+  long texts. No analytics SDKs or ads; feature-use tallies are counts only (below). Third-party libraries: Ktor (HTTP), CameraX,
   AndroidX/Material, ZXing (QR), Google ML Kit text recognition (on-device OCR)
   and Sentry (crash reports, below).
 - App backup is disabled. Outgoing calls: the update check (HTTPS to the
   publisher's download host, verified before Android asks you to install),
   crash reports if the build has a Sentry DSN and you leave them on, ML Kit's
   usage metrics to Google, audio URLs an agent asks the phone to play, and
-  callbacks you set up for an agent.
+  callbacks you set up for an agent, and a daily batch of feature-use tallies
+  unless you turn them off.
+
+## Feature-use tallies
+
+Unless turned off under Settings > Privacy > Send feature-use tallies, the app
+counts how often each feature is used (`api:GET /v1/health:ok`, `mcp:...`,
+`screen:home`, `switch:camera:on`) and about once a day POSTs the counts to
+bridgit.cc/api/usage (`core/Usage.kt`, `website/usage.mjs`). A batch is only
+a one-off nonce, the version code and the counts: no install id, agent names,
+times, parameters or content. Keys use endpoint path templates and must match
+a fixed pattern, so free text can't get in. Turning it off deletes unsent
+counts; "See what would be sent" shows them. Debug builds never send.
 
 ## Crash reports
 
@@ -197,8 +209,8 @@ Needs JDK 17 and the Android SDK (platform 35, build-tools 35).
 ```bash
 export JAVA_HOME=/path/to/jdk-17
 export ANDROID_HOME=/path/to/android-sdk   # or sdk.dir in local.properties
-./gradlew assembleDebug     # app/build/outputs/apk/debug/app-debug.apk
-./gradlew assembleRelease   # app/build/outputs/apk/release/app-release.apk
+./gradlew assemblePrivateDebug     # app/build/outputs/apk/private/debug/app-private-debug.apk
+./gradlew assemblePrivateRelease   # app/build/outputs/apk/private/release/app-private-release.apk
 ```
 
 Release signing reads `keystore.properties` (gitignored); without it the
@@ -232,7 +244,7 @@ tapping the screen. Release builds don't contain it.
 
 ## Tests
 
-- Unit tests (JVM): `./gradlew testDebugUnitTest`.
+- Unit tests (JVM): `./gradlew testPrivateDebugUnitTest`.
 - Device acceptance (TST-03), against the debug build on a test phone:
   `BRIDGIT_TEST_PHONE=<tailscale-ip> BRIDGIT_TEST_ADB=<ip>:5555 tools/acceptance.sh --apk app/build/outputs/apk/debug/app-debug.apk`.
   It writes `docs/acceptance/<date>-<version>-debug.md` with PASS, FAIL or
@@ -282,3 +294,10 @@ The repository is https://github.com/sponicgarden/bridgit and the selected websi
 The Android package is `cc.bridgit.app`. It replaced an earlier package id, so builds from before that change do not upgrade in place: uninstall the old app and pair agents again. `X-Bridget-*` headers, the `Bridget.respond` JavaScript bridge, pairing identifiers, updater object paths and historical release tags are unchanged. Use `tools/bridgit`; `tools/bridget` remains a compatibility entry point. Existing `BRIDGET_*` variables and `~/.config/bridget` configuration remain supported.
 
 New CLI configuration uses `~/.config/bridgit/env` and `BRIDGIT_KEY`, `BRIDGIT_HOST`, `BRIDGIT_PORT` (or `BRIDGIT_ENV` for an explicit config path). The old names remain accepted; new names take precedence.
+
+
+## Additive agent control build
+
+The private control build preserves the existing v1 API and adds scoped control sessions, reviewed actions and bounded sequences, durable operations/events, native workflows, selected notification replies, local text/translation tools, viewer-scoped JPEG monitoring and explicit multi-device routing. Start with `/v2/capabilities` and `/v2/tools`; the new MCP endpoint is `/mcp`. Open **Agent control and appliances** from Home’s menu to grant new scopes and review requests. New scopes start denied.
+
+See [implementation and acceptance](docs/implementation/agentic-control.md) for all twenty feature families, test evidence, distribution limits and hardware checks still needed. The website keeps the published 1.6.0 reference separate from these development additions. Build the normal signed update with `./gradlew assemblePrivateRelease`; the limited variant is `assemblePlayRelease` and does not include the Accessibility or notification-listener declarations. Versions are allocated automatically across cooperating worktrees; never override or decrement them.

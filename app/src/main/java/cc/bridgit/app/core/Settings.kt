@@ -18,7 +18,9 @@ class Settings(context: Context) {
     private fun changed() = synchronized(listeners) { listeners.toList() }.forEach { it() }
 
     fun isOn(switchKey: String) = prefs.getBoolean("switch_$switchKey", false)
-    fun setOn(switchKey: String, on: Boolean) { prefs.edit().putBoolean("switch_$switchKey", on).apply(); changed() }
+    fun setOn(switchKey: String, on: Boolean) { prefs.edit().putBoolean("switch_$switchKey", on).apply(); onSwitch?.invoke(switchKey, on); changed() }
+    /** Feature-use tallies hear which switch was flipped (never by whom). */
+    var onSwitch: ((String, Boolean) -> Unit)? = null
 
     var listenerEnabled: Boolean
         get() = prefs.getBoolean("listener", false)

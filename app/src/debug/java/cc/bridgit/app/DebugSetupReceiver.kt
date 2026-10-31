@@ -83,6 +83,17 @@ class DebugSetupReceiver : BroadcastReceiver() {
             app.settings.listenerEnabled = false
             BridgeService.pauseSilently(context)
         }
+        intent.getStringExtra("platform_grants")?.let { spec ->
+            val parts=spec.split(":",limit=2)
+            app.agents.byName(parts[0])?.let { a -> parts.getOrElse(1) { "" }.split(',').filter { it.isNotBlank() }.forEach { id ->
+                cc.bridgit.app.platform.Capabilities.setEnabled(app,id,true)
+                app.platform.grant(a.id,id,System.currentTimeMillis()+3600_000)
+            } }
+        }
+        intent.getStringExtra("platform_session_approve")?.let { app.platform.approveSession(it) }
+        intent.getStringExtra("platform_operation_approve")?.let { app.platform.approveOperation(it) }
+        intent.getStringExtra("platform_workflow_activate")?.let { app.platform.workflows.activate(it) }
+        intent.getStringExtra("platform_answer")?.let { value -> val p=value.split(":",limit=2); app.platform.answer(p[0],p.getOrElse(1) { "" }) }
         resultData = code
         // Last, after the result is set: never block the main thread (ask() reads the compass on it).
         intent.getStringExtra("tour_ask")?.let { q ->

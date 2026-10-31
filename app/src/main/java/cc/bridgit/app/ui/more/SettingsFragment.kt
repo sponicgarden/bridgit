@@ -38,6 +38,7 @@ import cc.bridgit.app.databinding.SettingsRowBinding
 import cc.bridgit.app.databinding.SettingsSwitchRowBinding
 import cc.bridgit.app.interact.InteractionNotifier
 import cc.bridgit.app.log.LogQuery
+import cc.bridgit.app.power.PowerAccess
 import cc.bridgit.app.ui.common.themeColor
 import cc.bridgit.app.ui.home.UiActions
 import cc.bridgit.app.update.UpdateDialog
@@ -46,10 +47,11 @@ import java.text.NumberFormat
 
 /**
  * Settings (UI-19, ui-spec 5.10), built from our own rows. Sections:
- * Listener, Agent powers (Turn everything on / off), Privacy (log visibility, lock-screen question text, urgent read-aloud in DND),
+ * Max control (one switch: every feature and Android permission on, or every feature off), Listener, Privacy (log visibility, lock-screen question text, urgent read-aloud in DND),
  * Log, Notifications, Appearance, About.
  * Allow internet callbacks (EVT-05) sits under Listener. Email alerts sit after Notifications.
- * Send crash reports (D32) sits under Privacy.
+ * Send crash reports (D32) and Send feature-use tallies (with See what would be sent) sit under Privacy.
+ * About links the privacy policy and terms; Reset deletes all Bridgit data.
  * Not shown yet (later phases): Screenshots, Feedback,
  * precise locations, address lookup, Licences, and the Files / Feedback notification channels.
  */
@@ -72,6 +74,15 @@ class SettingsFragment : Fragment() {
         }
         b.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
 
+        // Max control: the same Maximum powers pass as Add agent when turned on, Turn everything off when turned off.
+        b.maxControl.title.setText(R.string.settings_max_control)
+        UiActions.asSwitch(b.maxControl.root) { PowerAccess(app).everySwitchOn() }
+        b.maxControl.root.setOnClickListener {
+            if (PowerAccess(app).everySwitchOn()) cc.bridgit.app.ui.power.PowersFragment.confirmAllOff(this) {
+                bind(); Snackbar.make(b.root, R.string.power_off_done, Snackbar.LENGTH_SHORT).show()
+            } else cc.bridgit.app.ui.power.PowersFragment.confirmMaximum(this, null) { bind() }
+        }
+
         // Listener
         b.alwaysOn.title.setText(R.string.settings_always_on)
         b.alwaysOn.value.setText(R.string.settings_always_on_desc)
@@ -83,14 +94,6 @@ class SettingsFragment : Fragment() {
         prefSwitch(b.internetCallbacks, R.string.settings_internet_callbacks, R.string.settings_internet_callbacks_desc,
             cc.bridgit.app.core.Settings.PREF_INTERNET_CALLBACKS, R.string.settings_changed_internet_callbacks)
 
-        // Agent powers: the same Maximum powers pass as Add agent, and its undo.
-        row(b.everythingOn, R.string.settings_everything_on) { cc.bridgit.app.ui.power.PowersFragment.confirmMaximum(this, null) }
-        b.everythingOn.value.setText(R.string.settings_everything_on_desc)
-        row(b.everythingOff, R.string.settings_everything_off) {
-            cc.bridgit.app.ui.power.PowersFragment.confirmAllOff(this) { Snackbar.make(b.root, R.string.power_off_done, Snackbar.LENGTH_SHORT).show() }
-        }
-        b.everythingOff.value.setText(R.string.settings_everything_off_desc)
-
         // Privacy
         row(b.logVisibility, R.string.settings_log_visibility) { askVisibility() }
         prefSwitch(b.lockscreenText, R.string.settings_lockscreen_text, R.string.settings_lockscreen_text_desc,
@@ -98,6 +101,9 @@ class SettingsFragment : Fragment() {
         prefSwitch(b.speakUrgent, R.string.settings_speak_urgent, R.string.settings_speak_urgent_desc,
             InteractionNotifier.PREF_SPEAK_URGENT_IN_DND, R.string.settings_changed_speak_urgent)
         crashSwitch()
+        usageSwitch()
+        row(b.usageWhat, R.string.settings_usage_what) { showUsage() }
+        b.usageWhat.value.setText(R.string.settings_usage_what_desc)
 
         // Log
         row(b.keep, R.string.settings_keep) { askKeep() }
@@ -149,6 +155,14 @@ class SettingsFragment : Fragment() {
         b.cert.value.text = cert ?: "?"
         row(b.spec, R.string.settings_spec, onClick = null)
         b.spec.value.setText(R.string.settings_spec_value)
+        row(b.privacyPolicy, R.string.settings_privacy_policy) { openUrl(R.string.settings_privacy_url) }
+        b.privacyPolicy.value.setText(R.string.settings_privacy_url)
+        row(b.terms, R.string.settings_terms) { openUrl(R.string.settings_terms_url) }
+        b.terms.value.setText(R.string.settings_terms_url)
+
+        // Reset
+        row(b.deleteAll, R.string.settings_delete_all) { askDeleteAll() }
+        b.deleteAll.value.setText(R.string.settings_delete_all_desc)
 
         bind()
         viewLifecycleOwner.lifecycleScope.launch {
@@ -180,6 +194,10 @@ class SettingsFragment : Fragment() {
         if (_b == null) return
         val st = app.settings
         val s = app.listener.value
+        val max = PowerAccess(app).everySwitchOn()
+        b.maxControl.toggle.isChecked = max
+        b.maxControl.value.setText(if (max) R.string.settings_max_control_on_desc else R.string.settings_max_control_off_desc)
+        b.maxControl.root.contentDescription = "${b.maxControl.title.text}, ${b.maxControl.value.text}"
         if (b.alwaysOn.toggle.isChecked != st.listenerEnabled) b.alwaysOn.toggle.isChecked = st.listenerEnabled
         b.lockscreenText.toggle.isChecked = prefs().getBoolean(InteractionNotifier.PREF_LOCKSCREEN_TEXT, false)
         b.speakUrgent.toggle.isChecked = prefs().getBoolean(InteractionNotifier.PREF_SPEAK_URGENT_IN_DND, false)
@@ -212,7 +230,7 @@ class SettingsFragment : Fragment() {
         b.alertTest.root.isEnabled = confirmed
         b.alertTest.root.alpha = if (confirmed) 1f else 0.5f
         b.alertTest.value.setText(if (confirmed) R.string.alerts_test_ready else R.string.alerts_test_desc)
-        listOf(b.port, b.bind, b.logVisibility, b.keep, b.theme, b.alertFrequency, b.alertRecipient, b.alertTest, b.alertWhat, b.version, b.checkUpdates, b.commit, b.cert, b.spec, b.export, b.clear,
+        listOf(b.port, b.bind, b.logVisibility, b.keep, b.theme, b.alertFrequency, b.alertRecipient, b.alertTest, b.alertWhat, b.version, b.checkUpdates, b.commit, b.cert, b.spec, b.privacyPolicy, b.terms, b.deleteAll, b.export, b.clear,
             b.notifListener, b.notifCapture, b.notifQuestions, b.notifNotices).forEach { it.root.contentDescription = "${it.title.text}, ${it.value.text}" }
     }
 
@@ -273,6 +291,33 @@ class SettingsFragment : Fragment() {
             else cc.bridgit.app.core.CrashReports.stop()
             audit(getString(R.string.settings_changed_crash_reports, getString(if (on) R.string.home_on else R.string.home_off)))
         }
+    }
+
+    /** Feature-use tallies: on unless turned off; turning them off also deletes the counts not yet sent. */
+    private fun usageSwitch() {
+        val r = b.usageTallies
+        r.title.setText(R.string.settings_usage_tallies)
+        r.value.setText(R.string.settings_usage_tallies_desc)
+        r.root.contentDescription = getString(R.string.settings_usage_tallies) + ", " + getString(R.string.settings_usage_tallies_desc)
+        UiActions.asSwitch(r.root) { app.usage.enabled() }
+        r.root.setOnClickListener {
+            val on = !app.usage.enabled()
+            app.usage.setEnabled(on)
+            r.toggle.isChecked = on
+            audit(getString(R.string.settings_changed_usage_tallies, getString(if (on) R.string.home_on else R.string.home_off)))
+        }
+    }
+
+    /** The exact counts the next batch would carry, so the owner can check there's nothing personal in it. */
+    private fun showUsage() {
+        val pending = app.usage.pending()
+        val text = if (pending.isEmpty()) getString(R.string.settings_usage_none)
+            else pending.entries.sortedBy { it.key }.joinToString("\n") { "${it.value}  ${it.key}" }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.settings_usage_what)
+            .setMessage(text)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     private fun setListener(on: Boolean) {
@@ -385,6 +430,39 @@ class SettingsFragment : Fragment() {
                 .setNegativeButton(R.string.cancel, null)
                 .show()
         }
+    }
+
+    private fun openUrl(url: Int) {
+        val uri = getString(url)
+        if (!UiActions.openUrl(requireContext(), uri)) Snackbar.make(b.root, getString(R.string.settings_no_browser, uri), Snackbar.LENGTH_LONG).show()
+    }
+
+    /**
+     * Wipes every store at once with Android's own "Clear storage" (prefs, databases, files, cache and
+     * Keystore keys), so no store can be missed; Android then kills the process and the next start is first run.
+     * Before that: put back phone settings agents changed (their leases live in that storage) and cancel email alerts.
+     */
+    private fun askDeleteAll() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.settings_delete_all_title)
+            .setMessage(R.string.settings_delete_all_confirm)
+            .setPositiveButton(R.string.settings_delete_all_action) { _, _ ->
+                val ctx = requireContext().applicationContext
+                b.deleteAll.root.isEnabled = false
+                // NonCancellable: leaving or rotating mid-way must not skip the wipe after the restores ran.
+                viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.NonCancellable) {
+                    withContext(Dispatchers.IO) {
+                        runCatching { app.hardware.stop(owner = true) }
+                        if (app.settings.alertEmail != null) runCatching { app.alerts.relay.unsubscribe() }
+                    }
+                    val am = ctx.getSystemService(android.app.ActivityManager::class.java)
+                    if (!am.clearApplicationUserData()) {
+                        _b?.let { it.deleteAll.root.isEnabled = true; Snackbar.make(it.root, R.string.settings_delete_all_failed, Snackbar.LENGTH_LONG).show() }
+                    }
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun askAppearance() {

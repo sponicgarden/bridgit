@@ -31,7 +31,11 @@ class BridgeApp : Application() {
     lateinit var hardware: cc.bridgit.app.planned.Hardware
     lateinit var transfers: cc.bridgit.app.planned.Transfers
     lateinit var clipboardRequests: cc.bridgit.app.planned.ClipboardRequests
+    val policy by lazy { Policy(this) }
+    val audit by lazy { PlatformAudit(this) }
+    val platform by lazy { cc.bridgit.app.platform.AgentPlatform(this) }
     lateinit var alerts: cc.bridgit.app.alerts.Alerts
+    lateinit var usage: cc.bridgit.app.core.Usage
     lateinit var wake: cc.bridgit.app.listen.WakeListener
     val pairing = Pairing()
     val requests = cc.bridgit.app.api.RequestState()
@@ -62,7 +66,10 @@ class BridgeApp : Application() {
         super.onCreate()
         instance = this
         cc.bridgit.app.core.CrashReports.start(this)
+        cc.bridgit.app.relay.RelayPush.init(this)
         settings = Settings(this)
+        usage = cc.bridgit.app.core.Usage(this)
+        settings.onSwitch = { key, on -> usage.count("switch:$key:${if (on) "on" else "off"}") }
         agents = AgentRegistry(settings.agentStorage(this))
         log = LogStore(this) { settings.retention() }
         alerts = cc.bridgit.app.alerts.Alerts(this)
@@ -102,6 +109,8 @@ class BridgeApp : Application() {
             val now = settings.listenerEnabled
             if (now != tileListening) { tileListening = now; cc.bridgit.app.ui.home.ListenerTile.requestUpdate(this) }
         }
+        agents.addListener { platform.recheckCredentials() }
+        platform
         wake.start()
         agents.addListener { wake.sync() }
         applyAppearance()
@@ -121,6 +130,7 @@ class BridgeApp : Application() {
      */
     private fun createChannels() {
         val nm = getSystemService(NotificationManager::class.java)
+        nm.createNotificationChannel(NotificationChannel(INTERACTION_CHANNEL,"Agent control requests",NotificationManager.IMPORTANCE_DEFAULT))
         nm.deleteNotificationChannel("bridge") // 1.2's single channel, if a debug build carried it over
         nm.createNotificationChannel(NotificationChannel(CHANNEL_LISTENER, getString(R.string.channel_listener),
             NotificationManager.IMPORTANCE_LOW).apply { description = getString(R.string.channel_listener_desc) })
@@ -144,6 +154,8 @@ class BridgeApp : Application() {
     }
 
     companion object {
+        const val CAPTURE_CHANNEL = "capture"
+        const val INTERACTION_CHANNEL = "platform_interactions"
         const val CHANNEL_LISTENER = "listener"
         const val CHANNEL_CAPTURE = "capture"
         lateinit var instance: BridgeApp; private set

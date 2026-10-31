@@ -7,7 +7,7 @@
 # Options:
 #   --notes TEXT     Release notes shown in Bridgit's update dialog and on the GitHub release (required).
 #   --apk PATH       Publish this APK instead of building one.
-#   --no-build       Don't run ./gradlew assembleRelease; use app/build/outputs/apk/release/app-release.apk.
+#   --no-build       Don't run ./gradlew assemblePrivateRelease; use app/build/outputs/apk/private/release/app-private-release.apk.
 #   --no-github      Skip `gh release create`.
 #   --dry-run        Do every check and write latest.json, but upload nothing and create no release.
 #   --force          Publish even if the public latest.json already has this or a higher version_code.
@@ -105,9 +105,9 @@ fi
 if [[ ${BUILD} -eq 1 ]]; then
   [[ -f "${ROOT}/keystore.properties" ]] || die "keystore.properties missing: the release build would be unsigned"
   echo "==> Building the release APK"
-  (cd "${ROOT}" && ./gradlew assembleRelease -q)
+  (cd "${ROOT}" && ./gradlew assemblePrivateRelease -q)
 fi
-[[ -n "${APK}" ]] || APK="${ROOT}/app/build/outputs/apk/release/app-release.apk"
+[[ -n "${APK}" ]] || APK="${ROOT}/app/build/outputs/apk/private/release/app-private-release.apk"
 [[ -f "${APK}" ]] || die "APK not found: ${APK}"
 
 # ---- 2. Package and version ----
@@ -190,7 +190,7 @@ fi
 echo "==> Generating the API page for ${VNAME}"
 DOCS="${ROOT}/app/build/apidocs/api.html"
 rm -f "${DOCS}"
-(cd "${ROOT}" && ./gradlew testDebugUnitTest --tests '*ApiDocsTest*' --rerun -PbridgetDocsVersion="${VNAME}" -q) || die "ApiDocsTest failed"
+(cd "${ROOT}" && ./gradlew testPrivateDebugUnitTest --tests '*ApiDocsTest*' --rerun -PbridgetDocsVersion="${VNAME}" -q) || die "ApiDocsTest failed"
 grep -q "version ${VNAME}," "${DOCS}" || die "api.html wasn't written for ${VNAME}"
 
 if [[ ${DRY_RUN} -eq 1 ]]; then

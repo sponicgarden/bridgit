@@ -7,7 +7,7 @@
 | **Owner** | The phone's owner (sole user, sole device) |
 | **Product** | Bridgit, a general-purpose Android bridge for personal AI agents |
 | **Package** | `cc.bridgit.app` (sideloaded, not on the Play Store) |
-| **Device** | Google Pixel 10 Pro XL, Android 17 (API 37); minimum Android 14 (API 34) |
+| **Device** | Google Pixel 10 Pro XL, Android 17 (API 37); minimum Android 10 (API 29) |
 | **Current build** | Bridgit 1.2.0 (installed 26 Oct 2026); 1.3.0 (P1a) in review |
 | **Supersedes** | the v1.0 spec (as amended), `spec-per-agent-permissions.md`, `spec-agent-inbox.md`, `spec-flashlight.md`, `spec-screenshot.md`, `spec-access-screen.md` |
 
@@ -129,7 +129,7 @@ are the deliberate departures. Anything not listed still applies.
 | Pairing: on-screen code, the agent calls `/v1/pair` | Primary: a **setup prompt** with the key, copied from the phone. The code flow stays as an alternative. | D13 |
 | "Smallest possible surface. Three capabilities in v1." | Many capabilities, each behind its own master switch, phased in | D16 |
 | "No network calls other than answering API requests" | Also: (a) **callbacks** to agent webhook URLs the owner approves on the phone, (b) **feedback upload** if the owner turns it on, (c) optional address lookup for location. Each is off by default. | Sections 9, 11, 8.8 |
-| "No third-party SDKs" | Still none for analytics or ads; Sentry crash reports only (D32). Allowed: Ktor, CameraX, ZXing, AndroidX, Material, and Google ML Kit's **bundled, offline** text recognition (if OCR is built) | 8.15 |
+| "No third-party SDKs" | Still none for analytics or ads; Sentry crash reports only (D32). Feature-use tallies are Bridgit's own counts, not an SDK (31 Oct 2026). Allowed: Ktor, CameraX, ZXing, AndroidX, Material, and Google ML Kit's **bundled, offline** text recognition (if OCR is built) | 8.15 |
 | No access to messages, contacts, other apps' data | Unchanged for v2. Communications is listed as a possible later module, **not scheduled** (8.22) | Owner decision pending, Open Q1 |
 | "Version 1 accepts Android stopping the listener" | Same, plus the always-on service (D1) and battery exemption on the Access screen | D1 |
 | Audit log: 1,000 entries, read via `/v1/audit` | Structured log store with query, tail and agent notes; 20,000 entries / 30 days; `/v1/audit` kept as an alias in the new entry shape | D12, D20 |
@@ -146,7 +146,8 @@ are the deliberate departures. Anything not listed still applies.
   location), its data (photos, screenshots, files, phone status), its
   controls (flashlight and similar), and the owner themselves (notices and questions).
 - **PRD-02 [Decided]** It's for one person and one phone. It is not a
-  product for others, and has no accounts, analytics or ads. It has no cloud
+  product for others, and has no accounts or ads. Its only analytics are opt-out
+  feature-use counts with no identifiers (owner request 31 Oct 2026). It has no cloud
   relay unless the owner approves relay mode (Q10).
 
 ### 3.2 Principles (carried from v1, extended)
@@ -416,9 +417,17 @@ Pixel: Bridgit ◀═══ one outbound WebSocket (TLS), opened by the always-o
 - **ARC-20 [P2]** **Transport: the phone dials out.** While the listener runs
   and relay is on, Bridgit keeps one outbound TLS WebSocket to the relay
   (reconnect with back-off; heartbeat every 30 s). Jobs arrive on it within a
-  second and results go back on it. No inbound port, no Google push needed.
-  [Verify] that a foreground service keeps the socket alive in Doze on the
-  Pixel; if not, add FCM as the wake-up (ARC-16, Q9).
+  second and results go back on it. No inbound port.
+- **ARC-20a [P2]** **Push wake-up (FCM, Q9, decided 31 Oct 2026).** Doze can
+  cut the socket. When a job arrives and the phone has no socket, the relay
+  sends one high-priority FCM data message `{"type":"relay_wake"}` (at most
+  one every 10 s per phone). The phone reconnects at once, or, if it still
+  thinks it is connected, pings and drops a dead socket after 5 s. Connector
+  jobs wait up to 10 s for the phone; sealed jobs queue until their deadline.
+  The phone sends its FCM token on the socket; the relay stores it until the
+  phone or the owner turns the relay off. Google sees the token and the time
+  of each wake-up, never job content or the agent. Builds without Firebase
+  config, and phones without Play Services, work socket-only as before.
 - **ARC-21 [P2]** **Hosting.** A Cloudflare Worker with one Durable Object
   per phone (Sponic's Cloudflare account, the same one that hosts the update
   bucket), in its own Worker and namespace. Code in `relay/` in this repo,
@@ -763,7 +772,9 @@ under a minute, with nothing typed except the name.
   - `GET /v1/capabilities`: per capability, `enabled` (master switch),
     `ready` (Android permission or special access in place, service type
     active), `blocked_reason` (for example `"open_app_once"`,
-    `"permission:CAMERA"`, `"special_access:usage_access"`), and per-feature
+    `"permission:CAMERA"`, `"special_access:usage_access"`, or
+    `"android_version"` when the phone's Android is too old for it; calls then
+    return `not_supported`), and per-feature
     details (gallery `access_mode`, mic `max_seconds`, and so on).
 - **API-10 [Proposed]** Media sizing presets, accepted wherever an image is
   returned: `size=agent` (long edge 1568, q85, the default for `image/last`,
@@ -1406,6 +1417,13 @@ camera video shows Android's green camera dot.
   while a call is active.
 
 ### 8.23a Review gates for 1.6 and 1.7 (Codex design review, 27 Oct 2026)
+
+**29 October relay implementation record:** [relay gates and acceptance](implementation/relay.md)
+and [exact relay contracts](../relay/README.md) refine the relay items below.
+Relay design decisions and local implementations are recorded there; Pixel Doze,
+USB installation and production/hosted-client acceptance remain explicit gates.
+The separate wake-word and media/player gates are not closed by relay work.
+
 
 Open design work, recorded so the 1.6/1.7 plans close it before code:
 - Connector mode gives the relay **control**, not just visibility: connector
@@ -2156,7 +2174,7 @@ its debug builds; Bridgit's is for its **release** build.
 | NFR-10 | Crash-free | a crash in one request handler never stops the listener; crashes are logged to the diagnostic channel |
 | NFR-11 | Concurrency | many simultaneous requests; one capture per sensor at a time (others get `sensor_busy`) |
 | NFR-12 | Upgrades keep data | install-over-the-top keeps agents, switches, log and inbox (same signing key) |
-| NFR-13 | Target SDK pinned | `targetSdk` 35 today (1.2.0); move to the newest stable API within a release of it shipping, with a checklist of the target-gated rules in ARC-02a, 8.10, 8.17 and 12.12; `minSdk` 34 |
+| NFR-13 | Target SDK pinned | `targetSdk` 35 today (1.2.0); move to the newest stable API within a release of it shipping, with a checklist of the target-gated rules in ARC-02a, 8.10, 8.17 and 12.12; `minSdk` 29 |
 
 ---
 

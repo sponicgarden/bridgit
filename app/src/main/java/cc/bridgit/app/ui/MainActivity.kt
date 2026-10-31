@@ -61,6 +61,7 @@ class MainActivity : AppCompatActivity() {
             b.bottomNav.labelVisibilityMode = com.google.android.material.navigation.NavigationBarView.LABEL_VISIBILITY_UNLABELED
         panel = TextPanel(b.textPanel, ::closePanel)
         nav.addOnDestinationChangedListener { _, dest, _ ->
+            runCatching { app.usage.count("screen:" + resources.getResourceEntryName(dest.id)) }
             b.bottomNav.isVisible = dest.id in TOP_LEVEL
             applyPanelInset()
             lifecycleScope.launch { refreshPanel() }

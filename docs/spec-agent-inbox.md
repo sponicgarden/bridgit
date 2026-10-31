@@ -134,7 +134,7 @@ POST /v1/files
 
 - Bridgit appears in Android's **Share** menu. Android also offers one
   direct-share shortcut per agent ("Grok", "Claude", ...), so sharing a photo,
-  PDF, link or text to an agent is two taps. Sharing to plain "Bridget" asks
+  PDF, link or text to an agent is two taps. Sharing to plain "Bridgit" asks
   which agent.
 - Each share becomes an item in that agent's **outbox**, with an optional
   note the owner types ("what is this rash?").

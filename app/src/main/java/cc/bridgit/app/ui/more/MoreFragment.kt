@@ -13,6 +13,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import cc.bridgit.app.BridgeApp
 import cc.bridgit.app.BuildConfig
 import cc.bridgit.app.R
+import cc.bridgit.app.ui.home.UiActions
 import cc.bridgit.app.capability.appVersion
 import cc.bridgit.app.databinding.FragmentMoreBinding
 import cc.bridgit.app.databinding.MoreRowBinding
@@ -37,6 +38,7 @@ class MoreFragment : Fragment() {
         row(b.openActivity, R.drawable.ic_nav_activity, R.string.more_activity) { findNavController().navigate(R.id.activity) }
         row(b.features, R.drawable.ic_toggle, R.string.more_features) { findNavController().navigate(R.id.features) }
         row(b.access, R.drawable.ic_shield, R.string.more_access) { findNavController().navigate(R.id.access) }
+        row(b.relay, R.drawable.ic_shield, R.string.more_relay) { startActivity(android.content.Intent(requireContext(), cc.bridgit.app.relay.RelayActivity::class.java)) }
         row(b.settings, R.drawable.ic_settings, R.string.more_settings) { findNavController().navigate(R.id.settings) }
         row(b.reportBug, R.drawable.feedback_ic_bug, R.string.more_report_bug) {
             openReport(this, ReportKind.BUG, "More")
@@ -65,6 +67,7 @@ class MoreFragment : Fragment() {
             .setTitle(R.string.more_about_title)
             .setMessage(getString(R.string.more_about_body, app.appVersion(), BuildConfig.BUILD_TYPE, commit))
             .setPositiveButton(R.string.ok, null)
+            .setNeutralButton(R.string.settings_privacy_policy) { _, _ -> UiActions.openPrivacyPolicy(requireContext()) }
             .show()
     }
 

@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+"""Route tools to an explicit device; registry stores key-file paths, never keys."""
+import argparse,http.client,importlib.machinery,importlib.util,io,json,os,pathlib,re,tempfile,uuid
+ROOT=pathlib.Path(__file__).resolve().parent.parent
+loader=importlib.machinery.SourceFileLoader('bridgit_transport',str(ROOT/'tools/bridgit'));spec=importlib.util.spec_from_loader(loader.name,loader);transport=importlib.util.module_from_spec(spec);loader.exec_module(transport)
+def valid_host(host):
+ import ipaddress
+ try:return ipaddress.ip_address(host) in ipaddress.ip_network('100.64.0.0/10')
+ except ValueError:return bool(re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9.-]*\.ts\.net',host))
+class MemorySocket:
+ def __init__(self,data):self.data=data
+ def makefile(self,*args,**kwargs):return io.BytesIO(self.data)
+def request(device,method,path,body=None,key=None):
+ token=pathlib.Path(device['key_file']).expanduser().read_text().strip().removeprefix('Authorization: Bearer ').strip()
+ if not re.fullmatch(r'brg_[A-Za-z0-9_-]{24,200}',token):raise ValueError('Key file must hold a Bridgit key or Authorization header')
+ data=json.dumps(body).encode() if body is not None else b''
+ idem='Idempotency-Key: '+(key or str(uuid.uuid4()))+'\r\n' if method=='POST' else ''
+ host=device['host'];port=device['port']
+ raw=transport.send({},(f'{method} {path} HTTP/1.1\r\nHost: {host}:{port}\r\nAuthorization: Bearer {token}\r\nContent-Type: application/json\r\nContent-Length: {len(data)}\r\n{idem}Connection: close\r\n\r\n').encode()+data,host,port)
+ response=http.client.HTTPResponse(MemorySocket(raw));response.begin();result=json.loads(response.read())
+ if response.status>=400:raise ValueError(str(result.get('error','request_failed'))+': '+str(result.get('message','Request failed')))
+ return result
+def save(path,data):
+ path.parent.mkdir(parents=True,exist_ok=True);fd,name=tempfile.mkstemp(dir=path.parent,prefix='.fleet-')
+ try:
+  with os.fdopen(fd,'w') as out:json.dump(data,out,indent=2);out.write('\n')
+  os.chmod(name,0o600);os.replace(name,path)
+ finally:
+  if os.path.exists(name):os.unlink(name)
+def main():
+ p=argparse.ArgumentParser(description=__doc__);p.add_argument('--config',type=pathlib.Path,default=pathlib.Path.home()/'.config/bridgit/fleet.json');sub=p.add_subparsers(dest='command',required=True)
+ sub.add_parser('list');add=sub.add_parser('add');add.add_argument('name');add.add_argument('host');add.add_argument('--port',type=int,default=8734);add.add_argument('--key-file',required=True)
+ remove=sub.add_parser('remove');remove.add_argument('name');call=sub.add_parser('call');call.add_argument('name');call.add_argument('tool');call.add_argument('--arguments',default='{}');call.add_argument('--idempotency-key')
+ a=p.parse_args();registry=json.loads(a.config.read_text()) if a.config.exists() else {}
+ if a.command=='list':print(json.dumps(registry,indent=2));return
+ if a.command=='remove':registry.pop(a.name,None);save(a.config,registry);return
+ if a.command=='add':
+  if a.name in registry:raise ValueError('Name already registered; remove explicitly before replacing it')
+  if not re.fullmatch(r'[A-Za-z0-9_-]{1,32}',a.name) or not valid_host(a.host) or not 1024<=a.port<=65535:raise ValueError('Use a device name, Tailscale host and valid port')
+  device={'host':a.host,'port':a.port,'key_file':str(pathlib.Path(a.key_file).expanduser().resolve())};cap=request(device,'GET','/v2/capabilities');device['device_id']=cap['device_id'];device['device_name']=cap['device_name'];registry[a.name]=device;save(a.config,registry);print('Registered',a.name,device['device_id']);return
+ device=registry.get(a.name)
+ if not device:raise ValueError('Unknown device; no fallback is performed')
+ if not valid_host(device['host']):raise ValueError('Registry host is not a private-network device')
+ cap=request(device,'GET','/v2/capabilities')
+ if cap['device_id']!=device['device_id']:raise ValueError('Device identity changed; refusing to route the action')
+ args=json.loads(a.arguments)
+ if not isinstance(args,dict):raise ValueError('Arguments must be a JSON object')
+ print(json.dumps(request(device,'POST','/v2/call',{'tool':a.tool,'arguments':args},a.idempotency_key),indent=2))
+if __name__=='__main__':
+ try:main()
+ except Exception as e:raise SystemExit('bridgit-fleet: '+str(e))

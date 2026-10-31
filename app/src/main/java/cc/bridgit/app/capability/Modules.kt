@@ -78,7 +78,7 @@ class StatusModule(app: BridgeApp) : Capability(app) {
             val bat = app.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
             val level = bat?.let { val l = it.getIntExtra(BatteryManager.EXTRA_LEVEL, -1); val s = it.getIntExtra(BatteryManager.EXTRA_SCALE, 100); if (l >= 0) l * 100 / s else null }
             val s = app.listener.value
-            Reply.Json(JSONObject().put("status", "ok").put("app", "Bridget").put("app_version", app.appVersion())
+            Reply.Json(JSONObject().put("status", "ok").put("app", "Bridget").put("app_version", app.appVersion()).put("agent_control",JSONObject().put("capabilities","/v2/capabilities").put("tools","/v2/tools").put("mcp","/mcp").put("mode",if(cc.bridgit.app.BuildConfig.PRIVATE_CONTROL) "private" else "limited"))
                 .put("agent", agentName).put("agent_id", agent?.id)
                 .put("model", agent?.let { app.agents.get(it.id) }?.model ?: JSONObject.NULL)
                 .put("listener_uptime_seconds", (System.currentTimeMillis() - s.startedAt) / 1000)

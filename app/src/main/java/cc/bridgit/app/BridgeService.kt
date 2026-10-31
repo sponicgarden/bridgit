@@ -13,6 +13,7 @@ import android.net.LinkProperties
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -42,6 +43,13 @@ import java.net.NetworkInterface
  */
 class BridgeService : LifecycleService() {
     private val app get() = application as BridgeApp
+    val cameraReady get() = app.listener.value.cameraReady
+    val micReady get() = app.listener.value.micReady
+    val locationReady get() = !app.listener.value.startedInBackground
+    val bindAddress get() = app.listener.value.boundTo.firstOrNull()
+    private var platformTick: Job? = null
+    val relay by lazy { cc.bridgit.app.relay.RelayClient(this) }
+    private var relayJob: Job? = null
     private var server: ApiServer? = null
     private var boundTo: List<String> = emptyList()
     private var watcher: Job? = null
@@ -80,6 +88,8 @@ class BridgeService : LifecycleService() {
             watcher = lifecycleScope.launch(Dispatchers.IO) { watchTailscale() }
             registerNetworkCallback()
         }
+        if(platformTick==null) platformTick=lifecycleScope.launch(Dispatchers.IO) { while(isActive) { runCatching { app.platform.workflows.tick(); app.platform.delivery.tick() }; delay(1000) } }
+        if(relayJob==null) relayJob=lifecycleScope.launch(Dispatchers.IO) { relay.run() }
         running = this
         return START_STICKY
     }
@@ -87,18 +97,20 @@ class BridgeService : LifecycleService() {
     /**
      * Enters the foreground. From a visible start: every type whose permission is held.
      * From a background start: specialUse only, since Android refuses camera/mic there.
+     * specialUse exists from Android 14 and the camera/mic types from 11; earlier versions start with fewer bits.
      */
     private fun promote(background: Boolean): Boolean {
         val wantCamera = !background && granted(Manifest.permission.CAMERA)
         val wantMic = !background && granted(Manifest.permission.RECORD_AUDIO)
-        var types = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-        if (wantCamera) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
-        if (wantMic) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+        val base = if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
+        var types = base
+        if (wantCamera && Build.VERSION.SDK_INT >= 30) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
+        if (wantMic && Build.VERSION.SDK_INT >= 30) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
         // Location (8.8, City tour) needs the type while in use; playback needs mediaPlayback (SPK-03).
         if (!background && (granted(Manifest.permission.ACCESS_FINE_LOCATION) || granted(Manifest.permission.ACCESS_COARSE_LOCATION)))
             types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
         if (!background) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-        if (types != ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) {
+        if (types != base) {
             try {
                 ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(), types)
                 app.updateListener { it.copy(cameraReady = wantCamera, micReady = wantMic, startedInBackground = false) }
@@ -109,7 +121,7 @@ class BridgeService : LifecycleService() {
             }
         }
         return try {
-            ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(), base)
             app.updateListener { it.copy(cameraReady = false, micReady = false, startedInBackground = true) }
             true
         } catch (e: Exception) {
@@ -129,6 +141,7 @@ class BridgeService : LifecycleService() {
         while (lifecycleScope.isActive) {
             val why = withTimeoutOrNull(RECHECK_MS) { recheck.receive() } ?: "periodic"
             server?.maintenance()
+            lifecycleScope.launch(Dispatchers.IO) { runCatching { app.usage.flushIfDue() } }
             if (why != "start" && why != "periodic") delay(1500) // let the VPN settle after a change
             val addrs = tailscaleAddresses()
             val port = app.settings.port
@@ -220,6 +233,7 @@ class BridgeService : LifecycleService() {
                 app.wake.running?.words.isNullOrEmpty() -> R.string.wake_notif_title_sounds
                 app.wake.running?.sound != null -> R.string.wake_notif_title_both
                 else -> R.string.wake_notif_title })
+            relay.store.enabled -> "Bridgit relay: ${relay.status}"
             boundTo.isEmpty() -> getString(R.string.notif_waiting_tailscale)
             else -> getString(R.string.notif_listening)
         }
@@ -227,6 +241,7 @@ class BridgeService : LifecycleService() {
         val text = when {
             captureNote != null -> getString(R.string.notif_capture_sub)
             wake != null -> getString(R.string.wake_notif_text, app.wake.agentNames())
+            relay.store.enabled -> "Relay on · ${relay.status} · Pause stops all access"
             boundTo.isEmpty() -> getString(R.string.notif_not_reachable)
             last != null -> getString(R.string.notif_last_request, last.name,
                 android.text.format.DateUtils.getRelativeTimeSpanString(last.lastUsedAt).toString())
@@ -257,6 +272,8 @@ class BridgeService : LifecycleService() {
     }
 
     private fun stopEverything() {
+        relayJob?.cancel(); relayJob=null
+        app.platform.stopAll(); platformTick?.cancel(); platformTick=null
         app.hardware.stop()
         watcher?.cancel(); watcher = null
         netCallback?.let { runCatching { getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(it) } }
@@ -269,6 +286,8 @@ class BridgeService : LifecycleService() {
     }
 
     override fun onDestroy() {
+        relayJob?.cancel(); relayJob=null
+        app.platform.interrupt(); platformTick?.cancel(); platformTick=null
         app.hardware.stop()
         server?.stop(); server = null
         netCallback?.let { runCatching { getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(it) } }
@@ -288,6 +307,7 @@ class BridgeService : LifecycleService() {
         const val ACTION_PAUSE = "cc.bridgit.app.PAUSE"
         const val ACTION_WAKE_STOP = "cc.bridgit.app.WAKE_STOP"
         const val ACTION_WAKE_MUTE = "cc.bridgit.app.WAKE_MUTE"
+        const val ACTION_RELAY_WAKE = "cc.bridgit.app.RELAY_WAKE"
         const val EXTRA_BACKGROUND = "background"
         const val EXTRA_SILENT = "silent"
         private const val RECHECK_MS = 5 * 60 * 1000L
@@ -301,6 +321,8 @@ class BridgeService : LifecycleService() {
         fun startInBackground(ctx: Context) =
             ctx.startForegroundService(Intent(ctx, BridgeService::class.java).putExtra(EXTRA_BACKGROUND, true))
 
+        fun stop(ctx: Context) = pause(ctx)
+        fun tailscaleAddress(): String? = tailscaleAddresses().firstOrNull()
         fun pause(ctx: Context) = ctx.startService(Intent(ctx, BridgeService::class.java).setAction(ACTION_PAUSE))
 
         /** Stops the listener without the "paused from the notification" log line; the caller logs its own reason. */
