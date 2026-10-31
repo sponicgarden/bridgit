@@ -96,7 +96,7 @@ object SetupPrompt {
         sb.appendLine("FIRST TEST")
         sb.appendLine("1. Call /v1/health.")
         sb.appendLine("2. POST /v1/me {\"model\":\"<your model id>\",\"harness\":\"<e.g. Claude Code>\"} so your card shows your model.")
-        sb.append("3. Tell the owner you're connected and offer a short demo: follow GET /v1/demo.")
+        sb.append("3. Offer the owner a demo: ${Demos.SKILL_URL} (or GET /v1/demo).")
         return sb.toString()
     }
 
@@ -156,7 +156,8 @@ object Guide {
         }
         sb.appendLine()
         sb.appendLine("## Show the owner what's possible")
-        sb.appendLine("`GET /v1/demo` is a script for a hands-on tour: offer it, ask the owner a few questions, then run the demos that fit them. Offer it once after you connect.")
+        sb.appendLine("Right after you connect, offer the five-minute first-run demo at ${Demos.SKILL_URL}: flash, photo, a question on the phone, a spoken reply, a wake word and a camera game.")
+        sb.appendLine("`GET /v1/demo` is the full menu for later: ask the owner a few questions, then run the demos that fit them.")
         sb.appendLine()
         sb.appendLine("## Hearing from the phone")
         sb.appendLine("Bridgit never calls you: it queues events for you. Loop on `GET /v1/events?since=<last id>&wait=55` with a 60 s timeout.")

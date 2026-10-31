@@ -233,7 +233,7 @@ object Endpoints {
             Param("tour_id", "string", "Narration for your running City tour"), Param("urgent", "boolean", "Jump the queue (answers to questions)"),
             Param("text", "string", "Caption shown on the phone while it plays")),
         body = listOf(Param("url", "string", "https:// audio file (MP3, M4A, OGG, WAV, FLAC), up to 25 MB")),
-        example = "POST /v1/speaker/play (Content-Type: audio/mpeg, body = the MP3)", returns = "play_id, position, status",
+        example = "POST /v1/speaker/play (Content-Type: audio/mpeg, body = the MP3)", returns = "play_id, position, status (playing, queued or silenced)",
         errors = listOf("capability_disabled", "notifications_required", "invalid_parameter", "payload_too_large", "rate_limited", "not_found"))
     val SPEAKER_SAY = EndpointSpec("POST", "/speaker/say", "speaker", "Read text aloud on the phone (its own text-to-speech)",
         idempotent = true, privateFields = setOf("text"),
@@ -242,7 +242,8 @@ object Endpoints {
             Param("replace", "string", "after_current (default), now, or queue"), Param("tour_id", "string", "Narration for your City tour"),
             Param("urgent", "boolean", "Jump the queue")),
         example = "POST /v1/speaker/say {\"text\":\"On your left is the old town hall, built in 1360.\",\"tour_id\":\"t123\"}",
-        returns = "play_id, position, status", errors = listOf("capability_disabled", "invalid_parameter", "rate_limited", "not_found"))
+        returns = "play_id, position, status (playing, queued, or silenced: the phone is on silent, Do Not Disturb or in a call, so it won't be heard)",
+        errors = listOf("capability_disabled", "invalid_parameter", "rate_limited", "not_found"))
     val SPEAKER_STATUS = EndpointSpec("GET", "/speaker", "speaker", "What's playing, and your queued sounds",
         example = "GET /v1/speaker", returns = "playing{play_id, agent, text} (yours only, else null), busy (someone else's sound is playing), paused, queued[], quiet")
     val SPEAKER_STOP = EndpointSpec("DELETE", "/speaker", "speaker", "Stop your audio and clear your queue",

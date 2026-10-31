@@ -6,6 +6,9 @@ package net.finleg.bridget.api
  * Every demo is listed so the owner sees what's possible; each is marked with whether it works right now.
  */
 object Demos {
+    /** The fixed first-run demo (website/public/demo/SKILL.md): run once after pairing, before this menu. */
+    const val SKILL_URL = "https://bridgit.cc/demo/SKILL.md"
+
     /** One demo: [capability] decides whether it can run now, [calls] are the endpoints it uses. */
     data class Demo(val title: String, val capability: String, val goodFor: Set<String>, val pitch: String,
                     val steps: List<String>, val calls: List<String>)
@@ -107,6 +110,7 @@ object Demos {
         sb.appendLine()
         sb.appendLine("You are $agentName. This page is a short script for giving the owner a hands-on tour of Bridgit, built from what's switched on right now.")
         sb.appendLine("The goal: they finish knowing the handful of things you can do through their phone that matter to *them*.")
+        sb.appendLine("First time with this owner? Run the five-minute first-run demo at $SKILL_URL first; this menu is for afterwards.")
         sb.appendLine()
         sb.appendLine("## 1. Offer it")
         sb.appendLine("Once you're connected, ask once: \"Want me to show you a few things I can do with your phone now? It takes about two minutes.\"")

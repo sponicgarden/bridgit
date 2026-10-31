@@ -29,6 +29,14 @@ class SpeakerRulesTest {
             assertFalse(no, SpeakerRules.publicAddress(ip(no)))
     }
 
+    /** On silent, vibrate or DND nothing plays, so a say/play reply must not claim "playing" (the agent would wait for speech that never comes). */
+    @Test fun replyStatusSaysSilenced() {
+        assertEquals("playing", SpeakerRules.replyStatus(0, quiet = false))
+        assertEquals("queued", SpeakerRules.replyStatus(2, quiet = false))
+        assertEquals("silenced", SpeakerRules.replyStatus(0, quiet = true))
+        assertEquals("silenced", SpeakerRules.replyStatus(1, quiet = true))
+    }
+
     /** GET /v1/speaker must not show another agent's caption or play id (it may be private narration). */
     @Test fun statusShowsOnlyYourOwnSound() {
         val a = SpeakerRules.Entry("p1", "agentA", "Grok", "Secret narration for the owner")
