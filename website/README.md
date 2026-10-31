@@ -32,7 +32,15 @@ BRIDGIT — “Turn any Android device into an agentic appliance.” Original SV
 
 `wrangler.jsonc` pins the Cloudflare account and the `bridgit` Worker, serving this directory’s static build at `bridgit.cc` and `www.bridgit.cc` through Cloudflare Custom Domains. Cloudflare manages DNS and TLS for these bindings. The domain is already an active Free zone.
 
-From `website/`, run `npm run deploy:check` to build, validate and dry-run the configuration; run `npm run deploy` only when publication is intended. Both commands require Wrangler on PATH, authenticated to the named account. No token belongs in this repository. `workers.dev` and version preview URLs are disabled. The Worker runs before assets and permanently redirects HTTP and www requests to `https://bridgit.cc`, preserving path and query. `npm test` covers redirects and canonical asset/404 behavior.
+### Deploying
+
+Production deploys only from `main`. Every push to `main` runs `.github/workflows/deploy-website.yml`, which builds, tests, applies pending D1 migrations, runs `wrangler deploy` and then checks that the live `/version.json` reports the pushed commit. It runs on every push to `main`, not only website changes, so the live site always reports `main`'s head commit. Redeploying unchanged files is cheap. The workflow uses the `CLOUDFLARE_API_TOKEN` repository secret: a Cloudflare API token for the account in `wrangler.jsonc`, made from the "Edit Cloudflare Workers" template with Account › D1 › Edit added. Actions › Deploy website › Run workflow does a dry run by default. Untick "dry run" there to redeploy `main` by hand.
+
+From `website/`, `npm run deploy` runs the same steps on your machine: deploy guard, build, test, preflight, `npm run migrate`, `wrangler deploy`, `npm run verify-live`. The guard (`scripts/deploy-guard.mjs`) fetches `origin/main` and refuses unless `HEAD` is exactly `origin/main` and `git status` is clean. Your branch name doesn't matter; the commit does. Set `BRIDGIT_DEPLOY_UNCHECKED=1` only for a deliberate one-off deploy of another tree. The live site then won't match `main` until the next push to `main`. `npm run deploy:check` (build, test, preflight, `wrangler deploy --dry-run`) has no guard and works on any branch. Local commands need Wrangler on PATH, signed in to the named account. No token belongs in this repository.
+
+Each build stamps a version in the Sponic format `vYYMMDD.NN H:MMa`: the Warsaw date, that day's commit number and the commit time, plus `+local` when `website/` has uncommitted changes. The stamp appears in the header pill, a `web-version` meta tag and `/version.json`, which also holds the full commit SHA, author, subject and build time. Run `npm run verify-live` at any time to compare the live site with your checkout. `EXPECTED_SHA` overrides the commit to check.
+
+`workers.dev` and version preview URLs are disabled. The Worker runs before assets and permanently redirects HTTP and www requests to `https://bridgit.cc`, preserving path and query. `npm test` covers redirects and canonical asset/404 behavior.
 
 Cloudflare reference: https://developers.cloudflare.com/workers/configuration/routing/custom-domains/
 
@@ -48,7 +56,7 @@ Search-indexing update, 28 October 2026: all seven public pages allow indexing; 
 
 ## Feature catalog and identity
 
-`npm run build` reads the Android app’s `WhatCanData.kt` and creates `/features/` with all 47 current catalog entries, their availability, examples, options and API calls. Images are copied from the app’s WebP illustrations and loaded lazily. Parsing fails rather than silently dropping malformed entries. Source availability labels describe the personal app build, not a Google Play release.
+`npm run build` reads the Android app’s `WhatCanData.kt` and creates `/features/` with all 48 catalog entries, their availability, examples, options and API calls. Images are copied from the app’s WebP illustrations and loaded lazily. Parsing fails rather than silently dropping malformed entries. Source availability labels describe the personal app build, not a Google Play release.
 
 The approved identity is documented in `brand/README.md`. The icon is the actual Android artwork; the wordmark uses outlined glyphs. Phone layouts expose a Features link with at least 44px tap height. Existing illustrated concept carousel content is preserved.
 
@@ -56,7 +64,7 @@ The approved identity is documented in `brand/README.md`. The icon is the actual
 
 The Worker uses the `SIGNUPS` D1 binding, the `EMAIL` send_email binding (Cloudflare Email Sending, beta: needs the Workers Paid plan and bridgit.cc onboarded under Email Service › Email Sending, which adds SPF/DKIM/DMARC/bounce records), and two secrets: `TURNSTILE_SECRET` and `RATE_LIMIT_SALT`. Mail is sent from support@bridgit.cc. The old `RESEND_API_KEY` secret is no longer read and can be deleted. Set secrets using Wrangler stdin; never commit credentials. The public Turnstile site key and current signed APK URL/version/hash are in `site.config.json`. Email Sending does no click/open tracking.
 
-Apply `migrations/0001_download_requests.sql` and `migrations/0002_alert_subscriptions.sql` to the database before deployment. A daily scheduled handler removes expired download-only/pending signup records and old abuse counters. Requests are limited to 20 email sends per 24 hours globally, 3 per network address per hour, and one per email per 15 minutes, after production Turnstile validation. Increase caps deliberately when launch traffic grows.
+`npm run deploy` (and the workflow) applies pending `migrations/` to the remote database before deploying the Worker; add new schema changes as numbered migration files. A daily scheduled handler removes expired download-only/pending signup records and old abuse counters. Requests are limited to 20 email sends per 24 hours globally, 3 per network address per hour, and one per email per 15 minutes, after production Turnstile validation. Increase caps deliberately when launch traffic grows.
 
 GET links show a confirmation screen; explicit POST confirms a download and any optional update preference. Tokens are hashed at rest; network counters use a secret-keyed hash. Confirmation/unsubscribe pages are not cached and use origin-only referrers, so tokens do not leak through Referer headers while browser form Origin checks remain valid. Direct APK downloads remain public; email confirmation is not an APK access-control boundary. `npm test` uses Node’s SQLite runtime to exercise the actual database queries and consent flow.
 
@@ -66,6 +74,6 @@ GET links show a confirmation screen; explicit POST confirms a download and any 
 
 ## Feature-use tallies
 
-`usage.mjs` takes the Android app's daily feature-use counts (`app/.../core/Usage.kt`; Settings › Privacy › Send feature-use tallies, on by default). `POST /api/usage` accepts exactly `{batch, app_version, counts}`: a one-off UUID, the version code and up to 300 `kind:feature` keys with positive integer counts. Anything else is refused, so no identifier or free text can be added later by accident. Counts are added to `usage_counts` (UTC day, app version, feature, count); no per-batch or per-install rows are kept. Batch UUIDs are kept for a week to ignore retries, and a day-scoped keyed hash of the network address caps each address at 200 batches a day; the daily cron removes both. Apply `migrations/0003_usage_tallies.sql` before deploying. No new bindings or secrets.
+`usage.mjs` takes the Android app's daily feature-use counts (`app/.../core/Usage.kt`; Settings › Privacy › Send feature-use tallies, on by default). `POST /api/usage` accepts exactly `{batch, app_version, counts}`: a one-off UUID, the version code and up to 300 `kind:feature` keys with positive integer counts. Anything else is refused, so no identifier or free text can be added later by accident. Counts are added to `usage_counts` (UTC day, app version, feature, count); no per-batch or per-install rows are kept. Batch UUIDs are kept for a week to ignore retries, and a day-scoped keyed hash of the network address caps each address at 200 batches a day; the daily cron removes both. No new bindings or secrets.
 
 Read the totals with `wrangler d1 execute bridgit-website --remote --command "SELECT feature, SUM(count) n FROM usage_counts GROUP BY feature ORDER BY n DESC"`.

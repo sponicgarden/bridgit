@@ -9,9 +9,11 @@
     "build": "node scripts/build.mjs",
     "check": "node scripts/check.mjs",
     "preflight": "node scripts/check.mjs --release",
-    "deploy": "npm run build && npm test && npm run preflight && wrangler deploy",
+    "deploy": "node scripts/deploy-guard.mjs && npm run build && npm test && npm run preflight && npm run migrate && wrangler deploy && npm run verify-live",
     "deploy:check": "npm run build && npm test && npm run preflight && wrangler deploy --dry-run",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "migrate": "CLOUDFLARE_ACCOUNT_ID=9cd3a280a54ce2a5b382602f0247b577 wrangler d1 migrations apply bridgit-website --remote",
+    "verify-live": "node scripts/verify-deploy.mjs"
   },
   "engines": {
     "node": ">=22.13"
