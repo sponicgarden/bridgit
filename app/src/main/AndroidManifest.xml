@@ -27,7 +27,7 @@
     <!-- In-app updates (12.14, UPD-04): hands a verified APK to Android's installer, which always asks to confirm. -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
-    <!-- Lets Bridgit open the Tailscale app from Home and first run. -->
+    <!-- Videos and downloads (8.5): gallery reads include videos. -->
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
@@ -41,6 +41,7 @@
     <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
 
     <queries>
+        <!-- Lets Bridgit open the Tailscale app from Home and first run. -->
         <package android:name="com.tailscale.ipn" />
         <!-- CAP-31/41: interaction link controls may open an app by package (its launch intent). -->
         <intent>

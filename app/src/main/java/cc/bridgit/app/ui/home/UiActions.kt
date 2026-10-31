@@ -71,6 +71,12 @@ object UiActions {
             tryStart(ctx, Intent(SysSettings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
     }
 
+    /** Opens a web page in the browser; false if nothing can show it. */
+    fun openUrl(ctx: Context, url: String): Boolean = tryStart(ctx, Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+
+    /** The privacy policy (Play: linked from first run, About, Settings and the Health rationale). */
+    fun openPrivacyPolicy(ctx: Context): Boolean = openUrl(ctx, ctx.getString(R.string.settings_privacy_url))
+
     fun tryStart(ctx: Context, i: Intent): Boolean = try {
         ctx.startActivity(i); true
     } catch (e: ActivityNotFoundException) { false } catch (e: SecurityException) { false }

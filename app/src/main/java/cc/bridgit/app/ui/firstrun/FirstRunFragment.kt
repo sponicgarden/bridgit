@@ -194,6 +194,7 @@ class FirstRunFragment : Fragment() {
             if (position == 2) {
                 p.addFirst.setOnClickListener { finish(addAgent = true) }
                 p.later.setOnClickListener { finish(addAgent = false) }
+                p.privacy.setOnClickListener { UiActions.openPrivacyPolicy(requireContext()) }
             }
         }
     }

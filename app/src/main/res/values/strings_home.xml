@@ -166,6 +166,19 @@
     <string name="settings_cert_copied">Certificate fingerprint copied</string>
     <string name="settings_spec">Spec</string>
     <string name="settings_spec_value">docs/bridgit-spec-v2.md</string>
+    <string name="settings_privacy_policy">Privacy policy</string>
+    <string name="settings_terms">Terms of use</string>
+    <string name="settings_privacy_url" translatable="false">https://bridgit.cc/privacy/</string>
+    <string name="settings_terms_url" translatable="false">https://bridgit.cc/terms/</string>
+    <string name="health_rationale">Health access in Bridgit\n\nBridgit reads only the steps, sleep and heart-rate source records you grant. It never writes health data. Reads require the Health Connect feature switch and the calling agent\'s grant. Data is returned to that agent on request; its provider may retain a copy. No health records are retained by Bridgit. Revoke permissions in Health Connect at any time.\n\nPrivacy policy: %1$s</string>
+    <string name="settings_no_browser">No browser to open %1$s</string>
+    <string name="settings_reset">Reset</string>
+    <string name="settings_delete_all">Delete all Bridgit data</string>
+    <string name="settings_delete_all_desc">Agents, keys, log, inbox, reports, files and settings</string>
+    <string name="settings_delete_all_title">Delete all Bridgit data?</string>
+    <string name="settings_delete_all_confirm">Every agent is removed and its key stops working at once. The log, inbox, bug reports, received files, wake words and every setting are deleted, and any phone setting an agent changed for a while is put back. Email alerts are cancelled.\n\nBridgit then closes. Next time you open it, it starts like a fresh install. This can\'t be undone.\n\nAndroid also resets Bridgit\'s permissions (camera, microphone, notifications) and turns off its notification access. Usage access and Accessibility may stay on; turn them off in Android settings if you want.</string>
+    <string name="settings_delete_all_action">Delete everything</string>
+    <string name="settings_delete_all_failed">Android didn\'t delete the data. Try again, or use Android Settings > Apps > Bridgit > Storage > Clear storage.</string>
     <string name="settings_save">Save</string>
     <string name="settings_changed_port">You changed the port to %1$d</string>
     <string name="settings_changed_listener">You turned Always on %1$s</string>

@@ -190,6 +190,15 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="@string/firstrun_later" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/privacy"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="16dp"
+                android:text="@string/settings_privacy_policy" />
         </LinearLayout>
     </LinearLayout>
 </ScrollView>
