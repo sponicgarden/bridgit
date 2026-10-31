@@ -55,7 +55,11 @@ if (process.argv.includes('--release')) {
   if (!config.supportEmail) warnings.push('Verified support mailbox is pending.');
   if (!config.privacyEmail) warnings.push('Verified privacy mailbox is pending.');
   if (!config.indexable) warnings.push('Search indexing is disabled deliberately.');
-
+  // An older checkout once deployed a static-only Worker, which took email signups and the daily cleanup offline.
+  const wrangler = await readFile(path.join(root, 'wrangler.jsonc'), 'utf8'), worker = await readFile(path.join(root, 'worker.mjs'), 'utf8');
+  if (!/"binding":\s*"SIGNUPS"/.test(wrangler)) errors.push('wrangler.jsonc must bind the SIGNUPS D1 database.');
+  if (!/"send_email"[\s\S]*"name":\s*"EMAIL"/.test(wrangler)) errors.push('wrangler.jsonc must bind EMAIL (send_email).');
+  if (!/"crons"/.test(wrangler) || !/async scheduled\(/.test(worker)) errors.push('The daily cleanup cron and scheduled handler are required.');
 }
 for (const warning of warnings) console.warn(`NOTE: ${warning}`);
 if (errors.length) { for (const error of errors) console.error(`FAIL: ${error}`); process.exitCode = 1; }
