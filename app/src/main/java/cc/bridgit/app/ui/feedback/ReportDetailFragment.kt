@@ -175,7 +175,7 @@ class ReportDetailFragment : Fragment() {
         bb.logToggle.isVisible = n > 0
         val count = resources.getQuantityString(R.plurals.feedback_log_count, n, n)
         bb.logToggle.text = "$count · " + getString(if (logExpanded) R.string.feedback_log_collapse else R.string.feedback_log_expand)
-        bb.logToggle.stateDescription = getString(if (logExpanded) R.string.feedback_log_collapse else R.string.feedback_log_expand)
+        ViewCompat.setStateDescription(bb.logToggle, getString(if (logExpanded) R.string.feedback_log_collapse else R.string.feedback_log_expand))
         bb.logList.isVisible = logExpanded && n > 0
         if (logExpanded) logAdapter.submitList(logEntries)
     }

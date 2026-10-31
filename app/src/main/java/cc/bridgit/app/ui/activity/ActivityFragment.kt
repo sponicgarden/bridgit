@@ -200,7 +200,7 @@ class ActivityFragment : Fragment() {
             if (rendering) return@setOnCheckedChangeListener
             live = on
             updatePulse()
-            b.chipLive.stateDescription = getString(if (on) R.string.activity_live_on else R.string.activity_live_off)
+            ViewCompat.setStateDescription(b.chipLive, getString(if (on) R.string.activity_live_on else R.string.activity_live_off))
             if (on) checkNew(app.log.latestId.value)
         }
         b.clearFilters.setOnClickListener { clearFilters() }
@@ -449,7 +449,7 @@ class ActivityFragment : Fragment() {
             ?: getString(R.string.activity_chip_level)
         bb.chipLevel.isChecked = minLevel != null
         bb.chipLive.isChecked = live
-        bb.chipLive.stateDescription = getString(if (live) R.string.activity_live_on else R.string.activity_live_off)
+        ViewCompat.setStateDescription(bb.chipLive, getString(if (live) R.string.activity_live_on else R.string.activity_live_off))
         rendering = false
     }
 

@@ -20,6 +20,7 @@ import cc.bridgit.app.BridgeApp
 import cc.bridgit.app.BridgeService
 import cc.bridgit.app.R
 import cc.bridgit.app.capability.Capability
+import cc.bridgit.app.capability.Perms
 import cc.bridgit.app.capability.granted
 import android.provider.Settings as SysSettings
 
@@ -135,8 +136,8 @@ class PermissionAsker(private val fragment: Fragment, private val onDone: () -> 
         fragment.registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result -> handle(result) }
 
     fun request(vararg permissions: String) {
-        if (permissions.isEmpty()) return
-        asked = arrayOf(*permissions)
+        asked = Perms.forRequest(permissions)
+        if (asked.isEmpty()) return
         launcher.launch(asked)
     }
 

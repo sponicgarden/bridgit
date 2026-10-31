@@ -19,7 +19,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import cc.bridgit.app.BridgeApp
 import cc.bridgit.app.R
+import cc.bridgit.app.capability.Perms
 import org.json.JSONObject
+import androidx.core.content.IntentCompat
+import cc.bridgit.app.core.Compat
 
 /** Owner-only actions, reached from Features or a notification. No remote intent may invoke an approval. */
 class OwnerToolsActivity : AppCompatActivity() {
@@ -30,7 +33,7 @@ class OwnerToolsActivity : AppCompatActivity() {
         val request = projectionRequest; projectionRequest = null
         if (request != null) {
             if (result.resultCode == RESULT_OK && result.data != null) {
-                val bounds = getSystemService(android.view.WindowManager::class.java).currentWindowMetrics.bounds
+                val bounds = Compat.windowBounds(this)
                 startForegroundService(Intent(this, ProjectionService::class.java).putExtra("agent_id", request.getString("agent_id"))
                     .putExtra("grant_id", request.getString("id")).putExtra("data", result.data).putExtra("width", bounds.width()).putExtra("height", bounds.height()))
             } else app.screenGrants.decide(request.getString("id"), "denied")
@@ -74,7 +77,7 @@ class OwnerToolsActivity : AppCompatActivity() {
         button("Modify system settings") { open(Settings.ACTION_MANAGE_WRITE_SETTINGS, Uri.parse("package:$packageName")) }
         button("Usage access (${if (UsageModule.usageAllowed(this)) "on" else "off"})") { open(Settings.ACTION_USAGE_ACCESS_SETTINGS, Uri.parse("package:$packageName")) }
         button("Notification access (${if (NotificationMemory.allowed(this)) "on" else "off"})") { open(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS) }
-        button("Grant video access") { permissions.launch(arrayOf(Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED)) }
+        button("Grant video access") { permissions.launch(Perms.forRequest(arrayOf(Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED))) }
         button("Grant step sensor access") { permissions.launch(arrayOf(Manifest.permission.ACTIVITY_RECOGNITION)) }
         button("Grant Health Connect reads (steps, sleep, heart rate)") { permissions.launch(arrayOf("android.permission.health.READ_STEPS", "android.permission.health.READ_SLEEP", "android.permission.health.READ_HEART_RATE")) }
         button("Open Health Connect") { open("android.health.connect.action.HEALTH_HOME_SETTINGS") }
@@ -152,8 +155,8 @@ class ShareActivity : AppCompatActivity() {
         if (!app.settings.isOn("shares")) { fail("Turn on Share to an agent in Features first."); return }
         val agents = app.agents.all().filter { it.allows("shares") }
         if (agents.isEmpty()) { fail("Add an agent with sharing access first."); return }
-        val uris = if (intent.action == Intent.ACTION_SEND_MULTIPLE) intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri::class.java).orEmpty()
-            else listOfNotNull(intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java))
+        val uris = if (intent.action == Intent.ACTION_SEND_MULTIPLE) IntentCompat.getParcelableArrayListExtra(intent, Intent.EXTRA_STREAM, Uri::class.java).orEmpty()
+            else listOfNotNull(IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java))
         val sharedText = intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
         if (uris.size > 10 || uris.any { it.scheme != "content" || it.authority == "$packageName.fileprovider" } || (uris.isEmpty() && sharedText.isNullOrBlank()) || (sharedText?.length ?: 0) > 200_000) { fail("Share up to ten content files or 200 KB of text."); return }
         val view = TextView(this).apply { text = "Choose which agent receives this share. It may retain a copy on its own servers."; setPadding(32, 48, 32, 32) }; setContentView(view)

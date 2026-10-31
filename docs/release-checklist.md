@@ -517,7 +517,7 @@ Everything in `launch-kit/play-store/` was written for 1.2 (camera, mic, gallery
   site "Agentic Android Device Bridge", the app "bridgit: Device Manager for Android".
   "for Android" is the allowed Android trademark form.
 - [ ] **[SHOULD] Claims (Play metadata policy and consumer law):**
-  - "Turn **any** Android device…" while minSdk is 34: qualify it as Android 14+.
+  - "Turn **any** Android device…" while minSdk is 29: qualify it as Android 10+.
   - Don't lead with the nursery/baby-monitor concept, which doesn't exist; keep
     planned features out of the listing.
   - "Set up in 3 seconds" ignores the Tailscale and pairing prerequisites.

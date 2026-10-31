@@ -7,7 +7,7 @@
 | **Owner** | The phone's owner (sole user, sole device) |
 | **Product** | Bridgit, a general-purpose Android bridge for personal AI agents |
 | **Package** | `cc.bridgit.app` (sideloaded, not on the Play Store) |
-| **Device** | Google Pixel 10 Pro XL, Android 17 (API 37); minimum Android 14 (API 34) |
+| **Device** | Google Pixel 10 Pro XL, Android 17 (API 37); minimum Android 10 (API 29) |
 | **Current build** | Bridgit 1.2.0 (installed 26 Oct 2026); 1.3.0 (P1a) in review |
 | **Supersedes** | the v1.0 spec (as amended), `spec-per-agent-permissions.md`, `spec-agent-inbox.md`, `spec-flashlight.md`, `spec-screenshot.md`, `spec-access-screen.md` |
 
@@ -771,7 +771,9 @@ under a minute, with nothing typed except the name.
   - `GET /v1/capabilities`: per capability, `enabled` (master switch),
     `ready` (Android permission or special access in place, service type
     active), `blocked_reason` (for example `"open_app_once"`,
-    `"permission:CAMERA"`, `"special_access:usage_access"`), and per-feature
+    `"permission:CAMERA"`, `"special_access:usage_access"`, or
+    `"android_version"` when the phone's Android is too old for it; calls then
+    return `not_supported`), and per-feature
     details (gallery `access_mode`, mic `max_seconds`, and so on).
 - **API-10 [Proposed]** Media sizing presets, accepted wherever an image is
   returned: `size=agent` (long edge 1568, q85, the default for `image/last`,
@@ -2171,7 +2173,7 @@ its debug builds; Bridgit's is for its **release** build.
 | NFR-10 | Crash-free | a crash in one request handler never stops the listener; crashes are logged to the diagnostic channel |
 | NFR-11 | Concurrency | many simultaneous requests; one capture per sensor at a time (others get `sensor_busy`) |
 | NFR-12 | Upgrades keep data | install-over-the-top keeps agents, switches, log and inbox (same signing key) |
-| NFR-13 | Target SDK pinned | `targetSdk` 35 today (1.2.0); move to the newest stable API within a release of it shipping, with a checklist of the target-gated rules in ARC-02a, 8.10, 8.17 and 12.12; `minSdk` 34 |
+| NFR-13 | Target SDK pinned | `targetSdk` 35 today (1.2.0); move to the newest stable API within a release of it shipping, with a checklist of the target-gated rules in ARC-02a, 8.10, 8.17 and 12.12; `minSdk` 29 |
 
 ---
 

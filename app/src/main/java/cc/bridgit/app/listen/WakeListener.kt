@@ -6,7 +6,7 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import android.os.VibrationEffect
-import android.os.VibratorManager
+import cc.bridgit.app.core.Compat
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -344,7 +344,7 @@ class WakeListener(private val app: BridgeApp) {
         .mapNotNull { app.agents.get(it)?.name }.distinct().joinToString(", ")
 
     private fun tick() = runCatching {
-        app.getSystemService(VibratorManager::class.java)?.defaultVibrator?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
+        Compat.vibrator(app)?.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_TICK))
     }
 
     private fun newId(): String { val b = ByteArray(9); SecureRandom().nextBytes(b); return "c" + b.joinToString("") { "%02x".format(it) } }
