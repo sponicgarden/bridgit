@@ -1,0 +1,40 @@
+{
+  "artifact": "/Users/otter/.codex/worktrees/agentic-control/bridgit/app/build/outputs/verified/bridgit-1.6.40-57.apk",
+  "package": "cc.bridgit.app",
+  "versionName": "1.6.40",
+  "versionCode": 57,
+  "sha256": "814677f246d534d5a15dfe3a1b7e350582c3b770905f4eadd0c5b4421a38957c",
+  "sizeBytes": 131125604,
+  "certificateSha256": "6bbd482d18efdc58ca28de8358405602ebb0405b479cabd36b37ff8242042f61",
+  "sourceCommit": "9a2da2615bccf8927b140fa7be587b2da28d8fcb",
+  "sourceDirty": false,
+  "verifiedAtUtc": "2026-10-29T04:15:59.255982+00:00",
+  "checks": {
+    "privateUnitTests": 186,
+    "playUnitTests": 186,
+    "unitFailures": 0,
+    "lintPrivateDebug": "passed",
+    "lintPlayDebug": "passed",
+    "lintVitalPrivateRelease": "passed",
+    "allocatorTests": 9,
+    "nativeDeviceChecks": 14,
+    "websiteTests": 10,
+    "websitePages": 8,
+    "websiteLinks": 293,
+    "signature": "verified; matches installed release",
+    "zipAlignment": "passed; 16 KiB library alignment",
+    "debugComponents": "absent"
+  },
+  "installation": {
+    "device": "57091FDCQ0081F",
+    "method": "adb install -r",
+    "result": "Success",
+    "installedVersionName": "1.6.40",
+    "installedVersionCode": 57,
+    "existingAgentPairingsPreserved": 3,
+    "appDataPreserved": true,
+    "uidAndFirstInstallTimePreserved": true,
+    "startup": "passed; live process, no fatal Bridgit crash detected",
+    "installerEvidence": "/tmp/bridgit-pixel-update-result.json"
+  }
+}

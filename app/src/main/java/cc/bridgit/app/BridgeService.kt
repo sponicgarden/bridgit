@@ -43,6 +43,13 @@ import java.net.NetworkInterface
  */
 class BridgeService : LifecycleService() {
     private val app get() = application as BridgeApp
+    val cameraReady get() = app.listener.value.cameraReady
+    val micReady get() = app.listener.value.micReady
+    val locationReady get() = !app.listener.value.startedInBackground
+    val bindAddress get() = app.listener.value.boundTo.firstOrNull()
+    private var platformTick: Job? = null
+    val relay by lazy { cc.bridgit.app.relay.RelayClient(this) }
+    private var relayJob: Job? = null
     private var server: ApiServer? = null
     private var boundTo: List<String> = emptyList()
     private var watcher: Job? = null
@@ -81,6 +88,8 @@ class BridgeService : LifecycleService() {
             watcher = lifecycleScope.launch(Dispatchers.IO) { watchTailscale() }
             registerNetworkCallback()
         }
+        if(platformTick==null) platformTick=lifecycleScope.launch(Dispatchers.IO) { while(isActive) { runCatching { app.platform.workflows.tick(); app.platform.delivery.tick() }; delay(1000) } }
+        if(relayJob==null) relayJob=lifecycleScope.launch(Dispatchers.IO) { relay.run() }
         running = this
         return START_STICKY
     }
@@ -224,6 +233,7 @@ class BridgeService : LifecycleService() {
                 app.wake.running?.words.isNullOrEmpty() -> R.string.wake_notif_title_sounds
                 app.wake.running?.sound != null -> R.string.wake_notif_title_both
                 else -> R.string.wake_notif_title })
+            relay.store.enabled -> "Bridgit relay: ${relay.status}"
             boundTo.isEmpty() -> getString(R.string.notif_waiting_tailscale)
             else -> getString(R.string.notif_listening)
         }
@@ -231,6 +241,7 @@ class BridgeService : LifecycleService() {
         val text = when {
             captureNote != null -> getString(R.string.notif_capture_sub)
             wake != null -> getString(R.string.wake_notif_text, app.wake.agentNames())
+            relay.store.enabled -> "Relay on · ${relay.status} · Pause stops all access"
             boundTo.isEmpty() -> getString(R.string.notif_not_reachable)
             last != null -> getString(R.string.notif_last_request, last.name,
                 android.text.format.DateUtils.getRelativeTimeSpanString(last.lastUsedAt).toString())
@@ -261,6 +272,8 @@ class BridgeService : LifecycleService() {
     }
 
     private fun stopEverything() {
+        relayJob?.cancel(); relayJob=null
+        app.platform.stopAll(); platformTick?.cancel(); platformTick=null
         app.hardware.stop()
         watcher?.cancel(); watcher = null
         netCallback?.let { runCatching { getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(it) } }
@@ -273,6 +286,8 @@ class BridgeService : LifecycleService() {
     }
 
     override fun onDestroy() {
+        relayJob?.cancel(); relayJob=null
+        app.platform.interrupt(); platformTick?.cancel(); platformTick=null
         app.hardware.stop()
         server?.stop(); server = null
         netCallback?.let { runCatching { getSystemService(ConnectivityManager::class.java).unregisterNetworkCallback(it) } }
@@ -292,6 +307,7 @@ class BridgeService : LifecycleService() {
         const val ACTION_PAUSE = "cc.bridgit.app.PAUSE"
         const val ACTION_WAKE_STOP = "cc.bridgit.app.WAKE_STOP"
         const val ACTION_WAKE_MUTE = "cc.bridgit.app.WAKE_MUTE"
+        const val ACTION_RELAY_WAKE = "cc.bridgit.app.RELAY_WAKE"
         const val EXTRA_BACKGROUND = "background"
         const val EXTRA_SILENT = "silent"
         private const val RECHECK_MS = 5 * 60 * 1000L
@@ -305,6 +321,8 @@ class BridgeService : LifecycleService() {
         fun startInBackground(ctx: Context) =
             ctx.startForegroundService(Intent(ctx, BridgeService::class.java).putExtra(EXTRA_BACKGROUND, true))
 
+        fun stop(ctx: Context) = pause(ctx)
+        fun tailscaleAddress(): String? = tailscaleAddresses().firstOrNull()
         fun pause(ctx: Context) = ctx.startService(Intent(ctx, BridgeService::class.java).setAction(ACTION_PAUSE))
 
         /** Stops the listener without the "paused from the notification" log line; the caller logs its own reason. */

@@ -294,3 +294,10 @@ The repository is https://github.com/sponicgarden/bridgit and the selected websi
 The Android package is `cc.bridgit.app`. It replaced an earlier package id, so builds from before that change do not upgrade in place: uninstall the old app and pair agents again. `X-Bridget-*` headers, the `Bridget.respond` JavaScript bridge, pairing identifiers, updater object paths and historical release tags are unchanged. Use `tools/bridgit`; `tools/bridget` remains a compatibility entry point. Existing `BRIDGET_*` variables and `~/.config/bridget` configuration remain supported.
 
 New CLI configuration uses `~/.config/bridgit/env` and `BRIDGIT_KEY`, `BRIDGIT_HOST`, `BRIDGIT_PORT` (or `BRIDGIT_ENV` for an explicit config path). The old names remain accepted; new names take precedence.
+
+
+## Additive agent control build
+
+The private control build preserves the existing v1 API and adds scoped control sessions, reviewed actions and bounded sequences, durable operations/events, native workflows, selected notification replies, local text/translation tools, viewer-scoped JPEG monitoring and explicit multi-device routing. Start with `/v2/capabilities` and `/v2/tools`; the new MCP endpoint is `/mcp`. Open **Agent control and appliances** from Home’s menu to grant new scopes and review requests. New scopes start denied.
+
+See [implementation and acceptance](docs/implementation/agentic-control.md) for all twenty feature families, test evidence, distribution limits and hardware checks still needed. The website keeps the published 1.6.0 reference separate from these development additions. Build the normal signed update with `./gradlew assemblePrivateRelease`; the limited variant is `assemblePlayRelease` and does not include the Accessibility or notification-listener declarations. Versions are allocated automatically across cooperating worktrees; never override or decrement them.

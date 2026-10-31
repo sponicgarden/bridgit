@@ -93,11 +93,18 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
     private val uploadSlots = app.requests.uploadSlots
     private val uploads = java.io.File(app.cacheDir, "uploads").apply { mkdirs() }
 
+    /** Register real handlers without opening any listener or trusting loopback. */
+    fun prepareRelay() {
+        val route = io.ktor.server.routing.Route(null, io.ktor.server.routing.RootRouteSelector(""))
+        app.registry.modules.forEach { m -> with(m) { with(route) { install(this@ApiServer) } } }
+    }
+
     fun start() {
         val env = applicationEngineEnvironment {
             hosts.forEach { h -> connector { host = h; port = this@ApiServer.port } }
             module {
                 routing {
+                    cc.bridgit.app.platform.PlatformApi(app).install(this)
                     route("/v1") { app.registry.modules.forEach { m -> with(m) { install(this@ApiServer) } } }
                     route("{...}") { handle { notFound(call) } }
                 }
@@ -159,7 +166,10 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
             if (spec.auth) {
                 val token = call.request.headers["Authorization"]?.takeIf { it.startsWith("Bearer ") }?.removePrefix("Bearer ")?.trim()
                 when (val r = app.agents.authenticate(token)) {
-                    is AuthResult.Ok -> agent = r.agent
+                    is AuthResult.Ok -> {
+                        if(r.agent.connection == cc.bridgit.app.core.Connection.RELAY) throw ErrorCatalog.error("unauthorized", "Relay credentials require the relay transport.")
+                        agent = r.agent
+                    }
                     else -> {
                         // SEC-06: only requests without a valid key are blocked by the per-IP failure count.
                         // tryAcquire checks and records in one step, so concurrent bad keys can't slip past.
@@ -363,7 +373,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
      * The caller (POST /v1/mcp) has already passed the source and key checks for [agent].
      */
     suspend fun dispatch(spec: EndpointSpec, agent: Agent, source: String, queries: Map<String, String>,
-                         pathParams: Map<String, String>, body: JSONObject, idempotencyKey: String?): Outcome {
+                         pathParams: Map<String, String>, body: JSONObject, idempotencyKey: String?, via: String = "mcp"): Outcome {
         val started = System.currentTimeMillis()
         val rid = newRequestId()
         val logParams = JSONObject()
@@ -373,7 +383,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
             val v = body.get(k)
             logParams.put(k, if (k in spec.privateFields) "[${(v as? org.json.JSONArray)?.length()?.let { "$it items" } ?: "${v.toString().length} chars"}]" else v)
         }
-        logParams.put("via", "mcp")
+        logParams.put("via", via)
         val r = Req(spec, agent, rid, source, body, null, queries, pathParams) { name ->
             if (name.equals("Content-Type", ignoreCase = true)) "application/json" else null
         }
@@ -444,7 +454,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                 params = Redactor.params(logParams), http = http, result = result, bytesIn = body.toString().length.toLong(),
                 bytesOut = r.bytesOut, durationMs = System.currentTimeMillis() - started, requestId = rid,
                 message = Redactor.string(msg, 300),
-                data = (r.data ?: JSONObject()).put("via", "mcp").let { Redactor.params(it) }))
+                data = (r.data ?: JSONObject()).put("via", via).let { Redactor.params(it) }))
         }
     }
 

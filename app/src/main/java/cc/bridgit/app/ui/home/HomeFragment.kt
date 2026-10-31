@@ -97,11 +97,13 @@ class HomeFragment : Fragment() {
             v.updatePadding(top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top); insets
         }
         b.brandTitle.text = brandVersion(requireContext())
+        b.toolbar.menu.add(0, 8799, 1, "Agent control and appliances").setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
         b.toolbar.menu.add(0, MENU_SETTINGS, 0, R.string.home_menu_settings)
             .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER)
         b.toolbar.inflateMenu(R.menu.feedback_overflow) // Report a bug / Request a feature (FBK-01)
         b.toolbar.setOnMenuItemClickListener {
-            if (it.itemId == MENU_SETTINGS) { findNavController().navigate(R.id.settings); true }
+            if (it.itemId == 8799) { startActivity(android.content.Intent(requireContext(),cc.bridgit.app.platform.ControlCenterActivity::class.java)); true }
+            else if (it.itemId == MENU_SETTINGS) { findNavController().navigate(R.id.settings); true }
             else handleFeedbackMenu(it, "Home")
         }
 
