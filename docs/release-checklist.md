@@ -509,12 +509,10 @@ Everything in `launch-kit/play-store/` was written for 1.2 (camera, mic, gallery
   screenshots, plus the reviewer walkthrough. `reviewer-demo.md` covers only the 1.2
   flow.
 - [ ] **[BLOCKER] Match the brand.**
-  - `play-icon-512.png` and `play-feature-1024x500.png` use the retired bridge/beacon
-    mark and lime palette.
+  - `play-feature-1024x500.png` uses the retired bridge/beacon mark and lime palette.
   - The app launcher (phone with a B ribbon on plum) and `website/brand/README.md` are
     the approved identity.
-  - Regenerate the Play icon from the launcher artwork. Sizes and alpha are already
-    correct.
+  - Done: `play-icon-512.png` is now the launcher icon (2026-10-31).
 - [ ] **[DECIDE] One product name.** The listing says "BRIDGIT Device Manager", the live
   site "Agentic Android Device Bridge", the app "bridgit: Device Manager for Android".
   "for Android" is the allowed Android trademark form.
