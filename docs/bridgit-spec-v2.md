@@ -416,9 +416,17 @@ Pixel: Bridgit ◀═══ one outbound WebSocket (TLS), opened by the always-o
 - **ARC-20 [P2]** **Transport: the phone dials out.** While the listener runs
   and relay is on, Bridgit keeps one outbound TLS WebSocket to the relay
   (reconnect with back-off; heartbeat every 30 s). Jobs arrive on it within a
-  second and results go back on it. No inbound port, no Google push needed.
-  [Verify] that a foreground service keeps the socket alive in Doze on the
-  Pixel; if not, add FCM as the wake-up (ARC-16, Q9).
+  second and results go back on it. No inbound port.
+- **ARC-20a [P2]** **Push wake-up (FCM, Q9, decided 31 Oct 2026).** Doze can
+  cut the socket. When a job arrives and the phone has no socket, the relay
+  sends one high-priority FCM data message `{"type":"relay_wake"}` (at most
+  one every 10 s per phone). The phone reconnects at once, or, if it still
+  thinks it is connected, pings and drops a dead socket after 5 s. Connector
+  jobs wait up to 10 s for the phone; sealed jobs queue until their deadline.
+  The phone sends its FCM token on the socket; the relay stores it until the
+  phone or the owner turns the relay off. Google sees the token and the time
+  of each wake-up, never job content or the agent. Builds without Firebase
+  config, and phones without Play Services, work socket-only as before.
 - **ARC-21 [P2]** **Hosting.** A Cloudflare Worker with one Durable Object
   per phone (Sponic's Cloudflare account, the same one that hosts the update
   bucket), in its own Worker and namespace. Code in `relay/` in this repo,

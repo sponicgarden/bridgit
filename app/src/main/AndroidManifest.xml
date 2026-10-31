@@ -131,6 +131,11 @@
                 android:value="Private API listener on the owner's Tailscale network; answers camera, microphone and gallery requests from the owner's agents." />
         </service>
 
+        <!-- Relay wake-ups: a content-free FCM data message tells the relay socket to reconnect now. -->
+        <service android:name="net.finleg.bridget.relay.RelayPushService" android:exported="false">
+            <intent-filter><action android:name="com.google.firebase.MESSAGING_EVENT" /></intent-filter>
+        </service>
+
         <!-- 8.10 (D17, CAP-26): takes screenshots only; no events, no window content, no gestures, no keys. -->
         <service
             android:name="net.finleg.bridget.capability.ScreenshotService"

@@ -190,7 +190,14 @@ all job content. Provider backups/deletion mechanics remain Cloudflare's; this
 is not a guarantee of immediate physical erasure from their infrastructure.
 No request/result console logging, Worker observability or analytics is enabled.
 Phone audit records contain transport/agent/outcome metadata, not relay bodies.
-No transcript storage is added by relay. Existing phone retention and redaction
+No transcript storage is added by relay.
+
+**Push wake-ups (FCM).** If `FCM_SERVICE_ACCOUNT` (a Firebase service-account
+JSON, set with `wrangler secret put`) is present and the phone has sent a push
+token, a job that finds no socket triggers one content-free high-priority FCM
+data message, `{"type":"relay_wake"}`, at most every 10 s. The token is stored
+in the phone's object and deleted when the phone or owner disables the relay
+or FCM reports it unregistered. Google sees the token and wake-up times only. Existing phone retention and redaction
 still apply to the underlying capability.
 
 ## Deployment and acceptance
@@ -210,6 +217,7 @@ review/device acceptance, never part of a test run.
 Doze must be measured on the actual Pixel with and without battery exemption,
 including socket delay, lost pongs/reconnect and job delivery. A foreground
 service does not guarantee network in Doze. Force-stop remains unreachable
-until reopened. FCM is not implemented. USB installation and Tailscale-disabled
+until reopened. FCM wake-ups are implemented (see Storage and privacy) but
+need a Firebase project and the `FCM_SERVICE_ACCOUNT` secret. USB installation and Tailscale-disabled
 acceptance are blocked while the requested USB serial is absent. The network
 ADB route alone is not a controlled substitute for that test.

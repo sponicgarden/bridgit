@@ -35,6 +35,15 @@ android {
         val sentryDsn = (project.findProperty("bridgitSentryDsn") as String?)
             ?: System.getenv("BRIDGIT_SENTRY_DSN") ?: keystoreProps.getProperty("sentryDsn") ?: ""
         buildConfigField("String", "SENTRY_DSN", "\"${sentryDsn.trim()}\"")
+        // Relay push wake-ups (FCM) use the builder's Firebase app the same way: -PbridgitFcmAppId,
+        // BRIDGIT_FCM_APP_ID or fcmAppId in keystore.properties (and ProjectId, ApiKey, SenderId).
+        // Empty means no push: the relay then reaches the phone only while its socket is up.
+        for (name in listOf("AppId", "ProjectId", "ApiKey", "SenderId")) {
+            val value = (project.findProperty("bridgitFcm$name") as String?)
+                ?: System.getenv("BRIDGIT_FCM_" + name.replace(Regex("(?<=.)([A-Z])"), "_$1").uppercase())
+                ?: keystoreProps.getProperty("fcm$name") ?: ""
+            buildConfigField("String", "FCM_" + name.replace(Regex("(?<=.)([A-Z])"), "_$1").uppercase(), "\"${value.trim()}\"")
+        }
     }
 
     buildFeatures {
@@ -129,6 +138,7 @@ fun gitDirty(): Boolean = runCatching {
 dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("org.bouncycastle:bcprov-jdk18on:1.86")
+    implementation("com.google.firebase:firebase-messaging:24.1.0")
     testImplementation("org.robolectric:robolectric:4.14.1")
     implementation("com.google.mlkit:translate:17.0.3")
     val camerax = "1.4.1"

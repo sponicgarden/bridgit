@@ -65,6 +65,7 @@ class BridgeApp : Application() {
         super.onCreate()
         instance = this
         net.finleg.bridget.core.CrashReports.start(this)
+        net.finleg.bridget.relay.RelayPush.init(this)
         settings = Settings(this)
         agents = AgentRegistry(settings.agentStorage(this))
         log = LogStore(this) { settings.retention() }

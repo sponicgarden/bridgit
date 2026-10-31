@@ -26,6 +26,11 @@ class RelayClient(private val service:BridgeService) {
     private val operations=ConcurrentHashMap<String,Pair<String,String>>()
     @Volatile var status="Off";private set
     @Volatile private var socket:WebSocket?=null
+    private val wakeups=Channel<Unit>(Channel.CONFLATED)
+    @Volatile private var wokenAt=0L
+    @Volatile private var pushSent:String?=null
+    /** FCM wake-up or new push token: reconnect now, or prove the current socket is alive and resend the token. */
+    fun wake(){wokenAt=System.currentTimeMillis();pushSent=null;socket?.send("{\"type\":\"ping\"}");wakeups.trySend(Unit)}
     fun disable(){store.enabled=false;socket?.send("{\"type\":\"off\"}");socket?.close(1000,"owner_disabled");active.values.forEach { it.cancel() };store.agents().forEach { app.platform.invalidate(it.getString("id")) };status="Off"}
     suspend fun enroll(token:String)=withContext(Dispatchers.IO){
         require(store.base.endsWith("/d/${store.device}")) { "Relay URL must match this device id" }
@@ -44,7 +49,7 @@ class RelayClient(private val service:BridgeService) {
         try { while(currentCoroutineContext().isActive){
             if(!store.enabled||store.base.isEmpty()){status="Off";delay(1000);continue}
             try { connected();backoff=1000 }catch(e:CancellationException){throw e}catch(_:Exception){status="Disconnected; retrying"}
-            delay(backoff+kotlin.random.Random.nextLong(500));backoff=(backoff*2).coerceAtMost(60000)
+            backoff=if(withTimeoutOrNull(backoff+kotlin.random.Random.nextLong(500)){wakeups.receive()}!=null)1000 else (backoff*2).coerceAtMost(60000)
         } } finally {socket?.close(1000,"listener_stopped");http.dispatcher.executorService.shutdown();http.connectionPool.evictAll()}
     }
     private suspend fun connected()=coroutineScope {
@@ -60,7 +65,7 @@ class RelayClient(private val service:BridgeService) {
             override fun onFailure(webSocket:WebSocket,t:Throwable,response:Response?){opened.completeExceptionally(t);ended.complete(Unit)}
         });socket=ws
         val acknowledgments=ConcurrentHashMap<String,CompletableDeferred<Unit>>()
-        val slots=Semaphore(2);var lastPong=System.currentTimeMillis();var fingerprint=""
+        val slots=Semaphore(2);var lastPong=System.currentTimeMillis();var fingerprint="";pushSent=null
         try {
             withTimeout(20000){opened.await()};status="Connected";service.refreshNotification()
             val heartbeat=launch {
@@ -74,7 +79,10 @@ class RelayClient(private val service:BridgeService) {
                         if(!ws.send(JSONObject().put("type","agents").put("agents",JSONArray(configs.map { o -> JSONObject(o.toString()).apply { remove("peer");remove("routes");remove("tools") } })).toString()))error("Socket queue full")
                         fingerprint=current
                     }
+                    if(pushSent==null){val token=RelayPush.token();if(token!=null&&!ws.send(JSONObject().put("type","push").put("token",token).toString()))error("Socket queue full");pushSent=token ?: ""}
                     if(System.currentTimeMillis()-lastPong>75000)error("Heartbeat expired")
+                    // After a wake-up the relay already thinks this socket is gone; don't wait 75 s to find out.
+                    if(wokenAt>lastPong&&System.currentTimeMillis()-wokenAt>5000)error("Heartbeat expired after wake-up")
                     if(System.currentTimeMillis()-lastPong>25000)ws.send("{\"type\":\"ping\"}")
                     delay(1000)
                 }

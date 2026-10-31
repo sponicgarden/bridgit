@@ -1,4 +1,5 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
+import * as push from "./push.mjs";
 export const MAX_BODY = 2 * 1024 * 1024,
   MAX_RESULT = 8 * 1024 * 1024,
   FRAME = 512 * 1024,
@@ -105,6 +106,28 @@ export class PhoneRelay {
     this.env = env;
     this.memory = new Map();
     this.waiters = new Map();
+    this.fcm = {};
+    this.lastWake = 0;
+  }
+  // A sleeping phone has no socket. One FCM wake-up at most every 10 s.
+  async wake() {
+    const account = push.serviceAccount(this.env.FCM_SERVICE_ACCOUNT);
+    const token = await this.ctx.storage.get("push_token");
+    if (!account || !token || Date.now() - this.lastWake < 10000) return false;
+    this.lastWake = Date.now();
+    try {
+      const r = await push.wake(account, this.fcm, token);
+      if (r === "unregistered") await this.ctx.storage.delete("push_token");
+      return r === "sent";
+    } catch {
+      return false;
+    }
+  }
+  async waitForSocket(ms) {
+    const until = Date.now() + ms;
+    while (!this.sockets().length && Date.now() < until)
+      await new Promise((r) => setTimeout(r, 250));
+    return this.sockets().length > 0;
   }
   async save(j) {
     for (const field of ["payload", "result"])
@@ -232,6 +255,7 @@ export class PhoneRelay {
     }
     if (path === "/admin/disable" && req.method === "POST") {
       await this.ctx.storage.put("enabled", false);
+      await this.ctx.storage.delete("push_token");
       for (const ws of this.sockets()) ws.close(4003, "device_disabled");
       await this.cancelAll("device_disabled");
       return json({ disabled: true });
@@ -601,7 +625,12 @@ export class PhoneRelay {
         b.deadline > now + TTL
       )
         fail("invalid_deadline");
-      if (!sealed && !this.sockets().length) fail("phone_unreachable", 503);
+      if (!this.sockets().length) {
+        const woken = await this.wake();
+        // Connector content lives only in memory, so it waits for the phone instead of queueing.
+        if (!sealed && !(woken && (await this.waitForSocket(10000))))
+          fail("phone_unreachable", 503);
+      }
       if (sealed ? !b.envelope : !b.request) fail("mode_mismatch");
       const jobs = [
           ...(await this.ctx.storage.list({ prefix: "j:" })).values(),
@@ -735,8 +764,16 @@ export class PhoneRelay {
         }
         return;
       }
+      if (b.type === "push") {
+        if (b.token === null) await this.ctx.storage.delete("push_token");
+        else if (push.validToken(b.token))
+          await this.ctx.storage.put("push_token", b.token);
+        else fail("invalid_push_token");
+        return;
+      }
       if (b.type === "off") {
         await this.ctx.storage.put("enabled", false);
+        await this.ctx.storage.delete("push_token");
         await this.cancelAll("device_disabled");
         ws.close(4003, "disabled");
         return;

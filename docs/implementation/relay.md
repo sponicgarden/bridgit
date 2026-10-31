@@ -64,7 +64,8 @@ mock cipher.
 - Actual-phone enrolment, relay requests with Tailscale off, Doze with and
   without battery exemption, process restart/reboot behavior, battery use and
   owner approval/cancellation remain unverified. A foreground socket is not a
-  delivery guarantee. FCM is not implemented.
+  delivery guarantee. FCM wake-ups are implemented (31 Oct 2026) but need a
+  Firebase project, the app config and the Worker secret before they can be tested.
 - The relay targets the Bridgit Cloudflare account (`3d2c7c0c…`), which is
   empty as of 31 October 2026. The `bridgit.cc` zone is still in the original
   account (`9cd3a280…`), so `relay.bridgit.cc` needs the zone moved first, or the
