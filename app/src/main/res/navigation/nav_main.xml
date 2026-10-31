@@ -10,10 +10,9 @@
     <fragment android:id="@+id/interactionDetail" android:name="net.finleg.bridget.ui.interactions.InteractionDetailFragment">
         <argument android:name="interactionId" app:argType="long" />
     </fragment>
-    <!-- Owner, 27 Oct 2026: Applets is a tab in place of Agents; Agents opens from More (id kept). -->
-    <fragment android:id="@+id/applets" android:name="net.finleg.bridget.ui.tour.AppletsFragment" android:label="@string/nav_applets" />
     <!-- City tour (8.25, D30): setup and the running tour. Full screen. -->
     <fragment android:id="@+id/tour" android:name="net.finleg.bridget.ui.tour.TourFragment" />
+    <!-- Owner, 30 Oct 2026: Agents is a tab again; Applets lives in the Interactions screen as a subtab. -->
     <fragment android:id="@+id/agents" android:name="net.finleg.bridget.ui.agents.AgentsFragment" android:label="@string/nav_agents" />
     <!-- Not a tab since 1.5 (D26): opened from More, Home's Today card and Agent detail. -->
     <fragment android:id="@+id/activity" android:name="net.finleg.bridget.ui.activity.ActivityFragment" android:label="@string/nav_activity" />
@@ -30,6 +29,10 @@
     <fragment android:id="@+id/pairCode" android:name="net.finleg.bridget.ui.addagent.PairCodeFragment" />
     <fragment android:id="@+id/features" android:name="net.finleg.bridget.ui.more.FeaturesFragment" />
     <fragment android:id="@+id/access" android:name="net.finleg.bridget.ui.more.AccessFragment" />
+    <!-- Maximum powers: every switch on, then each Android permission in one guided pass. agentId = the agent just given every grant. -->
+    <fragment android:id="@+id/powers" android:name="net.finleg.bridget.ui.power.PowersFragment">
+        <argument android:name="agentId" app:argType="string" app:nullable="true" android:defaultValue="@null" />
+    </fragment>
     <fragment android:id="@+id/settings" android:name="net.finleg.bridget.ui.more.SettingsFragment" />
     <!-- P1b feedback (section 11). reportForm: kind = "bug" | "feature"; optional logEntryId attaches one log entry. -->
     <fragment android:id="@+id/reportForm" android:name="net.finleg.bridget.ui.feedback.ReportFormFragment">

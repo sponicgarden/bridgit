@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Limited or Maximum powers: chosen when an agent key is issued, changeable on the agent's page and in Settings. -->
+<resources>
+    <string name="power_heading">What can %1$s do?</string>
+    <string name="power_limited">Limited powers</string>
+    <string name="power_limited_desc">Nothing new is turned on. You switch on each feature yourself in Features.</string>
+    <string name="power_maximum">Maximum powers</string>
+    <string name="power_maximum_desc">Turns on every feature and walks you through each Android permission in one pass.</string>
+    <string name="power_change_later">You can change this any time on the agent\'s page, or turn everything off in Settings.</string>
+
+    <string name="power_confirm_title">Give %1$s maximum powers?</string>
+    <string name="power_confirm_body">This turns on every feature switch (%2$s) and lets %1$s use all of them, including features added in later updates.\n\nNext, Android asks you for each permission and special access on its own screens. Skip any you don\'t want.\n\nEverything stays revocable: Pause on Home stops every agent, and Settings has Turn everything off.</string>
+    <string name="power_confirm_body_device">This turns on every feature switch (%1$s) for the agents you allow.\n\nNext, Android asks you for each permission and special access on its own screens. Skip any you don\'t want.\n\nEverything stays revocable: Pause on Home stops every agent, and Settings has Turn everything off.</string>
+    <string name="power_confirm_yes">Turn everything on</string>
+    <string name="power_off_title">Turn everything off?</string>
+    <string name="power_off_body">Every feature switch goes off, so agents can only check status until you turn features back on. Android permissions stay granted; Access lists each one if you want to remove it.</string>
+    <string name="power_off_yes">Turn everything off</string>
+    <string name="power_off_done">Every feature is off</string>
+    <string name="power_granted_log">Owner gave %1$s maximum powers</string>
+
+    <string name="power_title">Maximum powers</string>
+    <string name="power_intro">Every feature switch is on. Now Android needs your OK for each permission below. Tap Continue to go through them in order; skip any you don\'t want.</string>
+    <string name="power_intro_agent">Every feature switch is on and %1$s may use all of them. Now Android needs your OK for each permission below. Tap Continue to go through them in order; skip any you don\'t want.</string>
+    <string name="power_android_header">Android access</string>
+    <string name="power_features_header">Features</string>
+    <string name="power_open_features">Open Features</string>
+    <string name="power_continue">Continue: %1$s</string>
+    <string name="power_done">Done</string>
+    <string name="power_status_skipped">Skipped</string>
+    <string name="power_btn_try_again">Try again</string>
+    <string name="power_summary">%1$d of %2$d permissions are on.</string>
+    <string name="power_summary_skipped">Skipped: %1$s. You can turn these on later in More &gt; Access.</string>
+    <string name="power_features_ready">All %1$d features are on and ready.</string>
+    <string name="power_features_some">%1$d of %2$d features are on and ready. Still need setup: %3$s.</string>
+    <string name="power_denied_settings">Android won\'t ask again. Turn it on in App info &gt; Permissions.</string>
+
+    <string name="power_location">Location</string>
+    <string name="power_location_unlocks">Lets agents ask where the phone is.</string>
+    <string name="power_background_location">Location all the time</string>
+    <string name="power_activity">Physical activity</string>
+    <string name="power_activity_unlocks">Lets agents read the step counter and motion sensors.</string>
+    <string name="power_health">Health Connect</string>
+    <string name="power_health_unlocks">Lets agents read steps, sleep and heart rate you allow.</string>
+    <string name="power_usage">Usage access</string>
+    <string name="power_usage_unlocks">Lets agents see which apps you used and when.</string>
+    <string name="power_write_settings">Modify system settings</string>
+    <string name="power_write_settings_unlocks">Lets agents change brightness and other phone settings for a while.</string>
+    <string name="power_dnd">Do Not Disturb access</string>
+    <string name="power_dnd_unlocks">Lets agents ring the phone and change sound modes.</string>
+    <string name="power_installs_unlocks">Lets Bridgit install its own updates after you confirm.</string>
+    <string name="power_a11y">Accessibility: %1$s</string>
+    <string name="power_a11y_unlocks">Lets agents see the screen and use the features of this service.</string>
+    <string name="power_listener">Notification access: %1$s</string>
+    <string name="power_listener_unlocks">Lets agents read the notifications on this phone.</string>
+    <string name="power_restricted">Allow restricted settings</string>
+    <string name="power_restricted_unlocks">Android blocks accessibility and notification access for apps installed from a file. In App info, tap ⋮ then Allow restricted settings, then come back and try again.</string>
+    <string name="power_other_unlocks">Another permission a Bridgit feature uses.</string>
+
+    <string name="settings_powers">Agent powers</string>
+    <string name="settings_everything_on">Turn everything on</string>
+    <string name="settings_everything_on_desc">Every feature switch on, then each Android permission in one pass</string>
+    <string name="settings_everything_off">Turn everything off</string>
+    <string name="settings_everything_off_desc">Every feature switch off. Agents stay paired.</string>
+    <string name="agents_powers">Powers</string>
+    <string name="agents_powers_maximum">Maximum powers</string>
+    <string name="agents_powers_limited">Limited powers</string>
+    <string name="agents_powers_limited_pick">Choose what %1$s may use</string>
+</resources>

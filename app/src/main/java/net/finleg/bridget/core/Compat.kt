@@ -1,9 +1,13 @@
 package net.finleg.bridget.core
 
 import android.app.Activity
+import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
+import android.content.pm.ResolveInfo
+import android.content.pm.ServiceInfo
 import android.graphics.Rect
 import android.media.MediaRecorder
 import android.os.Build
@@ -43,6 +47,22 @@ object Compat {
     fun packageInfo(pm: PackageManager, pkg: String, flags: Int): PackageInfo =
         if (Build.VERSION.SDK_INT >= 33) pm.getPackageInfo(pkg, PackageManager.PackageInfoFlags.of(flags.toLong()))
         else pm.getPackageInfo(pkg, flags)
+
+    @Suppress("DEPRECATION")
+    fun queryServices(pm: PackageManager, intent: Intent): List<ResolveInfo> =
+        if (Build.VERSION.SDK_INT >= 33) pm.queryIntentServices(intent, PackageManager.ResolveInfoFlags.of(0))
+        else pm.queryIntentServices(intent, 0)
+
+    @Suppress("DEPRECATION")
+    fun serviceInfo(pm: PackageManager, cn: ComponentName): ServiceInfo =
+        if (Build.VERSION.SDK_INT >= 33) pm.getServiceInfo(cn, PackageManager.ComponentInfoFlags.of(0))
+        else pm.getServiceInfo(cn, 0)
+
+    /** The store or installer that installed [pkg], or null for adb and file installs. */
+    @Suppress("DEPRECATION")
+    fun installer(pm: PackageManager, pkg: String): String? =
+        if (Build.VERSION.SDK_INT >= 30) pm.getInstallSourceInfo(pkg).installingPackageName
+        else pm.getInstallerPackageName(pkg)
 
     /** The window's full size in pixels, for sizing a screen capture. */
     @Suppress("DEPRECATION")

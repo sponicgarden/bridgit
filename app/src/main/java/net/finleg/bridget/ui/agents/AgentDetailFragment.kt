@@ -88,6 +88,22 @@ class AgentDetailFragment : Fragment() {
                 }.setNeutralButton("Allow all capabilities") { _, _ -> updateGrants(null) }
                 .setNegativeButton("Cancel", null).show()
         }
+        // Limited or Maximum powers, as offered when the key was issued. Limited opens the per-capability choice.
+        b.powersCard.setOnClickListener {
+            val a = agent() ?: return@setOnClickListener
+            val max = net.finleg.bridget.power.PowerAccess(app).isMaximum(a.id)
+            MaterialAlertDialogBuilder(requireContext()).setTitle(getString(R.string.power_heading, a.name))
+                .setSingleChoiceItems(arrayOf(getString(R.string.power_limited) + "\n" + getString(R.string.power_limited_desc),
+                    getString(R.string.power_maximum) + "\n" + getString(R.string.power_maximum_desc)), if (max) 1 else 0) { d, n ->
+                    d.dismiss()
+                    if (n == 1) net.finleg.bridget.ui.power.PowersFragment.confirmMaximum(this, a.id)
+                    else b.capabilityPermissions.performClick()
+                }
+                .setNeutralButton(R.string.settings_everything_off) { _, _ ->
+                    net.finleg.bridget.ui.power.PowersFragment.confirmAllOff(this) { bindAgent() }
+                }
+                .setNegativeButton(R.string.cancel, null).show()
+        }
         b.rotate.setOnClickListener { confirmRotate() }
         b.remove.setOnClickListener { confirmRemove() }
         b.developer.setOnCheckedChangeListener { _, on ->
@@ -152,6 +168,9 @@ class AgentDetailFragment : Fragment() {
         if (savedNotes == null) savedNotes = a.notes
         b.activityEmpty.text = getString(R.string.agents_no_calls, a.name)
         bindCallback(a)
+        val max = net.finleg.bridget.power.PowerAccess(app).isMaximum(a.id)
+        b.powersValue.setText(if (max) R.string.agents_powers_maximum else R.string.agents_powers_limited)
+        b.powersCard.contentDescription = getString(R.string.agents_powers) + ", " + b.powersValue.text
     }
 
     // ---- Callback URL (EVT-05) ----

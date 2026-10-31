@@ -57,6 +57,7 @@ abstract class Capability(protected val app: BridgeApp) {
                 "$title needs Android access. Ask the owner to enable $b on the Access or Device tools screen.", mapOf("setting" to b))
             b == "android_version" -> throw ErrorCatalog.error("not_supported",
                 "$title needs a newer Android version than this phone has.")
+            b == "no_hardware" -> throw ErrorCatalog.error("not_supported", "This device has no ${title.lowercase()}.")
             b == "open_app_once" -> throw ErrorCatalog.error("service_start_blocked",
                 "Android hasn't given Bridgit's listener the $title yet. Ask the owner to open Bridgit once.")
             else -> throw ErrorCatalog.error("service_start_blocked", "$title isn't ready: $b")

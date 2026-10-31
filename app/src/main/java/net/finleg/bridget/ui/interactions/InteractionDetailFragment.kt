@@ -133,7 +133,7 @@ class InteractionDetailFragment : Fragment() {
         val bb = _b ?: return
         val i = current
         bb.toolbar.menu.findItem(R.id.interactions_play)?.isVisible = i != null && SpeakHook.speak != null
-        bb.toolbar.menu.findItem(R.id.interactions_close)?.isVisible = i != null && i.status.open
+        bb.toolbar.menu.findItem(R.id.interactions_close)?.isVisible = i != null && InteractionUi.waiting(i)
     }
 
     private fun render(i: Interaction?) {
@@ -169,7 +169,7 @@ class InteractionDetailFragment : Fragment() {
         bb.header.contentDescription = bb.from.text.toString() + ", " + bb.time.text + ", " + InteractionUi.statusLabel(ctx, i.status)
 
         val banner = when (i.status) {
-            IStatus.EXPIRED -> getString(R.string.interactions_expired_banner, agent)
+            IStatus.EXPIRED -> getString(if (i.kind == IKind.QUESTION) R.string.interactions_late_banner else R.string.interactions_expired_banner, agent)
             IStatus.CANCELLED -> getString(R.string.interactions_cancelled_banner, agent)
             IStatus.DISMISSED -> getString(R.string.interactions_closed_banner, agent)
             else -> null
@@ -225,14 +225,14 @@ class InteractionDetailFragment : Fragment() {
         val note: CharSequence? = when {
             cardCrashed -> getString(R.string.interactions_card_crashed, agent)
             i.status == IStatus.ANSWERED -> InteractionUi.answerSummary(ctx, i)
-            i.status == IStatus.EXPIRED -> getString(R.string.interactions_expired_banner, agent)
+            i.status == IStatus.EXPIRED -> getString(R.string.interactions_late_banner, agent)
             i.status == IStatus.CANCELLED -> getString(R.string.interactions_cancelled_banner, agent)
             i.status == IStatus.DISMISSED -> getString(R.string.interactions_closed_banner, agent)
             else -> null
         }
         bb.cardNote.isVisible = note != null
         bb.cardNote.text = note
-        bb.cardDismiss.isVisible = i.status.open
+        bb.cardDismiss.isVisible = InteractionUi.waiting(i)
         bb.cardDismiss.contentDescription = getString(R.string.interactions_card_dismiss_desc, agent)
         bb.cardDismiss.setOnClickListener { close(i) }
     }

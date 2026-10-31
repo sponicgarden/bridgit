@@ -185,7 +185,7 @@ object Endpoints {
             Param("controls", "array", "Question: 1-6 of {type: button|text|choice|link, id, label, style?, placeholder?, options?, url?, package?}. Notice: links only"),
             Param("priority", "string", "normal or urgent", enum = listOf("normal", "urgent")),
             Param("speak", "boolean", "Read it aloud on the phone"),
-            Param("expires_in_seconds", "integer", "60 to 604800, default 86400"),
+            Param("expires_in_seconds", "integer", "60 to 604800, default 86400. After it, waits return expired and you get interaction.expired, but a question stays on the owner's phone and they can still answer it late (interaction.answered with late=true)"),
         ),
         example = "POST /v1/interactions {\"kind\":\"question\",\"title\":\"Pay this invoice?\",\"controls\":[{\"type\":\"button\",\"id\":\"yes\",\"label\":\"Pay\",\"style\":\"primary\"},{\"type\":\"button\",\"id\":\"no\",\"label\":\"Not now\"}]}",
         returns = "interaction_id, status, expires_at",
@@ -214,7 +214,7 @@ object Endpoints {
         errors = listOf("not_found", "too_many_waits"))
     val INTERACTION_CANCEL = EndpointSpec("DELETE", "/interactions/{id}", "interactions", "Cancel one of your interactions",
         example = "DELETE /v1/interactions/12", returns = "the interaction", errors = listOf("not_found"))
-    val EVENTS = EndpointSpec("GET", "/events", "interactions", "Your events, oldest first: answers, closes, expiries, switch changes. Repeated phone answers emit interaction.answered with resubmission=true and previous_answer; agents decide whether to accept the change",
+    val EVENTS = EndpointSpec("GET", "/events", "interactions", "Your events, oldest first: answers, closes, expiries, switch changes. Repeated phone answers emit interaction.answered with resubmission=true and previous_answer; agents decide whether to accept the change. An answer given after the question expired comes as interaction.answered with late=true",
         query = listOf(Param("since", "string", "next_cursor from the last call; omit for the last 50"),
             Param("wait", "integer", "With since: hold up to 55 s for a new event"), Param("types", "string", "Comma list, e.g. interaction.answered")),
         example = "GET /v1/events?since=0&wait=55", returns = "events[id, type, at, data], next_cursor",
@@ -233,7 +233,7 @@ object Endpoints {
             Param("tour_id", "string", "Narration for your running City tour"), Param("urgent", "boolean", "Jump the queue (answers to questions)"),
             Param("text", "string", "Caption shown on the phone while it plays")),
         body = listOf(Param("url", "string", "https:// audio file (MP3, M4A, OGG, WAV, FLAC), up to 25 MB")),
-        example = "POST /v1/speaker/play (Content-Type: audio/mpeg, body = the MP3)", returns = "play_id, position, status",
+        example = "POST /v1/speaker/play (Content-Type: audio/mpeg, body = the MP3)", returns = "play_id, position, status (playing, queued or silenced)",
         errors = listOf("capability_disabled", "notifications_required", "invalid_parameter", "payload_too_large", "rate_limited", "not_found"))
     val SPEAKER_SAY = EndpointSpec("POST", "/speaker/say", "speaker", "Read text aloud on the phone (its own text-to-speech)",
         idempotent = true, privateFields = setOf("text"),
@@ -242,7 +242,8 @@ object Endpoints {
             Param("replace", "string", "after_current (default), now, or queue"), Param("tour_id", "string", "Narration for your City tour"),
             Param("urgent", "boolean", "Jump the queue")),
         example = "POST /v1/speaker/say {\"text\":\"On your left is the old town hall, built in 1360.\",\"tour_id\":\"t123\"}",
-        returns = "play_id, position, status", errors = listOf("capability_disabled", "invalid_parameter", "rate_limited", "not_found"))
+        returns = "play_id, position, status (playing, queued, or silenced: the phone is on silent, Do Not Disturb or in a call, so it won't be heard)",
+        errors = listOf("capability_disabled", "invalid_parameter", "rate_limited", "not_found"))
     val SPEAKER_STATUS = EndpointSpec("GET", "/speaker", "speaker", "What's playing, and your queued sounds",
         example = "GET /v1/speaker", returns = "playing{play_id, agent, text} (yours only, else null), busy (someone else's sound is playing), paused, queued[], quiet")
     val SPEAKER_STOP = EndpointSpec("DELETE", "/speaker", "speaker", "Stop your audio and clear your queue",
