@@ -16,6 +16,7 @@ import android.service.notification.NotificationListenerService
 import cc.bridgit.app.BridgeApp
 import cc.bridgit.app.R
 import cc.bridgit.app.capability.granted
+import cc.bridgit.app.core.Compat
 import cc.bridgit.app.power.PowerPlan.Kind
 import cc.bridgit.app.power.PowerPlan.Step
 import cc.bridgit.app.ui.home.UiActions
@@ -25,7 +26,7 @@ class PowerAccess(private val app: BridgeApp) {
     private val pm get() = app.packageManager
 
     fun steps(): List<Step> {
-        val info = runCatching { pm.getPackageInfo(app.packageName, PackageManager.PackageInfoFlags.of(PackageManager.GET_PERMISSIONS.toLong())) }.getOrNull()
+        val info = runCatching { Compat.packageInfo(pm, app.packageName, PackageManager.GET_PERMISSIONS) }.getOrNull()
         val declared = info?.requestedPermissions?.toList().orEmpty()
         return PowerPlan.steps(declared, ::dangerous, services(AccessibilityService.SERVICE_INTERFACE, android.Manifest.permission.BIND_ACCESSIBILITY_SERVICE),
             services(NotificationListenerService.SERVICE_INTERFACE, android.Manifest.permission.BIND_NOTIFICATION_LISTENER_SERVICE), sideloaded())
@@ -37,13 +38,13 @@ class PowerAccess(private val app: BridgeApp) {
 
     /** Bridgit's own services bound with [permission] for [action], so a service added later joins the list. */
     private fun services(action: String, permission: String): List<String> =
-        pm.queryIntentServices(Intent(action).setPackage(app.packageName), PackageManager.ResolveInfoFlags.of(0))
+        Compat.queryServices(pm, Intent(action).setPackage(app.packageName))
             .mapNotNull { it.serviceInfo }.filter { it.permission == permission }
             .map { ComponentName(it.packageName, it.name).flattenToString() }.sorted()
 
     /** Not installed by a store: Android 13+ may block accessibility and notification access as "restricted settings". */
     fun sideloaded(): Boolean = runCatching {
-        pm.getInstallSourceInfo(app.packageName).installingPackageName !in STORES
+        Compat.installer(pm, app.packageName) !in STORES
     }.getOrDefault(true)
 
     fun granted(s: Step): Boolean = when {
@@ -107,7 +108,7 @@ class PowerAccess(private val app: BridgeApp) {
 
     private fun serviceLabel(flat: String?): String {
         val cn = flat?.let(ComponentName::unflattenFromString) ?: return app.getString(R.string.app_name)
-        return runCatching { pm.getServiceInfo(cn, PackageManager.ComponentInfoFlags.of(0)).loadLabel(pm).toString() }
+        return runCatching { Compat.serviceInfo(pm, cn).loadLabel(pm).toString() }
             .getOrDefault(cn.shortClassName)
     }
 
