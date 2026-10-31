@@ -4,8 +4,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
-import io.ktor.server.cio.CIO
-import io.ktor.server.engine.ApplicationEngine
+import cc.bridgit.app.api.engine.GuardedCio
 import io.ktor.server.engine.applicationEngineEnvironment
 import io.ktor.server.engine.connector
 import io.ktor.server.engine.embeddedServer
@@ -88,7 +87,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
     private val limiter = app.requests.limiter
     val waits = app.requests.waits
     private val idempotency = app.requests.idempotency
-    private var engine: ApplicationEngine? = null
+    @Volatile private var engine: cc.bridgit.app.api.engine.GuardedCioEngine? = null
     /** Large uploads read at once (finding: concurrent 25 MB bodies). */
     private val uploadSlots = app.requests.uploadSlots
     private val uploads = java.io.File(app.cacheDir, "uploads").apply { mkdirs() }
@@ -110,12 +109,20 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                 }
             }
         }
-        engine = embeddedServer(CIO, env) { connectionIdleTimeoutSeconds = 90 }.start(wait = false)
+        val e = embeddedServer(GuardedCio, env) { connectionIdleTimeoutSeconds = 90 }
+        e.start(wait = false)
+        engine = e
+        // A listening socket that died (Tailscale went away) ends the engine: ask for a rebind now.
+        e.stopped.invokeOnCompletion { cause -> if (cause != null && engine === e) service.poke("listener died") }
     }
 
+    /** False once the engine has ended on its own (its listening socket died). */
+    val running get() = engine?.stopped?.isCompleted == false
+
     fun stop() {
-        engine?.stop(500, 2000)
+        val e = engine
         engine = null
+        e?.stop(500, 2000)
     }
 
     /**
