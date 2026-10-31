@@ -95,6 +95,38 @@ class DebugSetupReceiver : BroadcastReceiver() {
         intent.getStringExtra("platform_workflow_activate")?.let { app.platform.workflows.activate(it) }
         intent.getStringExtra("platform_answer")?.let { value -> val p=value.split(":",limit=2); app.platform.answer(p[0],p.getOrElse(1) { "" }) }
         resultData = code
+        // Relay stand-ins for More → Relay on a locked test phone. relay_keys returns the public enrolment JSON;
+        // relay_base sets the relay URL; relay_agent=<name>:<sealed|connector>[:<agent HPKE public key>] adds an
+        // agent with RelayActivity's default allowlist and returns its one-time setup JSON; relay_enroll=<token>
+        // (empty to resume) confirms enrolment; relay_disable=1 turns the relay off.
+        val relay = cc.bridgit.app.relay.RelayStore(app)
+        if (intent.hasExtra("relay_keys")) resultData = relay.enrollment().toString()
+        intent.getStringExtra("relay_base")?.let { relay.base = it }
+        intent.getStringExtra("relay_agent")?.let { spec ->
+            val p = spec.split(":", limit = 3)
+            app.agents.byName(p[0])?.let { app.agents.remove(it.id) }
+            val specs = app.registry.modules.flatMap { it.endpoints }.filter { it.auth && !it.developerOnly && it.capability != "feedback" && it.path != "/mcp" && it.capability !in setOf("tour", "speaker", "video", "screenshare") }
+            val routes = specs.filter { it.capability == "status" }
+            val tools = (cc.bridgit.app.platform.Commands.reads + cc.bridgit.app.platform.Commands.mutations - cc.bridgit.app.relay.RelayDispatcher.excluded)
+                .filter { it in setOf("diagnostics", "phone.status", "interaction.create", "interaction.get", "interaction.list", "events", "operation.get") }.toSet()
+            val a = app.agents.add(p[0], Connection.RELAY).first
+            app.agents.update(a.id) { it.copy(caps = routes.map { r -> r.capability }.toSet(), developer = false) }
+            val token = relay.addAgent(a.id, p[1], p.getOrNull(2), routes.map { "${it.method} ${it.fullPath}" }.toSet(), tools)
+            resultData = org.json.JSONObject().put("base", relay.base).put("device_id", relay.device).put("agent_id", a.id).put("generation", app.agents.get(a.id)!!.keyHash)
+                .put("mode", p[1]).put("token", token).put("phone_hpke_public", cc.bridgit.app.relay.Sealed.publicKey(relay.hpke())).put("mcp_url", relay.base + "/mcp").toString()
+        }
+        if (intent.hasExtra("relay_disable")) BridgeService.running?.relay?.disable()
+        intent.getStringExtra("relay_enroll")?.let { token ->
+            val pending = goAsync()
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                pending.resultData = try {
+                    var service = BridgeService.running
+                    for (i in 0 until 50) { if (service?.relay != null) break; kotlinx.coroutines.delay(100); service = BridgeService.running }
+                    (service?.relay ?: error("Resume the listener first")).enroll(token); "enrolled"
+                } catch (e: Exception) { "error: ${e.message}" } finally { pending.finish() }
+            }
+            return
+        }
         // Last, after the result is set: never block the main thread (ask() reads the compass on it).
         intent.getStringExtra("tour_ask")?.let { q ->
             val pending = goAsync()
