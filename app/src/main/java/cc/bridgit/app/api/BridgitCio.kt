@@ -1,7 +1,13 @@
 /*
  * Adapted from Ktor 2.3.12 (Apache 2.0, Copyright 2014-2021 JetBrains s.r.o and contributors):
  * ktor-server/ktor-server-cio/jvmAndNix/src/io/ktor/server/cio/CIOApplicationEngine.kt and backend/HttpServer.kt.
- * Re-diff against upstream when Ktor is upgraded.
+ * Re-diff against upstream when Ktor is upgraded. Changes from upstream:
+ * - accept loop: a failed accept() backs off before retrying, and 20 in a row throw [DeadListener];
+ * - `backoffMs` parameter on [httpServer] (for tests) and the [BridgitCioEngine.stopped] accessor;
+ * - no JVM shutdown hook (Android; [ApiServer] stops the engine itself);
+ * - `Dispatchers.IO` for upstream's internal `Dispatchers.IOBridge` (the same dispatcher on JVM);
+ * - connection failures are logged through a Ktor logger instead of upstream's internal handler.
+ * The file suppresses INVISIBLE_* to reuse CIO's internal call classes: it is tied to Ktor 2.3.12.
  */
 @file:Suppress("INVISIBLE_MEMBER", "INVISIBLE_REFERENCE")
 @file:OptIn(io.ktor.util.InternalAPI::class)
@@ -37,6 +43,7 @@ import io.ktor.server.request.ApplicationReceivePipeline
 import io.ktor.server.request.httpVersion
 import io.ktor.server.response.respond
 import io.ktor.http.cio.Request
+import io.ktor.util.logging.KtorSimpleLogger
 import io.ktor.util.pipeline.PipelinePhase
 import io.ktor.util.pipeline.execute
 import io.ktor.utils.io.ByteWriteChannel
@@ -191,11 +198,13 @@ internal fun CoroutineScope.httpServer(settings: HttpServerSettings, backoffMs: 
     }
     val selector = SelectorManager(coroutineContext)
     val timeout = WeakTimeoutQueue(settings.connectionIdleTimeoutSeconds * 1000L)
+    val logger = KtorSimpleLogger("BridgitCio")
 
     val acceptJob = launch(serverJob + CoroutineName("accept-${settings.port}")) {
         aSocket(selector).tcp().bind(settings.host, settings.port) { reuseAddress = settings.reuseAddress }.use { server ->
             socket.complete(server)
-            val exceptionHandler = coroutineContext[CoroutineExceptionHandler] ?: CoroutineExceptionHandler { _, _ -> }
+            val exceptionHandler = coroutineContext[CoroutineExceptionHandler]
+                ?: CoroutineExceptionHandler { _, cause -> logger.error("Unhandled exception in connection", cause) }
             val connectionScope = CoroutineScope(coroutineContext + SupervisorJob(serverJob) + exceptionHandler + CoroutineName("request"))
             try {
                 var failures = 0
