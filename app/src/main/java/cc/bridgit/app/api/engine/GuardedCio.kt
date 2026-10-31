@@ -73,8 +73,9 @@ import java.nio.channels.ClosedChannelException
  * does `catch (IOException) { continue }` around `accept()` with no suspension point. When Tailscale goes away,
  * Android destroys the socket bound to its address, every `accept()` fails at once, and the loop spins at 100% CPU
  * per address; `stop()` cannot cancel it, and closing the socket only turns the error into another IOException.
- * Here a closed socket ends the loop, and any other accept error waits (backing off to 1 s) before retrying, which
- * gives cancellation a place to land. BridgeService rebinds when the address comes back (ARC-04a).
+ * Here a failed accept waits (backing off to 1 s) before retrying, which gives cancellation a place to land, and a
+ * socket that stays broken fails the engine ([stopped] completes with [DeadListener]). ApiServer then asks
+ * BridgeService to rebind, even when the address list looks unchanged (Tailscale back within the settle delay).
  */
 object GuardedCio : ApplicationEngineFactory<GuardedCioEngine, CIOApplicationEngine.Configuration> {
     override fun create(
@@ -83,15 +84,23 @@ object GuardedCio : ApplicationEngineFactory<GuardedCioEngine, CIOApplicationEng
     ): GuardedCioEngine = GuardedCioEngine(environment, configure)
 }
 
-class GuardedCioEngine(
+class GuardedCioEngine internal constructor(
     environment: ApplicationEngineEnvironment,
-    configure: CIOApplicationEngine.Configuration.() -> Unit
+    configure: CIOApplicationEngine.Configuration.() -> Unit,
+    private val giveUpAfter: Int,
+    private val accept: suspend (ServerSocket) -> io.ktor.network.sockets.Socket
 ) : BaseApplicationEngine(environment) {
+    constructor(environment: ApplicationEngineEnvironment, configure: CIOApplicationEngine.Configuration.() -> Unit) :
+        this(environment, configure, ACCEPT_GIVE_UP_AFTER, { it.accept() })
+
     private val configuration = CIOApplicationEngine.Configuration().apply(configure)
     private val dispatcher = Dispatchers.IO
     private val startupJob: CompletableDeferred<Unit> = CompletableDeferred()
     private val stopRequest: CompletableJob = Job()
     private val serverJob: Job
+
+    /** Completes when the engine is gone: stopped, or with [DeadListener] when a listening socket died. */
+    val stopped: Job get() = serverJob
 
     init {
         serverJob = initServerJob()
@@ -129,7 +138,7 @@ class GuardedCioEngine(
             connectionIdleTimeoutSeconds = configuration.connectionIdleTimeoutSeconds.toLong(),
             reuseAddress = configuration.reuseAddress
         )
-        return guardedHttpServer(settings) { request -> handleRequest(request) }
+        return guardedHttpServer(settings, giveUpAfter, accept) { request -> handleRequest(request) }
     }
 
     private suspend fun addHandlerForExpectedHeader(output: ByteWriteChannel, cioCall: CIOApplicationCall) {
@@ -175,7 +184,10 @@ class GuardedCioEngine(
     private fun initServerJob(): Job {
         val environment = environment
         val resolved = resolvedConnectors
-        return CoroutineScope(environment.parentCoroutineContext + dispatcher).launch(start = CoroutineStart.LAZY) {
+        // A dead listener fails this root job; report it through [stopped], not the thread's uncaught handler (a crash).
+        val failureHandler = environment.parentCoroutineContext[CoroutineExceptionHandler]
+            ?: CoroutineExceptionHandler { _, cause -> environment.log.warn("Listener ended: ${cause.message}") }
+        return CoroutineScope(environment.parentCoroutineContext + dispatcher + failureHandler).launch(start = CoroutineStart.LAZY) {
             val servers = ArrayList<HttpServer>(environment.connectors.size)
             try {
                 environment.connectors.forEach {
@@ -205,29 +217,41 @@ class GuardedCioEngine(
 /** Delays after consecutive accept failures: 10 ms doubling to 1 s. */
 internal fun acceptBackoffMillis(failures: Int): Long = (10L shl (failures - 1).coerceIn(0, 7)).coerceAtMost(1000L)
 
+/** Consecutive accept failures (about 14 s with the backoff) after which the socket counts as dead. */
+internal const val ACCEPT_GIVE_UP_AFTER = 20
+
+/** The listening socket was closed under us or kept failing; it will not recover. */
+class DeadListener(cause: IOException) : IOException("Listener socket died: ${cause.message}", cause)
+
 /**
- * Accepts until the socket is closed. Other accept errors (a destroyed socket fails every call at once) wait
- * [acceptBackoffMillis] before the next try, so the loop never spins and cancellation always has a place to land.
+ * Accepts until cancelled. A failed accept (a destroyed socket fails every call at once) waits [acceptBackoffMillis]
+ * before the next try, so the loop never spins and cancellation always has a place to land. A socket closed under
+ * us, or [giveUpAfter] failures in a row, throws [DeadListener].
  */
-internal suspend fun <T> acceptUntilClosed(accept: suspend () -> T, onAccepted: (T) -> Unit) {
+internal suspend fun <T> acceptUntilDead(
+    accept: suspend () -> T,
+    giveUpAfter: Int = ACCEPT_GIVE_UP_AFTER,
+    onAccepted: (T) -> Unit
+) {
     var failures = 0
     while (true) {
         val client = try {
             accept().also { failures = 0 }
-        } catch (closed: ClosedChannelException) {
-            return
         } catch (cause: IOException) {
             currentCoroutineContext().ensureActive()
-            delay(acceptBackoffMillis(++failures))
+            if (cause is ClosedChannelException || ++failures >= giveUpAfter) throw DeadListener(cause)
+            delay(acceptBackoffMillis(failures))
             continue
         }
         onAccepted(client)
     }
 }
 
-/** Ktor's `httpServer` with an accept loop that ends on a closed socket and backs off on other errors. */
+/** Ktor's `httpServer` with an accept loop that backs off on errors and fails once the socket is dead. */
 fun CoroutineScope.guardedHttpServer(
     settings: HttpServerSettings,
+    giveUpAfter: Int = ACCEPT_GIVE_UP_AFTER,
+    accept: suspend (ServerSocket) -> io.ktor.network.sockets.Socket = { it.accept() },
     handler: suspend ServerRequestScope.(Request) -> Unit
 ): HttpServer {
     val socket = CompletableDeferred<ServerSocket>()
@@ -247,7 +271,7 @@ fun CoroutineScope.guardedHttpServer(
                 coroutineContext + SupervisorJob(serverJob) + exceptionHandler + CoroutineName("request")
             )
             try {
-                acceptUntilClosed({ server.accept() }) { client ->
+                acceptUntilDead({ accept(server) }, giveUpAfter) { client ->
                     val connection = ServerIncomingConnection(
                         client.openReadChannel(),
                         client.openWriteChannel(),
