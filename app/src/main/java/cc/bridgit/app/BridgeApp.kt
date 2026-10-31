@@ -32,6 +32,7 @@ class BridgeApp : Application() {
     lateinit var transfers: cc.bridgit.app.planned.Transfers
     lateinit var clipboardRequests: cc.bridgit.app.planned.ClipboardRequests
     lateinit var alerts: cc.bridgit.app.alerts.Alerts
+    lateinit var usage: cc.bridgit.app.core.Usage
     lateinit var wake: cc.bridgit.app.listen.WakeListener
     val pairing = Pairing()
     val requests = cc.bridgit.app.api.RequestState()
@@ -63,6 +64,8 @@ class BridgeApp : Application() {
         instance = this
         cc.bridgit.app.core.CrashReports.start(this)
         settings = Settings(this)
+        usage = cc.bridgit.app.core.Usage(this)
+        settings.onSwitch = { key, on -> usage.count("switch:$key:${if (on) "on" else "off"}") }
         agents = AgentRegistry(settings.agentStorage(this))
         log = LogStore(this) { settings.retention() }
         alerts = cc.bridgit.app.alerts.Alerts(this)

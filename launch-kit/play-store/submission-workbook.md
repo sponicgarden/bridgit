@@ -48,6 +48,7 @@ Battery exemption: justify only when core functionality is adversely affected an
 - [ ] Public policy/support pages reachable without Sites private sign-in.
 - [ ] App access instructions successfully repeated on a clean isolated review device/network.
 - [ ] Data safety answers reconcile all optional modules and SDKs.
+- [ ] Feature-use tallies (app `core/Usage.kt`, website `usage.mjs`, on by default with a Settings switch): declare App activity › App interactions as collected, not shared, for analytics; check whether Play treats an opt-out switch as "optional".
 - [ ] Required testing and developer identity/account checks complete.
 - [ ] Applicable personal accounts: 12 testers continuously opted in for 14 days, then production-access application.
 - [ ] Review Console policy status and unresolved declarations; no bypasses.

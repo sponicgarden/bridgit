@@ -51,6 +51,8 @@
                 <include android:id="@+id/lockscreenText" layout="@layout/settings_switch_row" />
                 <include android:id="@+id/speakUrgent" layout="@layout/settings_switch_row" />
                 <include android:id="@+id/crashReports" layout="@layout/settings_switch_row" />
+                <include android:id="@+id/usageTallies" layout="@layout/settings_switch_row" />
+                <include android:id="@+id/usageWhat" layout="@layout/settings_row" />
 
                 <TextView style="@style/SettingsHeader" android:text="@string/settings_log" />
                 <include android:id="@+id/keep" layout="@layout/settings_row" />
