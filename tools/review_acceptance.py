@@ -1,10 +1,10 @@
 import subprocess,json,urllib.request,urllib.error,re,time,base64,sys
 from pathlib import Path
 import os,shutil
-ADB=os.environ.get('ADB') or shutil.which('adb') or 'adb';PHONE=os.environ['BRIDGIT_TEST_PHONE'];DEV=os.environ.get('BRIDGIT_TEST_ADB',PHONE+':5555');PKG='net.finleg.bridget.review';base=f'http://{PHONE}:8737/v1';name='ReviewPositive'
+ADB=os.environ.get('ADB') or shutil.which('adb') or 'adb';PHONE=os.environ['BRIDGIT_TEST_PHONE'];DEV=os.environ.get('BRIDGIT_TEST_ADB',PHONE+':5555');PKG='cc.bridgit.app.review';base=f'http://{PHONE}:8737/v1';name='ReviewPositive'
 def adb(*args):
  p=subprocess.run([ADB,'-s',DEV,*args],capture_output=True,text=True,timeout=25);assert p.returncode==0,p.stderr;return p.stdout
-def hook(*args):return adb('shell','am','broadcast','--include-stopped-packages','-n',PKG+'/net.finleg.bridget.DebugSetupReceiver','-a','net.finleg.bridget.debug.SETUP',*args)
+def hook(*args):return adb('shell','am','broadcast','--include-stopped-packages','-n',PKG+'/cc.bridgit.app.DebugSetupReceiver','-a','cc.bridgit.app.debug.SETUP',*args)
 def call(path,body=None,expected=200,method=None,headers=None):
  h={'Content-Type':'application/json'};h.update(headers or {})
  if key:h['Authorization']='Bearer '+key
@@ -17,7 +17,7 @@ if sys.argv[1:] != ['--isolated-review-app']:
  raise SystemExit('Use --isolated-review-app; never targets the release or ordinary debug package')
 key=None
 try:
- adb('shell','am','start','-n',PKG+'/net.finleg.bridget.ui.MainActivity')
+ adb('shell','am','start','-n',PKG+'/cc.bridgit.app.ui.MainActivity')
  r=hook('--es','agent',name,'--ez','ocr','true','--ez','phone','true','--ez','files','true')
  code=re.search(r'data="?(\d{6})',r);assert code,'No pairing code'
  time.sleep(4);key=call('/pair',{'code':code.group(1)})['key']

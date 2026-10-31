@@ -118,7 +118,7 @@
                                 android:orientation="horizontal"
                                 android:screenReaderFocusable="true">
 
-                                <net.finleg.bridget.ui.home.BeaconDotView
+                                <cc.bridgit.app.ui.home.BeaconDotView
                                     android:id="@+id/beacon"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"

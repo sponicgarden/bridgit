@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { parseCatalog } from '../scripts/features.mjs';
-const source = await readFile(new URL('../../app/src/main/java/net/finleg/bridget/ui/more/WhatCanData.kt', import.meta.url), 'utf8');
+const source = await readFile(new URL('../../app/src/main/java/cc/bridgit/app/ui/more/WhatCanData.kt', import.meta.url), 'utf8');
 test('catalog includes all app entries and preserves example quotes, availability and options', () => {
  const features = parseCatalog(source);
  assert.equal(features.length, 47);

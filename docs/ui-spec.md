@@ -647,7 +647,7 @@ Section headers in `primary` `LabelLarge`.
 | Privacy | Agents can read the log: **all entries** / **only their own** · Show question text on the lock screen (off) · Log precise locations (off) · Address lookup (off) |
 | Log | Keep: 20,000 entries / 30 days (two number fields) · Export · Clear |
 | Notifications | One row per channel (Listener, Captures, Questions, Notices, Files, Feedback) → opens the Android channel page · Open Bridgit when an agent sends something (switch, off; turning it on opens Android's "Display over other apps" page if not granted, CAP-56) |
-| Feedback | Also send reports to: Off / finleg intranet tasks / GitHub issue |
+| Feedback | Also send reports to: Off / Sponic intranet tasks / GitHub issue |
 | Appearance | System / Light / Dark (radio dialog) |
 | About | Version, build, commit (mono) · Signing certificate SHA-256 (mono, tap to copy) · Licences · Spec |
 
