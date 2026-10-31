@@ -119,11 +119,12 @@ class DebugSetupReceiver : BroadcastReceiver() {
         intent.getStringExtra("relay_enroll")?.let { token ->
             val pending = goAsync()
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                pending.resultData = try {
+                try {
                     var service = BridgeService.running
-                    for (i in 0 until 50) { if (service?.relay != null) break; kotlinx.coroutines.delay(100); service = BridgeService.running }
-                    (service?.relay ?: error("Resume the listener first")).enroll(token); "enrolled"
-                } catch (e: Exception) { "error: ${e.message}" } finally { pending.finish() }
+                    for (i in 0 until 50) { if (service != null) break; kotlinx.coroutines.delay(100); service = BridgeService.running }
+                    (service?.relay ?: error("Resume the listener first")).enroll(token)
+                    pending.resultData = "enrolled"
+                } catch (e: Exception) { pending.resultData = "error: ${e.message}" } finally { pending.finish() }
             }
             return
         }
