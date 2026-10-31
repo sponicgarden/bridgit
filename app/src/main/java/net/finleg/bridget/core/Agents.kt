@@ -226,6 +226,6 @@ class AgentRegistry(private val storage: AgentStorage, private val clock: () -> 
         const val TOMBSTONE_MS = 7L * 24 * 3600 * 1000
         const val FLUSH_MS = 5_000L
         val NAME_RE = Regex("^[A-Za-z0-9][A-Za-z0-9 _-]{0,23}$")
-        val SUGGESTIONS = listOf("Muse", "Grok", "Claude", "Codex", "ChatGPT", "Gemini")
+        val SUGGESTIONS = listOf("Muse", "Grok", "Claude", "Codex", "ChatGPT", "Gemini", "Instinct")
     }
 }
