@@ -10,7 +10,7 @@
 #   tools/acceptance.sh --skip-captures
 #   tools/acceptance.sh --device <serial> --host <tailscale-ip> --port 8735
 #
-# Needs: adb, python3, the debug build installed (./gradlew installDebug or adb install -r -g).
+# Needs: adb, python3, the debug build installed (./gradlew installPrivateDebug or adb install -r -g).
 set -euo pipefail
 cd "$(dirname "$0")/.."
 exec python3 -I tools/acceptance.py "$@"

@@ -209,8 +209,8 @@ Needs JDK 17 and the Android SDK (platform 35, build-tools 35).
 ```bash
 export JAVA_HOME=/path/to/jdk-17
 export ANDROID_HOME=/path/to/android-sdk   # or sdk.dir in local.properties
-./gradlew assembleDebug     # app/build/outputs/apk/debug/app-debug.apk
-./gradlew assembleRelease   # app/build/outputs/apk/release/app-release.apk
+./gradlew assemblePrivateDebug     # app/build/outputs/apk/private/debug/app-private-debug.apk
+./gradlew assemblePrivateRelease   # app/build/outputs/apk/private/release/app-private-release.apk
 ```
 
 Release signing reads `keystore.properties` (gitignored); without it the
@@ -244,7 +244,7 @@ tapping the screen. Release builds don't contain it.
 
 ## Tests
 
-- Unit tests (JVM): `./gradlew testDebugUnitTest`.
+- Unit tests (JVM): `./gradlew testPrivateDebugUnitTest`.
 - Device acceptance (TST-03), against the debug build on a test phone:
   `BRIDGIT_TEST_PHONE=<tailscale-ip> BRIDGIT_TEST_ADB=<ip>:5555 tools/acceptance.sh --apk app/build/outputs/apk/debug/app-debug.apk`.
   It writes `docs/acceptance/<date>-<version>-debug.md` with PASS, FAIL or
