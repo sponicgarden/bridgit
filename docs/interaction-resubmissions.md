@@ -6,4 +6,8 @@ Native questions restore the previously submitted text and choice values. HTML c
 
 Submitting again stores the latest answer and emits another `interaction.answered` event containing `resubmission: true` and `previous_answer`, alongside the usual `interaction_id` and `answer`. Earlier answer events remain subject to normal event retention. Agents should use the events cursor to observe repeat answers and decide whether to accept the requested change. Delivery to Bridgit does not mean that an agent accepted a change or repeated an external action.
 
-Resubmission requires the owner to reopen the question. Existing notification actions cannot overwrite an answered interaction. Cancelled, dismissed and expired interactions remain closed.
+Resubmission requires the owner to reopen the question. Existing notification actions cannot overwrite an answered interaction. Cancelled and dismissed interactions remain closed.
+
+## Late answers
+
+An expired question is not closed for the owner. Its notification stays in the shade, it counts in the Interactions badge, it sorts with open questions, and Home shows it in the "waiting for you" banner. The owner can answer it from the notification or the app until they close it or it is pruned 30 days after expiring. The agent still gets `interaction.expired` (and any `wait` returns `expired`) at the deadline; a later answer arrives as `interaction.answered` with `late: true`. The status the agent reads is `expired` until then, `answered` after. Agents should treat a late answer as new information, not as a reply they are still blocked on.

@@ -13,7 +13,9 @@ enum class IKind(val id: String) {
 enum class IStatus(val id: String) {
     PENDING("pending"), SEEN("seen"), ANSWERED("answered"), DISMISSED("dismissed"), EXPIRED("expired"), CANCELLED("cancelled");
     val open get() = this == PENDING || this == SEEN
-    fun acceptsAnswer(resubmission: Boolean = false) = open || (resubmission && this == ANSWERED)
+    /** A question in this state still waits for the owner: open, or expired with no answer yet (late answers are allowed). */
+    val awaitsOwner get() = open || this == EXPIRED
+    fun acceptsAnswer(resubmission: Boolean = false) = awaitsOwner || (resubmission && this == ANSWERED)
     companion object { fun of(id: String?) = values().firstOrNull { it.id == id } }
 }
 

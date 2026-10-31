@@ -103,7 +103,9 @@ object InteractionNotifier {
         runCatching {
             when (what) {
                 "created" -> { post(ctx, i); maybeSpeak(ctx, i); maybeOpen(ctx, i) }
-                "answered", "dismissed", "expired", "cancelled" -> cancel(ctx, i.id)
+                "answered", "dismissed", "cancelled" -> cancel(ctx, i.id)
+                // A question stays in the shade after it expires: the owner can still answer it late.
+                "expired" -> if (i.kind == IKind.NOTICE || i.kind == IKind.TEXT) cancel(ctx, i.id)
                 "seen" -> if (i.kind == IKind.NOTICE || i.kind == IKind.TEXT) cancel(ctx, i.id)
             }
         }.onFailure { app.log.system("diagnostic", "interaction", "Couldn't update the notification for interaction ${i.id}: ${it.javaClass.simpleName}", level = "error") }
@@ -141,7 +143,7 @@ object InteractionNotifier {
             .setCategory(if (question) NotificationCompat.CATEGORY_MESSAGE else NotificationCompat.CATEGORY_REMINDER)
             .setPriority(if (urgent) NotificationCompat.PRIORITY_MAX else if (question) NotificationCompat.PRIORITY_HIGH else NotificationCompat.PRIORITY_DEFAULT)
             .setLargeIcon(avatar(ctx, i.agent))
-        if (i.expiresAt > i.createdAt) b.setTimeoutAfter((i.expiresAt - System.currentTimeMillis()).coerceAtLeast(1000))
+        if (!question && i.expiresAt > i.createdAt) b.setTimeoutAfter((i.expiresAt - System.currentTimeMillis()).coerceAtLeast(1000))
 
         val picture = app.interactions.imageFile(i.image)?.let { decode(it, 1024) }
         if (picture != null) b.setStyle(NotificationCompat.BigPictureStyle().bigPicture(picture).setSummaryText(i.text))

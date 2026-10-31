@@ -105,12 +105,12 @@ class InteractionsFragment : Fragment() {
         b.list.adapter = a
         (b.list.itemAnimator as? SimpleItemAnimator)?.supportsChangeAnimations = false
 
-        // Swipe left to close (D26). Only open rows can be swiped.
+        // Swipe left to close (D26). Only rows still waiting (open, or expired unanswered questions) can be swiped.
         ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
             override fun getSwipeDirs(rv: RecyclerView, vh: RecyclerView.ViewHolder): Int {
                 val pos = vh.bindingAdapterPosition
                 if (pos == RecyclerView.NO_POSITION || pos >= a.itemCount) return 0
-                return if (a.getItem(pos).status.open) ItemTouchHelper.LEFT else 0
+                return if (InteractionUi.waiting(a.getItem(pos))) ItemTouchHelper.LEFT else 0
             }
             override fun onMove(rv: RecyclerView, vh: RecyclerView.ViewHolder, t: RecyclerView.ViewHolder) = false
             override fun onSwiped(vh: RecyclerView.ViewHolder, direction: Int) {
@@ -148,7 +148,7 @@ class InteractionsFragment : Fragment() {
         val shown = when (bb.chips.checkedChipId) {
             R.id.chip_questions -> all.filter { InteractionUi.isQuestion(it) }
             R.id.chip_notices -> all.filter { !InteractionUi.isQuestion(it) }
-            R.id.chip_open -> all.filter { it.status.open }
+            R.id.chip_open -> all.filter { InteractionUi.waiting(it) }
             else -> all
         }
         adapter?.submitList(shown)

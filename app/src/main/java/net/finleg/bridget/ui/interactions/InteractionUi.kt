@@ -56,13 +56,16 @@ class Drafts {
 object InteractionUi {
     fun isQuestion(i: Interaction) = i.kind == IKind.QUESTION || i.kind == IKind.HTML
 
+    /** Still needs the owner: open, or a question that expired unanswered (it can be answered late or closed). */
+    fun waiting(i: Interaction) = i.status.open || (isQuestion(i) && i.status == IStatus.EXPIRED)
+
     /** Rows rebind only when something the owner can see changed (Interaction holds JSON and controls compared by reference). */
     fun contentKey(i: Interaction) = listOf(i.status, i.seenAt, i.answeredAt, i.closedAt, i.title, i.text, i.image, i.agent, i.answer?.toString())
 
     fun agentName(i: Interaction) = i.agent.ifBlank { "Your agent" }
 
     /** Questions open by default; everything else starts collapsed to one line (D26). */
-    fun defaultExpanded(i: Interaction) = isQuestion(i) && i.status.open
+    fun defaultExpanded(i: Interaction) = isQuestion(i) && waiting(i)
 
     fun statusLabel(ctx: Context, s: IStatus): String = ctx.getString(when (s) {
         IStatus.PENDING -> R.string.interactions_status_waiting

@@ -85,6 +85,9 @@ object ApiChanges {
             Item("Listen for any sounds: the owner can have the phone tell you when the room gets loud (sound.heard events), and how it's set", "/v1/sounds"),
             Item("The audio of a sound, when the owner lets sounds send audio", "/v1/sounds/clip/{id}"),
         )),
+        Revision(12, "1.6.0", "2026-10-30", listOf(
+            Item("Late answers: the owner can still answer a question after it expires; you get interaction.answered with late=true after interaction.expired", "/v1/events"),
+        )),
     )
 
     val CURRENT: Int = revisions.maxOf { it.revision }
