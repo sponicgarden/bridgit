@@ -145,7 +145,7 @@ class BridgeService : LifecycleService() {
             if (why != "start" && why != "periodic") delay(1500) // let the VPN settle after a change
             val addrs = tailscaleAddresses()
             val port = app.settings.port
-            if (addrs != boundTo || (server != null && server!!.port != port)) {
+            if (addrs != boundTo || (server != null && (server!!.port != port || !server!!.running))) {
                 server?.stop(); server = null; boundTo = emptyList()
                 if (addrs.isNotEmpty()) {
                     try {
