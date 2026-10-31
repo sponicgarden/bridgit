@@ -129,7 +129,7 @@ are the deliberate departures. Anything not listed still applies.
 | Pairing: on-screen code, the agent calls `/v1/pair` | Primary: a **setup prompt** with the key, copied from the phone. The code flow stays as an alternative. | D13 |
 | "Smallest possible surface. Three capabilities in v1." | Many capabilities, each behind its own master switch, phased in | D16 |
 | "No network calls other than answering API requests" | Also: (a) **callbacks** to agent webhook URLs the owner approves on the phone, (b) **feedback upload** if the owner turns it on, (c) optional address lookup for location. Each is off by default. | Sections 9, 11, 8.8 |
-| "No third-party SDKs" | Still none for analytics or ads; Sentry crash reports only (D32). Allowed: Ktor, CameraX, ZXing, AndroidX, Material, and Google ML Kit's **bundled, offline** text recognition (if OCR is built) | 8.15 |
+| "No third-party SDKs" | Still none for analytics or ads; Sentry crash reports only (D32). Feature-use tallies are Bridgit's own counts, not an SDK (31 Oct 2026). Allowed: Ktor, CameraX, ZXing, AndroidX, Material, and Google ML Kit's **bundled, offline** text recognition (if OCR is built) | 8.15 |
 | No access to messages, contacts, other apps' data | Unchanged for v2. Communications is listed as a possible later module, **not scheduled** (8.22) | Owner decision pending, Open Q1 |
 | "Version 1 accepts Android stopping the listener" | Same, plus the always-on service (D1) and battery exemption on the Access screen | D1 |
 | Audit log: 1,000 entries, read via `/v1/audit` | Structured log store with query, tail and agent notes; 20,000 entries / 30 days; `/v1/audit` kept as an alias in the new entry shape | D12, D20 |
@@ -146,7 +146,8 @@ are the deliberate departures. Anything not listed still applies.
   location), its data (photos, screenshots, files, phone status), its
   controls (flashlight and similar), and the owner themselves (notices and questions).
 - **PRD-02 [Decided]** It's for one person and one phone. It is not a
-  product for others, and has no accounts, analytics or ads. It has no cloud
+  product for others, and has no accounts or ads. Its only analytics are opt-out
+  feature-use counts with no identifiers (owner request 31 Oct 2026). It has no cloud
   relay unless the owner approves relay mode (Q10).
 
 ### 3.2 Principles (carried from v1, extended)

@@ -22,6 +22,7 @@ class Usage(context: Context, private val base: String = BASE) {
     private var lastSent = 0L
     private var pendingBatch: String? = null
     private var savedAt = 0L
+    private var triedAt = 0L
 
     init { load() }
 
@@ -51,7 +52,9 @@ class Usage(context: Context, private val base: String = BASE) {
     fun flushIfDue(now: Long = System.currentTimeMillis()) {
         if (!enabled() || BuildConfig.DEBUG) return
         val (batch, sent) = synchronized(this) {
-            if (counts.isEmpty() || now - lastSent < DAY_MS) return
+            // A failed send waits an hour, so an unreachable server isn't asked every 5 minutes.
+            if (counts.isEmpty() || now - lastSent < DAY_MS || now - triedAt < HOUR_MS) return
+            triedAt = now
             // The same nonce is reused until the server accepts it, so a lost reply can't double-count.
             val id = pendingBatch ?: UUID.randomUUID().toString().also { pendingBatch = it; save() }
             id to HashMap(counts)
@@ -88,6 +91,7 @@ class Usage(context: Context, private val base: String = BASE) {
         const val BASE = "https://bridgit.cc"
         const val MAX_KEYS = 300
         private const val DAY_MS = 24 * 3600_000L
+        private const val HOUR_MS = 3600_000L
         private const val DEADLINE_MS = 15_000L
 
         /** Same rule as website/usage.mjs: a kind, then a feature name built from fixed identifiers. */

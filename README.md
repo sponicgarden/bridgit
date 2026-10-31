@@ -170,14 +170,26 @@ receiver didn't answer 2xx).
   a notification and Android's indicator shows. Agent photos never go into
   the gallery.
 - The log (SQLite on the phone) never stores keys, request headers, media or
-  long texts. No analytics or ads. Third-party libraries: Ktor (HTTP), CameraX,
+  long texts. No analytics SDKs or ads; feature-use tallies are counts only (below). Third-party libraries: Ktor (HTTP), CameraX,
   AndroidX/Material, ZXing (QR), Google ML Kit text recognition (on-device OCR)
   and Sentry (crash reports, below).
 - App backup is disabled. Outgoing calls: the update check (HTTPS to the
   publisher's download host, verified before Android asks you to install),
   crash reports if the build has a Sentry DSN and you leave them on, ML Kit's
   usage metrics to Google, audio URLs an agent asks the phone to play, and
-  callbacks you set up for an agent.
+  callbacks you set up for an agent, and a daily batch of feature-use tallies
+  unless you turn them off.
+
+## Feature-use tallies
+
+Unless turned off under Settings > Privacy > Send feature-use tallies, the app
+counts how often each feature is used (`api:GET /v1/health:ok`, `mcp:...`,
+`screen:home`, `switch:camera:on`) and about once a day POSTs the counts to
+bridgit.cc/api/usage (`core/Usage.kt`, `website/usage.mjs`). A batch is only
+a one-off nonce, the version code and the counts: no install id, agent names,
+times, parameters or content. Keys use endpoint path templates and must match
+a fixed pattern, so free text can't get in. Turning it off deletes unsent
+counts; "See what would be sent" shows them. Debug builds never send.
 
 ## Crash reports
 

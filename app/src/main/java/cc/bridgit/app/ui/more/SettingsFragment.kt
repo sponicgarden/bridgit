@@ -49,7 +49,7 @@ import java.text.NumberFormat
  * Listener, Agent powers (Turn everything on / off), Privacy (log visibility, lock-screen question text, urgent read-aloud in DND),
  * Log, Notifications, Appearance, About.
  * Allow internet callbacks (EVT-05) sits under Listener. Email alerts sit after Notifications.
- * Send crash reports (D32) sits under Privacy.
+ * Send crash reports (D32) and Send feature-use tallies (with See what would be sent) sit under Privacy.
  * Not shown yet (later phases): Screenshots, Feedback,
  * precise locations, address lookup, Licences, and the Files / Feedback notification channels.
  */
