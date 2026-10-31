@@ -107,4 +107,12 @@ class PowerPlanTest {
         assertTrue("android.permission.ACCESS_FINE_LOCATION" in perms)
         assertFalse(perms.any { it.startsWith(PowerPlan.HEALTH_PREFIX) })
     }
+
+    @Test fun autoContinueStopsAtTheFirstSkip() {
+        assertTrue(PowerPlan.autoContinue(listOf("camera", "mic"), emptySet()))
+        assertFalse(PowerPlan.autoContinue(listOf("camera", "mic"), setOf("mic")))
+        assertFalse(PowerPlan.autoContinue(emptyList(), emptySet()))
+        // Back from restricted settings: always try the blocked services again.
+        assertTrue(PowerPlan.autoContinue(listOf(PowerPlan.RESTRICTED), setOf(PowerPlan.RESTRICTED)))
+    }
 }
