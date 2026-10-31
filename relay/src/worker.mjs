@@ -3,7 +3,8 @@ import * as push from "./push.mjs";
 export const MAX_BODY = 2 * 1024 * 1024,
   MAX_RESULT = 8 * 1024 * 1024,
   FRAME = 512 * 1024,
-  TTL = 1800000;
+  TTL = 1800000,
+  STALE = 45000;
 const enc = new TextEncoder(),
   secret = () => crypto.randomUUID() + crypto.randomUUID();
 export const b64 = (b) => btoa(String.fromCharCode(...new Uint8Array(b)));
@@ -111,11 +112,12 @@ export class PhoneRelay {
   }
   // A sleeping phone has no socket. One FCM wake-up at most every 10 s.
   async wake() {
-    const account = push.serviceAccount(this.env.FCM_SERVICE_ACCOUNT);
     const token = await this.ctx.storage.get("push_token");
-    if (!account || !token || Date.now() - this.lastWake < 10000) return false;
-    this.lastWake = Date.now();
+    if (!token || Date.now() - this.lastWake < 10000) return false;
     try {
+      const account = push.serviceAccount(this.env.FCM_SERVICE_ACCOUNT);
+      if (!account) return false;
+      this.lastWake = Date.now();
       const r = await push.wake(account, this.fcm, token);
       if (r === "unregistered") await this.ctx.storage.delete("push_token");
       return r === "sent";
@@ -174,7 +176,15 @@ export class PhoneRelay {
       await this.ctx.storage.setAlarm(next);
   }
   sockets() {
-    return this.ctx.getWebSockets("phone");
+    return this.ctx.getWebSockets("phone").filter((ws) => ws.readyState === 1);
+  }
+  // In Doze the phone's TCP freezes but the socket stays open here. The phone
+  // pings every ~25 s, so 45 s of silence means it is asleep: close the socket
+  // so jobs queue and the phone gets woken instead of writing into a dead pipe.
+  dropStale() {
+    for (const ws of this.sockets())
+      if (Date.now() - (ws.deserializeAttachment()?.seen || 0) > (Number(this.env.STALE_MS) || STALE))
+        ws.close(4004, "stale");
   }
   async fetch(req) {
     try {
@@ -337,6 +347,7 @@ export class PhoneRelay {
       for (const ws of this.sockets()) ws.close(4000, "replaced");
       const pair = new WebSocketPair();
       this.ctx.acceptWebSocket(pair[1], ["phone"]);
+      pair[1].serializeAttachment({ seen: Date.now() });
       return new Response(null, { status: 101, webSocket: pair[0] });
     }
     if (path === "/.well-known/oauth-protected-resource")
@@ -625,6 +636,7 @@ export class PhoneRelay {
         b.deadline > now + TTL
       )
         fail("invalid_deadline");
+      this.dropStale();
       if (!this.sockets().length) {
         const woken = await this.wake();
         // Connector content lives only in memory, so it waits for the phone instead of queueing.
@@ -716,6 +728,7 @@ export class PhoneRelay {
         enc.encode(message).length > FRAME + 16384
       )
         fail("frame_too_large");
+      ws.serializeAttachment({ seen: Date.now() });
       const b = JSON.parse(message);
       if (!(await this.ctx.storage.get("enabled"))) {
         ws.close(4003, "disabled");

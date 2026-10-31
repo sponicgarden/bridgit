@@ -8,6 +8,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import net.finleg.bridget.BridgeApp
 import net.finleg.bridget.BridgeService
 import net.finleg.bridget.BuildConfig
@@ -33,10 +34,11 @@ object RelayPush {
 
     suspend fun token(): String? {
         if (!ready) return null
-        return runCatching { suspendCancellableCoroutine { c ->
+        // Bounded: the first fetch can be slow, and the relay heartbeat waits on it.
+        return runCatching { withTimeoutOrNull(5000) { suspendCancellableCoroutine { c ->
             FirebaseMessaging.getInstance().token
                 .addOnSuccessListener { c.resume(it) }.addOnFailureListener { c.resume(null) }
-        } }.getOrNull()
+        } } }.getOrNull()
     }
 }
 
@@ -45,6 +47,9 @@ class RelayPushService : FirebaseMessagingService() {
         if (message.data["type"] != "relay_wake") return
         val app = application as BridgeApp
         if (!app.settings.listenerEnabled || !RelayStore(app).enabled) return
+        // Already running: wake the socket directly. startForegroundService here would oblige the
+        // service to call startForeground again, and the app would crash if it didn't.
+        BridgeService.running?.let { it.relay.wake(); return }
         // A high-priority FCM message lets a background app start its foreground service.
         runCatching { startForegroundService(Intent(this, BridgeService::class.java)
             .setAction(BridgeService.ACTION_RELAY_WAKE).putExtra(BridgeService.EXTRA_BACKGROUND, true)) }

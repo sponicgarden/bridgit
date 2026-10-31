@@ -30,7 +30,7 @@ const result = await build({
   write: false,
   platform: "browser",
 });
-function create(persist) {
+function create(persist, extra = {}) {
   return new Miniflare({
     modules: true,
     script: result.outputFiles[0].text,
@@ -48,6 +48,7 @@ function create(persist) {
           agent_id: "agent001",
         },
       }),
+      ...extra,
     },
   });
 }
@@ -745,6 +746,42 @@ test("real Worker/SQLite/WebSocket: enrolment, scoped jobs, replay, restart, lim
       ).status,
       403,
     );
+  } finally {
+    await mf.dispose();
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("a silent (dozing) phone socket is dropped so jobs are not sent into a dead pipe", async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "bridgit-relay-test-"));
+  const mf = create(dir, { STALE_MS: "300" });
+  try {
+    const e = await (
+      await req(mf, "/admin/enrollment", "POST", { identity_spki: identity, hpke_public: phone.public }, "fixture-admin")
+    ).json();
+    assert.equal(
+      (await req(mf, "/enroll", "POST", { token: e.enrollment_token, identity_spki: identity, hpke_public: phone.public })).status,
+      200,
+    );
+    const agents = [{ id: "agent001", generation: "gen1", mode: "connector", token_hash: await hash("token1") }];
+    const job = { deadline: Date.now() + 20000, request: { method: "GET", path: "/v1/health" } };
+    let { ws, inbox } = await connect(mf);
+    const closed = new Promise((r) => ws.addEventListener("close", (e) => r(e.code)));
+    ws.send(JSON.stringify({ type: "agents", agents }));
+    ws.send(JSON.stringify({ type: "push", token: "fcm-token_ABCDEFGHIJ:123" }));
+    ws.send('{"type":"ping"}');
+    await next(inbox, "pong");
+    await new Promise((r) => setTimeout(r, 400));
+    // No FCM account is configured here, so the connector job fails fast instead of waiting.
+    assert.equal((await req(mf, "/jobs", "POST", job, "token1")).status, 503);
+    assert.equal(await closed, 4004);
+    ({ ws, inbox } = await connect(mf));
+    ws.send(JSON.stringify({ type: "agents", agents }));
+    ws.send('{"type":"ping"}');
+    await next(inbox, "pong");
+    assert.equal((await req(mf, "/jobs", "POST", { ...job, deadline: Date.now() + 20000 }, "token1")).status, 202);
+    assert.equal((await next(inbox, "job")).agent_id, "agent001");
+    ws.close();
   } finally {
     await mf.dispose();
     await rm(dir, { recursive: true, force: true });

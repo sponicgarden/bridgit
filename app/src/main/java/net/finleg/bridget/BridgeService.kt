@@ -73,7 +73,6 @@ class BridgeService : LifecycleService() {
                 return START_STICKY
             }
             ACTION_WAKE_MUTE -> { app.wake.mute(); app.wake.sync(); refreshNotification(); return START_STICKY }
-            ACTION_RELAY_WAKE -> if (relayJob != null) { relay.wake(); return START_STICKY }
         }
         if (!app.settings.listenerEnabled) { stopEverything(); return START_NOT_STICKY }
         // A null intent means Android restarted us in the background (START_STICKY).
