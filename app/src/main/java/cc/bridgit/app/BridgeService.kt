@@ -13,6 +13,7 @@ import android.net.LinkProperties
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
@@ -87,18 +88,20 @@ class BridgeService : LifecycleService() {
     /**
      * Enters the foreground. From a visible start: every type whose permission is held.
      * From a background start: specialUse only, since Android refuses camera/mic there.
+     * specialUse exists from Android 14 and the camera/mic types from 11; earlier versions start with fewer bits.
      */
     private fun promote(background: Boolean): Boolean {
         val wantCamera = !background && granted(Manifest.permission.CAMERA)
         val wantMic = !background && granted(Manifest.permission.RECORD_AUDIO)
-        var types = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-        if (wantCamera) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
-        if (wantMic) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
+        val base = if (Build.VERSION.SDK_INT >= 34) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
+        var types = base
+        if (wantCamera && Build.VERSION.SDK_INT >= 30) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA
+        if (wantMic && Build.VERSION.SDK_INT >= 30) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
         // Location (8.8, City tour) needs the type while in use; playback needs mediaPlayback (SPK-03).
         if (!background && (granted(Manifest.permission.ACCESS_FINE_LOCATION) || granted(Manifest.permission.ACCESS_COARSE_LOCATION)))
             types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
         if (!background) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
-        if (types != ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) {
+        if (types != base) {
             try {
                 ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(), types)
                 app.updateListener { it.copy(cameraReady = wantCamera, micReady = wantMic, startedInBackground = false) }
@@ -109,7 +112,7 @@ class BridgeService : LifecycleService() {
             }
         }
         return try {
-            ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            ServiceCompat.startForeground(this, NOTIF_ID, buildNotification(), base)
             app.updateListener { it.copy(cameraReady = false, micReady = false, startedInBackground = true) }
             true
         } catch (e: Exception) {

@@ -20,6 +20,7 @@ import cc.bridgit.app.BridgeApp
 import cc.bridgit.app.BridgeService
 import cc.bridgit.app.R
 import cc.bridgit.app.capability.Capability
+import cc.bridgit.app.capability.Perms
 import cc.bridgit.app.capability.granted
 import android.provider.Settings as SysSettings
 
@@ -70,6 +71,12 @@ object UiActions {
         if (!tryStart(ctx, Intent(SysSettings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:" + ctx.packageName))))
             tryStart(ctx, Intent(SysSettings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
     }
+
+    /** Opens a web page in the browser; false if nothing can show it. */
+    fun openUrl(ctx: Context, url: String): Boolean = tryStart(ctx, Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+
+    /** The privacy policy (Play: linked from first run, About, Settings and the Health rationale). */
+    fun openPrivacyPolicy(ctx: Context): Boolean = openUrl(ctx, ctx.getString(R.string.settings_privacy_url))
 
     fun tryStart(ctx: Context, i: Intent): Boolean = try {
         ctx.startActivity(i); true
@@ -135,8 +142,8 @@ class PermissionAsker(private val fragment: Fragment, private val onDone: () -> 
         fragment.registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result -> handle(result) }
 
     fun request(vararg permissions: String) {
-        if (permissions.isEmpty()) return
-        asked = arrayOf(*permissions)
+        asked = Perms.forRequest(permissions)
+        if (asked.isEmpty()) return
         launcher.launch(asked)
     }
 

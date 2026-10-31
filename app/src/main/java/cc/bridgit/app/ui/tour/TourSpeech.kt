@@ -6,6 +6,7 @@ import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.os.Build
 
 /**
  * The tour's Ask button (8.25 step 4): Android's speech recognizer, on the phone when it can
@@ -24,13 +25,13 @@ class TourSpeech(
     private var lastPartial = ""
     var listening = false; private set
 
-    fun available(): Boolean = (!skipOnDevice && runCatching { SpeechRecognizer.isOnDeviceRecognitionAvailable(ctx) }.getOrDefault(false)) ||
+    fun available(): Boolean = (!skipOnDevice && Build.VERSION.SDK_INT >= 31 && runCatching { SpeechRecognizer.isOnDeviceRecognitionAvailable(ctx) }.getOrDefault(false)) ||
         SpeechRecognizer.isRecognitionAvailable(ctx)
 
     private fun recognizer(): SpeechRecognizer? {
         sr?.let { return it }
         var r: SpeechRecognizer? = null
-        if (!skipOnDevice && runCatching { SpeechRecognizer.isOnDeviceRecognitionAvailable(ctx) }.getOrDefault(false)) {
+        if (!skipOnDevice && Build.VERSION.SDK_INT >= 31 && runCatching { SpeechRecognizer.isOnDeviceRecognitionAvailable(ctx) }.getOrDefault(false)) {
             r = runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(ctx) }.getOrNull()
             onDevice = r != null
         }

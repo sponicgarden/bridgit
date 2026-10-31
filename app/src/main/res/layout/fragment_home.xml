@@ -283,20 +283,22 @@
                     android:text="@string/home_quick_switches"
                     android:textAppearance="?attr/textAppearanceTitleMedium" />
 
-                <!-- Max control: every switch below on plus the Android permission pass, or every switch off. -->
-                <include
-                    android:id="@+id/maxControl"
-                    layout="@layout/home_switch_card"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_margin="4dp" />
-
                 <GridLayout
                     android:id="@+id/quickGrid"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:columnCount="2"
                     android:useDefaultMargins="false" />
+
+                <!-- Max power: one tap turns every switch on and starts Android's prompts (PowersFragment, auto). -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/maxPower"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:minHeight="56dp"
+                    android:text="@string/power_max"
+                    app:icon="@drawable/ic_bolt" />
 
                 <!-- "Waiting for you" (open questions) arrives with interactions in P2. -->
             </LinearLayout>

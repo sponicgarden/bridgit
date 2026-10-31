@@ -13,6 +13,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import cc.bridgit.app.BridgeApp
 import cc.bridgit.app.BuildConfig
 import cc.bridgit.app.R
+import cc.bridgit.app.ui.home.UiActions
 import cc.bridgit.app.capability.appVersion
 import cc.bridgit.app.databinding.FragmentMoreBinding
 import cc.bridgit.app.databinding.MoreRowBinding
@@ -65,6 +66,7 @@ class MoreFragment : Fragment() {
             .setTitle(R.string.more_about_title)
             .setMessage(getString(R.string.more_about_body, app.appVersion(), BuildConfig.BUILD_TYPE, commit))
             .setPositiveButton(R.string.ok, null)
+            .setNeutralButton(R.string.settings_privacy_policy) { _, _ -> UiActions.openPrivacyPolicy(requireContext()) }
             .show()
     }
 

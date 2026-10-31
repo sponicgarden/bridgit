@@ -112,7 +112,7 @@ REQ-26: Prompt injection in photos, audio or returned device text is data, not a
 
 ## 6. Older devices and reliability
 
-REQ-27: Proposed public minimum Android 10 (API 29), with API 26–28 feasibility later. Current minimum is API 34 and must not be advertised as changed until delivered. Target API 36 for the current submission requirement, independently of minimum OS. Capability probe reports supported hardware, memory limits, local engine readiness and missing grants. Native libraries including CameraX transitive .so files require 16 KiB compatibility validation; Kotlin source alone does not prove compatibility.
+REQ-27: Public minimum Android 10 (API 29), with API 26–28 feasibility later. Delivered 31 October 2026: `minSdk` 29, lint-clean (no NewApi) and device-tested on Android 11 (Pixel 2 XL); Android 10 is not yet device-tested, so don't advertise below Android 11 until it is. Version-gated capabilities report `android_version`: Health Connect below 14, Accessibility screenshots below 11, file transcription below 13. Target API 36 for the current submission requirement, independently of minimum OS. Capability probe reports supported hardware, memory limits, local engine readiness and missing grants. Native libraries including CameraX transitive .so files require 16 KiB compatibility validation; Kotlin source alone does not prove compatibility.
 
 GATE-01: Test API 29, 30, 31, 33, 34, 35, 36 and the owner's API 37 device; use a physical older low-memory device plus Pixel and at least one OEM with aggressive background restrictions. Test arm64 and 16 KiB device image; do not infer all hardware support from a single emulator. Camera, mic, wake word and streaming each have feature-specific availability.
 

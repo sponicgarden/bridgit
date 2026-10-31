@@ -38,6 +38,8 @@ import cc.bridgit.app.ui.home.UiActions
  * with live status; Continue asks with Android's own dialogs, then opens each real settings page
  * in turn. Re-checks on return, skips what's on, and ends with a summary. Nothing here imitates
  * a system dialog (REQ-05). Optional `agentId`: the agent that was just given every grant.
+ * With `auto` (Max power on Home) it starts at once and moves on after each step by itself,
+ * until a step comes back still off (see [PowerPlan.autoContinue]).
  */
 class PowersFragment : Fragment() {
     private var _b: FragmentPowersBinding? = null
@@ -54,6 +56,9 @@ class PowersFragment : Fragment() {
     private var asking: List<String> = emptyList()
     private var askedAt = 0L
     private var last: Map<String, Status> = emptyMap()
+    private val auto get() = arguments?.getBoolean(ARG_AUTO) == true
+    /** Auto mode already started; kept on the instance so coming back from Features doesn't start it again. */
+    private var started = false
 
     private val permLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         val ctx = context ?: return@registerForActivityResult
@@ -68,8 +73,11 @@ class PowersFragment : Fragment() {
                 .setAction(R.string.perm_open_settings) { UiActions.openAppDetails(ctx) }.setAnchorView(b.bottomBar).show() }
         // The listener adds camera, mic and location service types only when restarted from a visible screen (ARC-03).
         if (result.values.any { it } && app.settings.listenerEnabled) runCatching { BridgeService.start(ctx) }
+        val shown = asking
         asking = emptyList()
         refresh()
+        // Posted: the fragment resumes right after this result, and a page opened now would read as skipped.
+        autoNext(shown)
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, s: Bundle?): View {
@@ -90,15 +98,27 @@ class PowersFragment : Fragment() {
         }
         b.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         val agent = arguments?.getString(ARG_AGENT)?.let { app.agents.get(it) }
-        b.intro.text = if (agent != null) getString(R.string.power_intro_agent, agent.name) else getString(R.string.power_intro)
+        b.intro.text = when {
+            auto && agent != null -> getString(R.string.power_intro_auto_agent, agent.name)
+            auto -> getString(R.string.power_intro_auto)
+            agent != null -> getString(R.string.power_intro_agent, agent.name)
+            else -> getString(R.string.power_intro)
+        }
         b.openFeatures.setOnClickListener { findNavController().navigate(R.id.features) }
         b.next.setOnClickListener { continueNext() }
         steps = access.steps()
+        if (auto && savedInstanceState == null && !started) {
+            started = true
+            if (agent == null) com.google.android.material.snackbar.Snackbar.make(b.root, R.string.power_max_switched, 6000)
+                .setAction(R.string.undo) { access.allSwitchesOff(); refresh() }.setAnchorView(b.bottomBar).show()
+            autoNext(null)
+        }
     }
 
     override fun onResume() {
         super.onResume()
         // Back from a settings page: still off means the owner skipped it.
+        val back = opened
         opened?.let { id ->
             opened = null
             val s = steps.firstOrNull { it.id == id }
@@ -107,6 +127,15 @@ class PowersFragment : Fragment() {
             if (id == PowerPlan.RESTRICTED) declined += id
         }
         refresh()
+        back?.let { autoNext(listOf(it)) }
+    }
+
+    /** Auto mode: the next step, unless [shown] (null = first step) came back skipped or nothing is left. */
+    private fun autoNext(shown: List<String>?) {
+        if (!auto || (shown != null && !PowerPlan.autoContinue(shown, declined))) return
+        view?.post {
+            if (_b != null && opened == null && asking.isEmpty() && PowerPlan.next(steps, status()) != null) continueNext()
+        }
     }
 
     override fun onSaveInstanceState(out: Bundle) {
@@ -242,6 +271,7 @@ class PowersFragment : Fragment() {
 
     companion object {
         const val ARG_AGENT = "agentId"
+        const val ARG_AUTO = "auto"
         private const val HEALTH = "health"
         private const val NO_DIALOG_MS = 600L
         private const val STATE_DECLINED = "declined"
@@ -268,7 +298,7 @@ class PowersFragment : Fragment() {
                         access.grantAll(agent.id)
                         app.log.system("audit", "agent", fragment.getString(R.string.power_granted_log, agent.name))
                     }
-                    fragment.findNavController().navigate(R.id.powers, bundleOf(ARG_AGENT to agent?.id))
+                    fragment.findNavController().navigate(R.id.powers, bundleOf(ARG_AGENT to agent?.id, ARG_AUTO to true))
                 }
                 .setNegativeButton(R.string.cancel) { _, _ -> onCancel() }
                 .setOnCancelListener { onCancel() }

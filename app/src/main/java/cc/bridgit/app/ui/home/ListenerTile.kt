@@ -11,6 +11,8 @@ import cc.bridgit.app.BridgeApp
 import cc.bridgit.app.BridgeService
 import cc.bridgit.app.R
 import cc.bridgit.app.ui.MainActivity
+import android.annotation.SuppressLint
+import android.os.Build
 
 /**
  * UI-23: Quick Settings tile "Bridget". Active while the listener setting is on (Listening), inactive
@@ -50,11 +52,15 @@ class ListenerTile : TileService() {
         render()
     }
 
+    @SuppressLint("StartActivityAndCollapseDeprecated") // the Intent form is the only one before Android 14
     private fun openApp() {
         val pi = PendingIntent.getActivity(this, 0,
             Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        runCatching { startActivityAndCollapse(pi) }
+        runCatching {
+            if (Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(pi)
+            else @Suppress("DEPRECATION") startActivityAndCollapse(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+        }
     }
 
     private fun render() {

@@ -9,10 +9,12 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
+import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import androidx.core.content.ContextCompat
 import io.ktor.server.routing.Route
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -154,14 +156,15 @@ class SpeakerQueue(private val app: BridgeApp) {
     init {
         app.settings.addListener { recheckAccess() }
         // SPK-01/03: react while a clip plays, not only before it starts.
-        am.addOnModeChangedListener(onHandler) { checkConditions() }
+        // Android 10–11 lack the listener; the periodic sweep and pre-play checks still apply.
+        if (Build.VERSION.SDK_INT >= 31) am.addOnModeChangedListener(onHandler) { checkConditions() }
         val f = IntentFilter().apply {
             addAction(AudioManager.RINGER_MODE_CHANGED_ACTION)
             addAction(NotificationManager.ACTION_INTERRUPTION_FILTER_CHANGED)
         }
-        app.registerReceiver(object : BroadcastReceiver() {
+        ContextCompat.registerReceiver(app, object : BroadcastReceiver() {
             override fun onReceive(c: Context?, i: Intent?) = checkConditions()
-        }, f, null, handler, Context.RECEIVER_NOT_EXPORTED)
+        }, f, null, handler, ContextCompat.RECEIVER_NOT_EXPORTED)
         handler.postDelayed(object : Runnable { override fun run() { sweep(); handler.postDelayed(this, 10 * 60_000L) } }, 10 * 60_000L)
     }
 
@@ -272,7 +275,8 @@ class SpeakerQueue(private val app: BridgeApp) {
         }
     }
 
-    /** A phone call (or VoIP call) is active: nothing plays (SPK-03). */
+    /** A phone call (or VoIP call) is active: nothing plays (SPK-03). MODE_CALL_SCREENING is a constant older versions never report. */
+    @Suppress("InlinedApi")
     fun inCall(): Boolean = am.mode == AudioManager.MODE_IN_CALL || am.mode == AudioManager.MODE_IN_COMMUNICATION ||
         am.mode == AudioManager.MODE_RINGTONE || am.mode == AudioManager.MODE_CALL_SCREENING
 
