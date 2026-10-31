@@ -18,10 +18,12 @@ object PlatformNotifications {
 }
 class PauseTile:android.service.quicksettings.TileService() {
     override fun onStartListening() { super.onStartListening(); val app=application as BridgeApp; qsTile.state=if(app.policy.listenerEnabled) android.service.quicksettings.Tile.STATE_ACTIVE else android.service.quicksettings.Tile.STATE_INACTIVE; qsTile.label="BRIDGIT"; qsTile.updateTile() }
+    @android.annotation.SuppressLint("StartActivityAndCollapseDeprecated") // the Intent form is the only one before Android 14
     override fun onClick() {
         super.onClick(); val app=application as BridgeApp
         if(app.policy.listenerEnabled) { app.platform.stopAll(); app.policy.listenerEnabled=false; BridgeService.stop(this); onStartListening() }
-        else { val pending=PendingIntent.getActivity(this,0,Intent(this,cc.bridgit.app.ui.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),PendingIntent.FLAG_IMMUTABLE); startActivityAndCollapse(pending) }
+        else { val pending=PendingIntent.getActivity(this,0,Intent(this,cc.bridgit.app.ui.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),PendingIntent.FLAG_IMMUTABLE)
+            if(android.os.Build.VERSION.SDK_INT>=34) startActivityAndCollapse(pending) else @Suppress("DEPRECATION") startActivityAndCollapse(Intent(this,cc.bridgit.app.ui.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
 }
 class ApplianceAdmin:android.app.admin.DeviceAdminReceiver()

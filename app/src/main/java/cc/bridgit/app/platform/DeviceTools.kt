@@ -66,7 +66,7 @@ class DeviceTools(private val app:BridgeApp) {
         val provider=when { lm.isProviderEnabled(LocationManager.GPS_PROVIDER) && app.granted(Manifest.permission.ACCESS_FINE_LOCATION) -> LocationManager.GPS_PROVIDER; lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER; else -> throw ApiError(409,"location_disabled","Enable device location") }
         suspendCancellableCoroutine { cont ->
             val cancel=CancellationSignal(); cont.invokeOnCancellation { cancel.cancel() }
-            lm.getCurrentLocation(provider,cancel,app.mainExecutor) { loc ->
+            androidx.core.location.LocationManagerCompat.getCurrentLocation(lm,provider,cancel,app.mainExecutor) { loc ->
                 if(cont.isActive) {
                     if(loc==null) cont.resumeWith(kotlin.Result.failure(ApiError(504,"location_timeout","No location fix")))
                     else cont.resume(JSONObject().put("latitude",loc.latitude).put("longitude",loc.longitude).put("accuracy_m",loc.accuracy).put("as_of",loc.time).put("age_ms",(SystemClock.elapsedRealtimeNanos()-loc.elapsedRealtimeNanos)/1_000_000).put("provider",loc.provider))
@@ -163,8 +163,8 @@ class DeviceTools(private val app:BridgeApp) {
     suspend fun transcribe(agent:String,args:JSONObject):JSONObject = runtime.capture(agent,"speech.transcribe") {
         withTimeout(45_000) { withContext(Dispatchers.Main) {
             if(!ControlCenterActivity.foreground) throw ApiError(409,"foreground_required","Keep Device tools open for dictation")
-            if(!SpeechRecognizer.isOnDeviceRecognitionAvailable(app)) throw ApiError(409,"on_device_speech_unavailable","This device has no available on-device recognizer")
-            val recognizer=SpeechRecognizer.createOnDeviceSpeechRecognizer(app)
+            if(android.os.Build.VERSION.SDK_INT<31 || !SpeechRecognizer.isOnDeviceRecognitionAvailable(app)) throw ApiError(409,"on_device_speech_unavailable","This device has no available on-device recognizer")
+            @Suppress("NewApi") val recognizer=SpeechRecognizer.createOnDeviceSpeechRecognizer(app)
             try { suspendCancellableCoroutine { cont ->
                 recognizer.setRecognitionListener(object:RecognitionListener {
                     override fun onReadyForSpeech(params:Bundle?)=Unit

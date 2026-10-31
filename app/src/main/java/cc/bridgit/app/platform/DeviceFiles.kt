@@ -33,7 +33,7 @@ class DeviceFiles(private val context:Context,private val store:PlatformStore) {
         val mime=context.contentResolver.getType(uri) ?: "application/octet-stream"
         var name="Shared file"
         context.contentResolver.query(uri,arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),null,null,null)?.use { if(it.moveToFirst()) name=it.getString(0) }
-        val bytes=context.contentResolver.openInputStream(uri)?.use { it.readNBytes(512*1024+1) } ?: throw ApiError(404,"file_not_found","Cannot open selected file")
+        val bytes=context.contentResolver.openInputStream(uri)?.use { cc.bridgit.app.core.Compat.readAtMost(it,512*1024+1) } ?: throw ApiError(404,"file_not_found","Cannot open selected file")
         return save(agent,name.take(120),mime,bytes,"")
     }
     fun get(agent:String,id:String):JSONObject { val record=store.require(id,agent,"file"); return public(record).put("data_base64",Base64.encodeToString(file(agent,id).readBytes(),Base64.NO_WRAP)) }

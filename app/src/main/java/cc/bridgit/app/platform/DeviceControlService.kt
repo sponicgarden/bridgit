@@ -63,7 +63,7 @@ class DeviceControlService : AccessibilityService() {
     private fun nodeJson(node: AccessibilityNodeInfo,path: List<Int>,refs: MutableMap<String,Target>,count: IntArray): JSONObject? {
         if(count[0]++ >= 512 || path.size>24) return null
         val bounds=Rect(); node.getBoundsInScreen(bounds)
-        val secret=node.isPassword || node.isAccessibilityDataSensitive
+        val secret=cc.bridgit.app.core.Compat.sensitive(node)
         val out=JSONObject().put("role",node.className?.toString() ?: "").put("resource_id",node.viewIdResourceName ?: "")
             .put("label",if(secret) "[protected field]" else (node.contentDescription?.toString() ?: node.text?.toString() ?: "").take(512))
             .put("text",if(secret) "" else (node.text?.toString() ?: "").take(1024)).put("password",secret)
@@ -100,7 +100,12 @@ class DeviceControlService : AccessibilityService() {
             out
         } finally { root.recycle() }
     }
-    suspend fun screenshot(): JSONObject = suspendCancellableCoroutine { continuation ->
+    suspend fun screenshot(): JSONObject {
+        if(android.os.Build.VERSION.SDK_INT<30) throw ApiError(422,"not_supported","Accessibility screenshots need Android 11 or newer")
+        return screenshot30()
+    }
+    @androidx.annotation.RequiresApi(30)
+    private suspend fun screenshot30(): JSONObject = suspendCancellableCoroutine { continuation ->
         takeScreenshot(android.view.Display.DEFAULT_DISPLAY,mainExecutor,object:TakeScreenshotCallback {
             override fun onSuccess(result: ScreenshotResult) {
                 val buffer=result.hardwareBuffer
@@ -136,7 +141,7 @@ class DeviceControlService : AccessibilityService() {
                     var node=AccessibilityNodeInfo.obtain(root)
                     try {
                         target.path.forEach { index -> val child=node.getChild(index) ?: throw ApiError(409,"stale_observation","Element disappeared"); node.recycle(); node=child }
-                        if(node.isPassword || node.isAccessibilityDataSensitive || !node.isEnabled || !node.isVisibleToUser) throw ApiError(403,"protected_element","Element cannot be operated")
+                        if(cc.bridgit.app.core.Compat.sensitive(node) || !node.isEnabled || !node.isVisibleToUser) throw ApiError(403,"protected_element","Element cannot be operated")
                         when(type) {
                             "tap" -> node.performAction(AccessibilityNodeInfo.ACTION_CLICK) || gesture(node,false)
                             "long_press" -> node.performAction(AccessibilityNodeInfo.ACTION_LONG_CLICK) || gesture(node,true)
@@ -216,7 +221,7 @@ class DeviceControlService : AccessibilityService() {
         val r=rootInActiveWindow ?: return false
         try {
             if(args.has("package") && r.packageName?.toString()!=args.text("package",256)) return false
-            if(args.has("text")) { val text=args.text("text",512); if(text.isEmpty()) throw ApiError(422,"invalid_parameter","Expected text cannot be empty"); val nodes=r.findAccessibilityNodeInfosByText(text); val found=nodes.any { !it.isPassword && !it.isAccessibilityDataSensitive && it.isVisibleToUser && (it.text?.toString()?.contains(text)==true || it.contentDescription?.toString()?.contains(text)==true) }; nodes.forEach { it.recycle() }; return found }
+            if(args.has("text")) { val text=args.text("text",512); if(text.isEmpty()) throw ApiError(422,"invalid_parameter","Expected text cannot be empty"); val nodes=r.findAccessibilityNodeInfosByText(text); val found=nodes.any { !cc.bridgit.app.core.Compat.sensitive(it) && it.isVisibleToUser && (it.text?.toString()?.contains(text)==true || it.contentDescription?.toString()?.contains(text)==true) }; nodes.forEach { it.recycle() }; return found }
             return args.has("package")
         } finally { r.recycle() }
     }

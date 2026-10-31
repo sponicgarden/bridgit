@@ -34,7 +34,7 @@ class ProjectionService:Service() {
     override fun onStartCommand(intent:Intent?,flags:Int,startId:Int):Int {
         if(intent?.action=="stop") { stopSelf(); return START_NOT_STICKY }
         if(active) return START_NOT_STICKY
-        val data=intent?.getParcelableExtra("consent",Intent::class.java) ?: return START_NOT_STICKY
+        val data=intent?.let { androidx.core.content.IntentCompat.getParcelableExtra(it,"consent",Intent::class.java) } ?: return START_NOT_STICKY
         if(!Capabilities.visible(this)) { stopSelf(); return START_NOT_STICKY }
         val stop=PendingIntent.getService(this,912,Intent(this,ProjectionService::class.java).setAction("stop"),PendingIntent.FLAG_IMMUTABLE)
         ServiceCompat.startForeground(this,912,NotificationCompat.Builder(this,BridgeApp.CAPTURE_CHANNEL).setSmallIcon(cc.bridgit.app.R.drawable.ic_notif).setContentTitle("BRIDGIT screen sharing").setContentText("Screen content can be read by your approved agents").setOngoing(true).addAction(0,"Stop sharing",stop).build(),ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)

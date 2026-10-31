@@ -56,7 +56,9 @@ class PeripheralTools(private val app:BridgeApp) {
                     if(args.optString("type")=="ble.write") {
                         val bytes=runCatching { Base64.decode(args.text("data_base64",4096),Base64.NO_WRAP) }.getOrElse { fail("Invalid bytes"); return }
                         if(bytes.size>512) { fail("BLE writes are limited to 512 bytes"); return }
-                        if(g.writeCharacteristic(ch,bytes,BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)!=BluetoothStatusCodes.SUCCESS) fail("Write was not dispatched")
+                        val sent=if(android.os.Build.VERSION.SDK_INT>=33) g.writeCharacteristic(ch,bytes,BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)==BluetoothStatusCodes.SUCCESS
+                            else @Suppress("DEPRECATION") run { ch.writeType=BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT; ch.value=bytes; g.writeCharacteristic(ch) }
+                        if(!sent) fail("Write was not dispatched")
                     } else if(!g.readCharacteristic(ch)) fail("Read was not dispatched")
                 }
                 override fun onCharacteristicRead(g:BluetoothGatt,ch:BluetoothGattCharacteristic,value:ByteArray,status:Int) { if(status!=BluetoothGatt.GATT_SUCCESS) fail("Read failed") else if(cont.isActive) cont.resume(JSONObject().put("data_base64",Base64.encodeToString(value,Base64.NO_WRAP)).put("outcome","read")) }
