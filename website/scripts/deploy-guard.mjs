@@ -23,4 +23,4 @@ if (problems.length) {
   console.error(`Refusing to deploy bridgit.cc: production deploys only from origin/main with a clean tree.\n${problems.join('\n')}\nMerge to main (the Deploy website workflow then deploys it), or set BRIDGIT_DEPLOY_UNCHECKED=1 to deploy this tree anyway.`);
   process.exit(1);
 }
-console.log(`Deploy guard: HEAD is origin/main ${main.slice(0, 7)}, tree clean.`);
+console.log(`Deploy guard: HEAD ${head.slice(0, 7)} is on origin/main (${main.slice(0, 7)}), tree clean.`);
