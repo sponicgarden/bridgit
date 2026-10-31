@@ -29,7 +29,7 @@ test('planned device controls and ideas do not become current-build promises', (
 
 test('homepage groups match every canonical app title and availability stage', async () => {
   const { parseCatalog } = await import('../scripts/features.mjs');
-  const source = await readFile(new URL('../../app/src/main/java/net/finleg/bridget/ui/more/WhatCanData.kt', import.meta.url), 'utf8');
+  const source = await readFile(new URL('../../app/src/main/java/cc/bridgit/app/ui/more/WhatCanData.kt', import.meta.url), 'utf8');
   const canonical = parseCatalog(source);
   const grouped = catalog.groups.flatMap(group => group.features);
   assert.deepEqual(grouped.map(f => [f.sourceTitle, f.sourceStage]).sort(), canonical.map(f => [f.title, f.stage]).sort());

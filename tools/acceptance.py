@@ -35,8 +35,8 @@ class Ctx:
 
     def hook(self, **extras):
         """Sends the debug-only setup broadcast. Returns the pairing code (if any)."""
-        cmd = ["shell", "am", "broadcast", "-f", "0x20", "-a", "net.finleg.bridget.debug.SETUP",
-               "-n", f"{self.pkg}/net.finleg.bridget.DebugSetupReceiver"]
+        cmd = ["shell", "am", "broadcast", "-f", "0x20", "-a", "cc.bridgit.app.debug.SETUP",
+               "-n", f"{self.pkg}/cc.bridgit.app.DebugSetupReceiver"]
         for k, v in extras.items():
             # adb joins arguments into one shell command: quote values so spaces survive.
             cmd += (["--ez", k, "true" if v else "false"] if isinstance(v, bool) else ["--es", k, "'" + str(v).replace("'", "'\\''") + "'"])
@@ -145,7 +145,7 @@ def main():
     ap.add_argument("--host", default=os.environ.get("BRIDGIT_TEST_PHONE"), required="BRIDGIT_TEST_PHONE" not in os.environ,
                     help="phone Tailscale IP or name (or BRIDGIT_TEST_PHONE)")
     ap.add_argument("--port", type=int, default=8735)
-    ap.add_argument("--pkg", default="net.finleg.bridget.debug")
+    ap.add_argument("--pkg", default="cc.bridgit.app.debug")
     ap.add_argument("--out", default=None, help="results file (default docs/acceptance/<date>-<version>-<commit>.md)")
     ap.add_argument("--skip-captures", action="store_true")
     ap.add_argument("--apk", default=None, help="debug APK; reinstalls it to test the MY_PACKAGE_REPLACED restart (A29)")
@@ -157,7 +157,7 @@ def main():
     print(f"Bridgit acceptance: {c.base} via adb {c.serial}")
     # Launching the activity once takes a fresh install out of Android's "stopped" state,
     # so the debug hook's broadcast is delivered.
-    c.adb("shell", "am", "start", "-n", f"{c.pkg}/net.finleg.bridget.ui.MainActivity")
+    c.adb("shell", "am", "start", "-n", f"{c.pkg}/cc.bridgit.app.ui.MainActivity")
     time.sleep(2)
     c.hook(camera=True, mic=True, gallery=True, log_visibility="all")
     c.pair(T)
@@ -602,7 +602,7 @@ def main():
     def _():
         if captures_note:
             raise Unverified(captures_note)
-        c.adb("shell", "am", "start", "-n", f"{c.pkg}/net.finleg.bridget.ui.MainActivity"); time.sleep(3)
+        c.adb("shell", "am", "start", "-n", f"{c.pkg}/cc.bridgit.app.ui.MainActivity"); time.sleep(3)
         r = c.call("POST", "/camera/snapshot", T, {"camera": "rear", "max_width_px": 1024}, timeout=40); expect(r, 200)
         j = r.json(); assert j["width_px"] <= 1024 and j["format"] == "jpeg"
         r2 = c.call("POST", "/camera/snapshot", T, {"camera": "rear", "size": "thumb", "raw": 1}, timeout=40); expect(r2, 200)
@@ -709,7 +709,7 @@ def main():
     def _():
         if captures_note:
             raise Unverified(captures_note)
-        c.adb("shell", "am", "start", "-n", f"{c.pkg}/net.finleg.bridget.ui.MainActivity"); time.sleep(4)
+        c.adb("shell", "am", "start", "-n", f"{c.pkg}/cc.bridgit.app.ui.MainActivity"); time.sleep(4)
         l = c.call("GET", "/capabilities", T).json()["listener"]
         assert l["camera_ready"] and l["mic_ready"], l
 
@@ -723,7 +723,7 @@ def main():
                 m = json.loads(r.read())
         except urllib.error.HTTPError as e:
             raise Unverified(f"no manifest published yet (HTTP {e.code})")
-        assert m["package"] == "net.finleg.bridget" and m["url"].startswith("https://pub-3a79691572bc4abc93fce31910fe320b.r2.dev/bridget/"), m
+        assert m["package"] == "cc.bridgit.app" and m["url"].startswith("https://pub-3a79691572bc4abc93fce31910fe320b.r2.dev/bridget/"), m
         with urllib.request.urlopen(urllib.request.Request(m["url"], headers=ua), timeout=120) as r:
             apk = r.read()
         assert hashlib.sha256(apk).hexdigest() == m["sha256"].lower() and len(apk) == m["size_bytes"], "APK doesn't match the manifest"

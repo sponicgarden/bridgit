@@ -16,7 +16,7 @@
 # What it does:
 #   1. Builds the release APK (unless --apk / --no-build).
 #   2. Reads package, versionName and versionCode with `aapt2 dump badging`; refuses anything but
-#      net.finleg.bridget (so a .debug build can never be published).
+#      cc.bridgit.app (so a .debug build can never be published).
 #   3. Checks the signing certificate with `apksigner verify --print-certs` against Bridgit's release
 #      key (SHA-256 6bbd482d…2f61).
 #   4. Computes SHA-256 and size and writes latest.json:
@@ -39,7 +39,7 @@
 
 set -euo pipefail
 
-PACKAGE="net.finleg.bridget"
+PACKAGE="cc.bridgit.app"
 EXPECTED_CERT="6bbd482d18efdc58ca28de8358405602ebb0405b479cabd36b37ff8242042f61"
 UA="bridget-publish/1"
 MAX_BYTES=$((100 * 1024 * 1024))

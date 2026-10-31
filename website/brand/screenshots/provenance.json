@@ -1,6 +1,6 @@
 {
   "device": "Pixel 10 Pro XL",
-  "package": "net.finleg.bridget",
+  "package": "cc.bridgit.app",
   "versionName": "1.5.4",
   "versionCode": 16,
   "captureMethod": "ADB exec-out screencap -p over USB; navigation taps only",

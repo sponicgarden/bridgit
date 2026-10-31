@@ -136,7 +136,7 @@ Acceptance cases for that slice:
 
 ## Review and verification record
 
-This is a source and feasibility audit, not a device certification or penetration test. Existing test coverage inspected here concentrates on agent profiles/branding (`app/src/test/java/net/finleg/bridget/AgentProfileTest.kt`); it does not establish cross-app control behavior. No device operations, runtime captures, application changes, builds, publication or Git mutation were performed for the audit. Prior competitor research was used as a lead list, not re-certified as current fact.
+This is a source and feasibility audit, not a device certification or penetration test. Existing test coverage inspected here concentrates on agent profiles/branding (`app/src/test/java/cc/bridgit/app/AgentProfileTest.kt`); it does not establish cross-app control behavior. No device operations, runtime captures, application changes, builds, publication or Git mutation were performed for the audit. Prior competitor research was used as a lead list, not re-certified as current fact.
 
 The independent review is saved as [Opus 5.5 agentic control review](2026-10-29-opus-5.5-agentic-control-review.md). It was requested with the explicit model ID `claude-opus-5-5` and read-only file tools; the CLI reported success with no permission denials. Its model-usage metadata also includes Claude's configured `claude-fable-5-1` advisor. The requested Opus model was not silently substituted.
 
