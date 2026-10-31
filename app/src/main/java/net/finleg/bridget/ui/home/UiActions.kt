@@ -20,6 +20,7 @@ import net.finleg.bridget.BridgeApp
 import net.finleg.bridget.BridgeService
 import net.finleg.bridget.R
 import net.finleg.bridget.capability.Capability
+import net.finleg.bridget.capability.Perms
 import net.finleg.bridget.capability.granted
 import android.provider.Settings as SysSettings
 
@@ -135,8 +136,8 @@ class PermissionAsker(private val fragment: Fragment, private val onDone: () -> 
         fragment.registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result -> handle(result) }
 
     fun request(vararg permissions: String) {
-        if (permissions.isEmpty()) return
-        asked = arrayOf(*permissions)
+        asked = Perms.forRequest(permissions)
+        if (asked.isEmpty()) return
         launcher.launch(asked)
     }
 

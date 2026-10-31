@@ -32,6 +32,7 @@ import kotlinx.coroutines.withContext
 import net.finleg.bridget.BridgeApp
 import net.finleg.bridget.BridgeService
 import net.finleg.bridget.R
+import net.finleg.bridget.capability.Perms
 import net.finleg.bridget.capability.granted
 import net.finleg.bridget.databinding.FirstrunPageBinding
 import net.finleg.bridget.databinding.FragmentFirstRunBinding
@@ -186,7 +187,11 @@ class FirstRunFragment : Fragment() {
             if (position == 1) {
                 page2 = p
                 p.openTailscale.setOnClickListener { UiActions.openTailscale(requireContext()) }
-                p.allowNotif.setOnClickListener { notifRequest.launch(Manifest.permission.POST_NOTIFICATIONS) }
+                p.allowNotif.setOnClickListener {
+                    // Before Android 13 there's no permission to ask for; notifications are turned on in settings.
+                    if (Perms.platform(Manifest.permission.POST_NOTIFICATIONS) == null) UiActions.openAppNotificationSettings(requireContext())
+                    else notifRequest.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
                 p.notifSettings.setOnClickListener { UiActions.openAppNotificationSettings(requireContext()) }
                 bindTailscale()
                 bindNotifications()

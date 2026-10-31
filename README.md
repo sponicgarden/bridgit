@@ -2,7 +2,7 @@
 
 Copyright 2026 Sponic Garden, Inc. Licensed under the [Apache License 2.0](LICENSE).
 
-**BRIDGIT Device Manager for Android** turns an Android phone (Android 14+)
+**BRIDGIT Device Manager for Android** turns an Android phone (Android 11+; Android 10 support is built but not yet device-tested)
 into a device your own AI agents can use: Claude, Grok, Codex or any agent that
 can make HTTP or MCP calls. With your OK, paired agents can take a photo, record
 a short clip, read the screen, send you questions and notices, and more (see

@@ -8,7 +8,6 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.location.Location
 import android.location.LocationManager
-import android.os.CancellationSignal
 import androidx.core.content.ContextCompat
 import io.ktor.server.routing.Route
 import kotlinx.coroutines.Dispatchers
@@ -23,6 +22,8 @@ import net.finleg.bridget.api.ErrorCatalog
 import net.finleg.bridget.api.Reply
 import org.json.JSONObject
 import kotlin.coroutines.resume
+import android.os.Build
+import androidx.core.location.LocationManagerCompat
 
 /**
  * Location fixes from Android's own LocationManager (no Google Play services, "no third-party
@@ -50,16 +51,16 @@ class LocationReader(private val ctx: Context) {
     suspend fun fresh(high: Boolean, timeoutMs: Long): Location? {
         val provider = when {
             high && lm.isProviderEnabled(LocationManager.GPS_PROVIDER) && precision() == "precise" -> LocationManager.GPS_PROVIDER
-            lm.isProviderEnabled(LocationManager.FUSED_PROVIDER) -> LocationManager.FUSED_PROVIDER
+            Build.VERSION.SDK_INT >= 31 && lm.isProviderEnabled(LocationManager.FUSED_PROVIDER) -> LocationManager.FUSED_PROVIDER
             lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER) -> LocationManager.NETWORK_PROVIDER
             lm.isProviderEnabled(LocationManager.GPS_PROVIDER) -> LocationManager.GPS_PROVIDER
             else -> return null
         }
         return withTimeoutOrNull(timeoutMs) {
             suspendCancellableCoroutine { cont ->
-                val cancel = CancellationSignal()
+                val cancel = androidx.core.os.CancellationSignal()
                 cont.invokeOnCancellation { cancel.cancel() }
-                lm.getCurrentLocation(provider, cancel, ContextCompat.getMainExecutor(ctx)) { loc -> if (cont.isActive) cont.resume(loc) }
+                LocationManagerCompat.getCurrentLocation(lm, provider, cancel, ContextCompat.getMainExecutor(ctx)) { loc -> if (cont.isActive) cont.resume(loc) }
             }
         }
     }

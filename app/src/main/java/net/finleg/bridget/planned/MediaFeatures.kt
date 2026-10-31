@@ -26,6 +26,7 @@ import org.json.JSONObject
 import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import net.finleg.bridget.core.Compat
 
 class VideoModule(app: BridgeApp) : Capability(app) {
     override val id = "video"
@@ -99,7 +100,7 @@ class GalleryVideoModule(app: BridgeApp) : Capability(app) {
             val out = JSONArray()
             val args = android.os.Bundle().apply { putString(android.content.ContentResolver.QUERY_ARG_SQL_SORT_ORDER, "date_added DESC, _id DESC"); putString(android.content.ContentResolver.QUERY_ARG_SQL_LIMIT, limit.toString()) }
             app.contentResolver.query(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, arrayOf("_id", "display_name", "duration", "size", "mime_type", "date_added"), args, null)?.use { c ->
-                while (c.moveToNext()) out.put(JSONObject().put("id", c.getLong(0)).put("name", c.getString(1)).put("duration_ms", c.getLong(2)).put("size_bytes", c.getLong(3)).put("mime", c.getString(4)).put("added_at", isoAt(c.getLong(5) * 1000)))
+                while (out.length() < limit && c.moveToNext()) out.put(JSONObject().put("id", c.getLong(0)).put("name", c.getString(1)).put("duration_ms", c.getLong(2)).put("size_bytes", c.getLong(3)).put("mime", c.getString(4)).put("added_at", isoAt(c.getLong(5) * 1000)))
             }
             Reply.Json(JSONObject().put("items", out).put("access_mode", if (app.granted(Manifest.permission.READ_MEDIA_VIDEO)) "full" else "selected"))
         }
@@ -120,7 +121,7 @@ class GalleryVideoModule(app: BridgeApp) : Capability(app) {
                         Reply.Bytes(bytes, "image/jpeg")
                     } finally { retriever.release() }
                 } else {
-                    val bytes = app.contentResolver.openInputStream(uri)?.use { it.readNBytes(ApiServer.MAX_RAW + 1) } ?: throw ErrorCatalog.error("not_found", "Video unavailable.")
+                    val bytes = app.contentResolver.openInputStream(uri)?.use { Compat.readAtMost(it, ApiServer.MAX_RAW + 1) } ?: throw ErrorCatalog.error("not_found", "Video unavailable.")
                     if (bytes.size > ApiServer.MAX_RAW) throw ErrorCatalog.error("payload_too_large", "Video exceeds 40 MB. Request a frame instead.")
                     Reply.Bytes(bytes, app.contentResolver.getType(uri) ?: "video/mp4")
                 }
@@ -142,7 +143,7 @@ class OcrModule(app: BridgeApp) : Capability(app) {
             if (!app.settings.isOn("gallery") || !app.agents.get(agent!!.id)!!.allows("gallery")) throw ErrorCatalog.error("capability_disabled", "Enable this agent's gallery access first.")
             val id = body.optString("gallery_id").toLongOrNull()?.takeIf { it > 0 } ?: throw ErrorCatalog.error("invalid_parameter", "gallery_id must be a positive image ID.")
             val uri = ContentUris.withAppendedId(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id)
-            val raw = try { app.contentResolver.openInputStream(uri)?.use { it.readNBytes(16 * 1024 * 1024 + 1) } }
+            val raw = try { app.contentResolver.openInputStream(uri)?.use { Compat.readAtMost(it, 16 * 1024 * 1024 + 1) } }
                 catch (e: SecurityException) { throw ErrorCatalog.error("permission_denied", "This photo is outside your media grant.") }
                 ?: throw ErrorCatalog.error("photo_not_found", "Photo unavailable.")
             if (raw.size > 16 * 1024 * 1024) throw ErrorCatalog.error("payload_too_large", "OCR source images must be under 16 MB.")

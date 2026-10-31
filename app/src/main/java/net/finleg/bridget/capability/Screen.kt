@@ -24,6 +24,8 @@ import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import android.os.Build
+import androidx.annotation.RequiresApi
 
 /**
  * 8.10 Screenshots (D17, CAP-25/26): an Accessibility service that can only take screenshots.
@@ -37,7 +39,8 @@ class ScreenshotService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {}
     override fun onInterrupt() {}
 
-    /** CAP-25 private mode: the frame stays in memory; nothing is saved and there's no shutter flash. */
+    /** CAP-25 private mode: the frame stays in memory; nothing is saved and there's no shutter flash. Android 11+ (ScreenModule blocks earlier). */
+    @RequiresApi(30)
     suspend fun capture(): Bitmap = suspendCancellableCoroutine { cont ->
         takeScreenshot(Display.DEFAULT_DISPLAY, mainExecutor, object : TakeScreenshotCallback {
             override fun onSuccess(result: ScreenshotResult) {
@@ -82,6 +85,7 @@ class ScreenModule(app: BridgeApp) : Capability(app) {
     override val switchKey = "screen"
     override val endpoints = listOf(Endpoints.SCREEN_CAPTURE)
     override fun blockedReason() = when {
+        Build.VERSION.SDK_INT < 30 -> "android_version"
         !ScreenshotService.isEnabled(app) -> "accessibility_off"
         !app.captureNotificationsOn() -> "notifications_off"
         else -> null
@@ -111,6 +115,7 @@ class ScreenModule(app: BridgeApp) : Capability(app) {
             val spec = Sizing.resolve({ arg(it) }, "agent")
             if (!enabled) throw ErrorCatalog.error("capability_disabled",
                 "Screenshots are switched off on the phone. Ask the owner to turn on Screenshots in Features.", mapOf("setting" to switchKey))
+            if (Build.VERSION.SDK_INT < 30) throw ErrorCatalog.error("not_supported", "Screenshots need Android 11 or newer.")
             if (!ScreenshotService.isEnabled(app)) throw ErrorCatalog.error("access_needed",
                 "Bridgit's screenshot service is off. Ask the owner to open Bridgit > More > Access > Screenshots and turn it on.",
                 mapOf("setting" to "accessibility_screenshot"))

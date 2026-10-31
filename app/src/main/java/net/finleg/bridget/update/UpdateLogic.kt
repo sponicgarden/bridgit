@@ -141,7 +141,7 @@ object UpdateLogic {
         return when (v) {
             is Int -> v.toLong()
             is Long -> v
-            is java.math.BigInteger -> runCatching { v.longValueExact() }.getOrNull()
+            is java.math.BigInteger -> v.takeIf { it.bitLength() < 64 }?.toLong()
             else -> null
         }
     }

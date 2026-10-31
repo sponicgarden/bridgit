@@ -24,6 +24,7 @@ import net.finleg.bridget.capability.*
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.coroutines.resume
+import net.finleg.bridget.core.Compat
 
 /** Process-wide hardware leases. A second control replaces its timer but preserves the original value. */
 class Hardware(private val app: BridgeApp) {
@@ -36,7 +37,7 @@ class Hardware(private val app: BridgeApp) {
     private val ownTorchOff = mutableMapOf<String, Int>()
     private var ringTimer: Runnable? = null
     private var tone: android.media.Ringtone? = null
-    private val vibrator = app.getSystemService(VibratorManager::class.java).defaultVibrator
+    private val vibrator = Compat.vibrator(app)
     private val tick = Runnable { synchronized(this@Hardware) { restoreDue(false) } }
     private val alarms = app.getSystemService(android.app.AlarmManager::class.java)
     private val restoreIntent = android.app.PendingIntent.getBroadcast(app, 706,
@@ -106,13 +107,13 @@ class Hardware(private val app: BridgeApp) {
     @Synchronized fun lightStatus() = JSONObject().put("on", torch != null)
     @Synchronized fun ring(on: Boolean, seconds: Int): JSONObject {
         ringTimer?.let(handler::removeCallbacks); ringTimer = null
-        tone?.stop(); tone = null; vibrator.cancel()
+        tone?.stop(); tone = null; vibrator?.cancel()
         if (on) {
             // Respect Android's current ring volume, ringer and DND policy.
             tone = android.media.RingtoneManager.getRingtone(app, android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_RINGTONE))
                 ?.also { it.audioAttributes = android.media.AudioAttributes.Builder().setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE).build(); it.isLooping = true; it.play() }
                 ?: throw ErrorCatalog.error("not_supported", "No ringtone is configured on this device.")
-            vibrator.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 400, 600), 0))
+            vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 400, 600), 0))
             ringTimer = Runnable { ring(false, 1) }.also { handler.postDelayed(it, seconds * 1000L) }
         }
         notification()

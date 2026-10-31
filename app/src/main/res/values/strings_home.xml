@@ -108,6 +108,7 @@
     <string name="features_open_once">Needs the app opened once</string>
     <string name="features_notifications_off">Notifications are off.</string>
     <string name="features_listener_off">Listener is paused</string>
+    <string name="features_needs_newer_android">Needs a newer Android version</string>
     <string name="features_grant">Grant</string>
     <string name="features_turn_on">Turn on</string>
     <string name="perm_word_camera">camera</string>

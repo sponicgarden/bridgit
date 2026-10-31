@@ -11,6 +11,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.AudioManager
 import android.media.MediaRecorder
+import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
 import androidx.camera.core.CameraSelector
@@ -36,10 +37,33 @@ import java.time.temporal.ChronoUnit
 import kotlin.coroutines.resume
 import net.finleg.bridget.api.ApiError
 import net.finleg.bridget.api.Sizing
+import net.finleg.bridget.core.Compat
 
 class Encoded(val bytes: ByteArray, val width: Int, val height: Int, val mime: String)
 
-fun Context.granted(p: String) = ContextCompat.checkSelfPermission(this, p) == PackageManager.PERMISSION_GRANTED
+/**
+ * Permission names as this Android version knows them. Below Android 13 photos and videos fall under
+ * READ_EXTERNAL_STORAGE and notifications need no runtime grant; "Select photos" exists from Android 14.
+ * Null means the permission doesn't exist here, so there is nothing to ask for.
+ */
+object Perms {
+    fun platform(p: String): String? = when {
+        p == Manifest.permission.POST_NOTIFICATIONS && Build.VERSION.SDK_INT < 33 -> null
+        p == Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED && Build.VERSION.SDK_INT < 34 -> null
+        (p == Manifest.permission.READ_MEDIA_IMAGES || p == Manifest.permission.READ_MEDIA_VIDEO) && Build.VERSION.SDK_INT < 33 ->
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        else -> p
+    }
+
+    /** What to pass to a permission request on this Android version. */
+    fun forRequest(perms: Array<out String>): Array<String> = perms.mapNotNull(::platform).distinct().toTypedArray()
+}
+
+/** Whether [p] is held, by its meaning on this Android version: notifications count as granted before Android 13. */
+fun Context.granted(p: String): Boolean {
+    val real = Perms.platform(p) ?: return p == Manifest.permission.POST_NOTIFICATIONS
+    return ContextCompat.checkSelfPermission(this, real) == PackageManager.PERMISSION_GRANTED
+}
 
 fun isoAt(epochMs: Long): String =
     OffsetDateTime.ofInstant(Instant.ofEpochMilli(epochMs), ZoneId.systemDefault())
@@ -165,7 +189,7 @@ class MicCapture(private val context: Context) {
             throw ApiError(409, "sensor_busy", "Another app is using the microphone")
         val file = File(context.cacheDir, "clip-${System.nanoTime()}.m4a")
         val rate = 44100
-        val rec = MediaRecorder(context)
+        val rec = Compat.mediaRecorder(context)
         try {
             try {
                 rec.setAudioSource(MediaRecorder.AudioSource.MIC)
@@ -205,7 +229,7 @@ class Gallery(private val context: Context) {
                val size: Long, val mime: String, val album: String?,
                val addedAt: Long = 0, val relativePath: String? = null)
 
-    @SuppressLint("Range")
+    @SuppressLint("Range", "InlinedApi")
     fun recent(limit: Int, type: String = "any", album: String? = null, since: Long? = null, until: Long? = null): List<Item> {
         val args = Bundle().apply {
             // MediaStore ignores QUERY_ARG_SORT_COLUMNS here; the SQL sort string is honoured.
@@ -220,7 +244,7 @@ class Gallery(private val context: Context) {
         if (since != null) { clauses += "date_added >= ?"; values += (since / 1000).toString() }
         if (until != null) { clauses += "date_added <= ?"; values += (until / 1000).toString() }
         if (clauses.isNotEmpty()) { args.putString(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION, clauses.joinToString(" AND ")); args.putStringArray(android.content.ContentResolver.QUERY_ARG_SQL_SELECTION_ARGS, values.toTypedArray()) }
-        return query(args)
+        return query(args, limit)
     }
 
     enum class Kind { ANY, SCREENSHOT, PHOTO }
@@ -238,6 +262,7 @@ class Gallery(private val context: Context) {
     }
 
     /** The most recently added image of [kind], or null. */
+    @SuppressLint("InlinedApi")
     fun latest(kind: Kind): Pair<Item, String?>? {
         val args = Bundle().apply {
             when (kind) {
@@ -254,7 +279,7 @@ class Gallery(private val context: Context) {
             putString(android.content.ContentResolver.QUERY_ARG_SQL_SORT_ORDER, NEWEST_FIRST)
             putString(android.content.ContentResolver.QUERY_ARG_SQL_LIMIT, "1")
         }
-        return query(args).firstOrNull()?.let { it to it.relativePath }
+        return query(args, 1).firstOrNull()?.let { it to it.relativePath }
     }
 
     fun find(id: Long): Item? {
@@ -270,7 +295,9 @@ class Gallery(private val context: Context) {
         context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
     }.getOrNull()
 
-    private fun query(args: Bundle): List<Item> {
+    /** Android 10 ignores QUERY_ARG_SQL_LIMIT, so reading stops at [limit] here too. */
+    @SuppressLint("InlinedApi")
+    private fun query(args: Bundle, limit: Int = Int.MAX_VALUE): List<Item> {
         val proj = arrayOf(
             MediaStore.Images.Media._ID, MediaStore.Images.Media.DATE_TAKEN, MediaStore.Images.Media.DATE_ADDED,
             MediaStore.Images.Media.WIDTH, MediaStore.Images.Media.HEIGHT, MediaStore.Images.Media.SIZE,
@@ -279,7 +306,7 @@ class Gallery(private val context: Context) {
         )
         val out = mutableListOf<Item>()
         context.contentResolver.query(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, proj, args, null)?.use { c ->
-            while (c.moveToNext()) {
+            while (out.size < limit && c.moveToNext()) {
                 val taken = c.getLong(1).takeIf { it > 0 } ?: (c.getLong(2) * 1000)
                 var w = c.getInt(3); var h = c.getInt(4)
                 if (c.getInt(7) % 180 != 0) { val t = w; w = h; h = t }

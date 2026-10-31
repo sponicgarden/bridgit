@@ -24,6 +24,7 @@ import net.finleg.bridget.api.*
 import net.finleg.bridget.capability.*
 import org.json.JSONObject
 import java.util.UUID
+import androidx.core.content.IntentCompat
 
 class ScreenGrants(private val app: BridgeApp) {
     private val requests = linkedMapOf<String, JSONObject>()
@@ -111,7 +112,7 @@ class ProjectionService : Service() {
         once = seconds == 0
         expiresAt = System.currentTimeMillis() + (if (once) 300 else seconds) * 1000L
         try {
-            val data = intent.getParcelableExtra("data", Intent::class.java) ?: error("No projection consent")
+            val data = IntentCompat.getParcelableExtra(intent, "data", Intent::class.java) ?: error("No projection consent")
             projection = getSystemService(MediaProjectionManager::class.java).getMediaProjection(Activity.RESULT_OK, data)
             projection!!.registerCallback(object : MediaProjection.Callback() { override fun onStop() { stopSelf() } }, handler)
             val w = intent.getIntExtra("width", 1080).coerceIn(1, 4096); val h = intent.getIntExtra("height", 2400).coerceIn(1, 4096)

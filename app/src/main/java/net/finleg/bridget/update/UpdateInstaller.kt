@@ -23,6 +23,7 @@ import java.security.MessageDigest
 import java.util.UUID
 import javax.net.ssl.HttpsURLConnection
 import kotlin.coroutines.coroutineContext
+import net.finleg.bridget.core.Compat
 
 /**
  * Network, file and PackageManager side of the update flow (spec 12.14). Ported in concept
@@ -222,10 +223,9 @@ object UpdateInstaller {
     /** Package, versionCode (equal to the manifest, above installed) and signing certificates (UPD-03). */
     private fun verifyArchive(ctx: Context, file: File, m: UpdateLogic.Manifest) {
         val pm = ctx.packageManager
-        val flags = PackageManager.PackageInfoFlags.of(PackageManager.GET_SIGNING_CERTIFICATES.toLong())
-        val archive = pm.getPackageArchiveInfo(file.absolutePath, flags)
+        val archive = Compat.packageArchiveInfo(pm, file.absolutePath, PackageManager.GET_SIGNING_CERTIFICATES)
             ?: throw Refusal(Problem.NOT_AN_APK, "unreadable archive")
-        val installed = pm.getPackageInfo(ctx.packageName, flags)
+        val installed = Compat.packageInfo(pm, ctx.packageName, PackageManager.GET_SIGNING_CERTIFICATES)
         UpdateLogic.checkArchive(archive.packageName, archive.longVersionCode, m, ctx.packageName, installed.longVersionCode)
             ?.let { throw Refusal(it, "archive ${archive.packageName} ${archive.longVersionCode}") }
         val a = certDigests(archive)

@@ -13,10 +13,13 @@ import net.finleg.bridget.api.ErrorCatalog
 import java.io.File
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import android.os.Build
+import android.annotation.SuppressLint
 
-/** Transcribes a completed AAC clip through Android's explicitly on-device recognizer. No network fallback. */
+/** Transcribes a completed AAC clip through Android's explicitly on-device recognizer. No network fallback. Needs Android 13 (file audio source). */
+@SuppressLint("NewApi")
 object Transcriber {
-    fun available(ctx: Context) = SpeechRecognizer.isOnDeviceRecognitionAvailable(ctx)
+    fun available(ctx: Context) = Build.VERSION.SDK_INT >= 33 && SpeechRecognizer.isOnDeviceRecognitionAvailable(ctx)
     suspend fun transcribe(ctx: Context, bytes: ByteArray, language: String?): String {
         if (!available(ctx)) throw ErrorCatalog.error("not_supported", "No on-device speech recognizer is installed. Install an offline language model on the phone.")
         val source = File(ctx.cacheDir, "transcribe-${System.nanoTime()}.m4a")
@@ -30,6 +33,7 @@ object Transcriber {
     /** 16-bit PCM already on disk (wake words record PCM directly). Same on-device recogniser, same no-cloud rule. */
     suspend fun recognizePcm(ctx: Context, pcm: File, rate: Int, channels: Int, language: String?): String =
         withContext(Dispatchers.Main) {
+            if (Build.VERSION.SDK_INT < 33) throw ErrorCatalog.error("not_supported", "File transcription needs Android 13 or newer.")
             val recognizer = SpeechRecognizer.createOnDeviceSpeechRecognizer(ctx)
             val fd = ParcelFileDescriptor.open(pcm, ParcelFileDescriptor.MODE_READ_ONLY)
             try {

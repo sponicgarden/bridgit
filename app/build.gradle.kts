@@ -18,7 +18,7 @@ android {
 
     defaultConfig {
         applicationId = "net.finleg.bridget"
-        minSdk = 34
+        minSdk = 29
         targetSdk = 35
         // Every build is numbered from git: versionCode = commits in HEAD's history, versionName = 1.6.<code>,
         // so a newer commit always installs over an older build. (Squashing history would lower the count:

@@ -2,7 +2,6 @@ package net.finleg.bridget.ui.more
 
 import android.Manifest
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.net.Uri
 import android.os.Bundle
@@ -27,6 +26,8 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import net.finleg.bridget.BridgeApp
 import net.finleg.bridget.BridgeService
 import net.finleg.bridget.R
+import net.finleg.bridget.capability.Perms
+import net.finleg.bridget.capability.granted
 import net.finleg.bridget.databinding.AccessRowBinding
 import net.finleg.bridget.databinding.AccessSheetHowBinding
 import net.finleg.bridget.databinding.FragmentAccessBinding
@@ -116,7 +117,7 @@ class AccessFragment : Fragment() {
 
     // ---- Status ----
 
-    private fun granted(p: String) = ContextCompat.checkSelfPermission(requireContext(), p) == PackageManager.PERMISSION_GRANTED
+    private fun granted(p: String) = requireContext().granted(p)
 
     /** The rows for this release, in display order. */
     fun items(): List<Item> {
@@ -252,7 +253,7 @@ class AccessFragment : Fragment() {
     private fun request(perms: Array<String>, fallback: (() -> Unit)? = null) {
         permFallback = fallback
         requestedAt = android.os.SystemClock.elapsedRealtime()
-        permLauncher.launch(perms)
+        permLauncher.launch(Perms.forRequest(perms))
     }
 
     /** Bridgit's own page in Accessibility settings, else the Accessibility list. */

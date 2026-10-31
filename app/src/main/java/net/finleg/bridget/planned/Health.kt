@@ -17,8 +17,11 @@ import org.json.JSONObject
 import java.time.Instant
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import android.annotation.SuppressLint
+import android.os.Build
 
-/** Android 14 platform Health Connect; read-only and never requests write or background permissions. */
+/** Android 14 platform Health Connect; read-only and never requests write or background permissions. Blocked below Android 14. */
+@SuppressLint("NewApi")
 class HealthModule(app: BridgeApp) : Capability(app) {
     override val id = "health_connect"
     override val titleRes = R.string.cap_health
@@ -26,6 +29,7 @@ class HealthModule(app: BridgeApp) : Capability(app) {
     override val group = "private context"
     override val switchKey = "health_connect"
     override val endpoints = listOf(PlannedEndpoints.HEALTH_DATA)
+    override fun blockedReason() = if (Build.VERSION.SDK_INT < 34) "android_version" else null
     override fun details() = JSONObject().put("read_types", JSONArray(listOf("steps", "sleep", "heart_rate")))
     override fun Route.install(api: ApiServer) = with(api) { endpoint(PlannedEndpoints.HEALTH_DATA) {
         requireUsable()
