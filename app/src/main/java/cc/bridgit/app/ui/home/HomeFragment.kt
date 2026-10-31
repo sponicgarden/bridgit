@@ -49,10 +49,13 @@ import cc.bridgit.app.databinding.TourHomeCardBinding
 import cc.bridgit.app.interact.Interaction
 import cc.bridgit.app.tour.TourKinds
 import cc.bridgit.app.log.LogQuery
+import cc.bridgit.app.power.PowerAccess
+import cc.bridgit.app.power.PowerPlan
 import cc.bridgit.app.ui.common.Fmt
 import cc.bridgit.app.ui.common.themeColor
 import cc.bridgit.app.ui.feedback.handleFeedbackMenu
 import cc.bridgit.app.ui.interactions.InteractionUi
+import cc.bridgit.app.ui.power.PowersFragment
 import java.util.Calendar
 
 /**
@@ -65,6 +68,8 @@ class HomeFragment : Fragment() {
     private val app get() = requireActivity().application as BridgeApp
 
     private val perms = PermissionAsker(this) { requestRender() }
+    private val powers by lazy { PowerAccess(app) }
+    private val powerSteps by lazy { powers.steps() }
 
     /** Bumped by registry/settings listeners (any thread); collected and throttled on main. */
     private val dirty = MutableStateFlow(0)
@@ -118,6 +123,10 @@ class HomeFragment : Fragment() {
         b.addAgent.setOnClickListener { findNavController().navigate(R.id.addAgent) }
         b.today.setOnClickListener { goTab(R.id.activity) }
         buildQuickSwitches()
+        b.maxPower.setOnClickListener {
+            powers.allSwitchesOn()
+            findNavController().navigate(R.id.powers, bundleOf(PowersFragment.ARG_AUTO to true))
+        }
         buildTourCard()
 
         viewLifecycleOwner.lifecycleScope.launch {
@@ -173,6 +182,7 @@ class HomeFragment : Fragment() {
         renderAgents()
         renderToday()
         renderSwitches()
+        renderMaxPower()
     }
 
     private fun tailscaleAddresses(): List<String> {
@@ -484,6 +494,15 @@ class HomeFragment : Fragment() {
 
     private fun renderSwitches() {
         for ((m, c) in switchCards) if (c.toggle.isChecked != m.enabled) c.toggle.isChecked = m.enabled
+    }
+
+    /** Max power: on once every switch and every Android step this build declares is on. */
+    private fun renderMaxPower() {
+        val on = powers.everySwitchOn() && PowerPlan.status(powerSteps, powers::granted, emptySet()).values.all { it == PowerPlan.Status.ON }
+        b.maxPower.isEnabled = !on
+        b.maxPower.setText(if (on) R.string.power_max_on else R.string.power_max)
+        b.maxPower.setIconResource(if (on) R.drawable.ic_check else R.drawable.ic_bolt)
+        b.maxPower.contentDescription = if (on) getString(R.string.power_max_on) else getString(R.string.power_max) + ", " + getString(R.string.power_max_desc)
     }
 
     private fun toggle(m: Capability) {

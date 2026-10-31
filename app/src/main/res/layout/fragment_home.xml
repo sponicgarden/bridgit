@@ -290,6 +290,16 @@
                     android:columnCount="2"
                     android:useDefaultMargins="false" />
 
+                <!-- Max power: one tap turns every switch on and starts Android's prompts (PowersFragment, auto). -->
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/maxPower"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:minHeight="56dp"
+                    android:text="@string/power_max"
+                    app:icon="@drawable/ic_bolt" />
+
                 <!-- "Waiting for you" (open questions) arrives with interactions in P2. -->
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
