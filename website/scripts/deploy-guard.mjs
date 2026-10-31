@@ -13,7 +13,11 @@ git('fetch --quiet origin main');
 const head = git('rev-parse HEAD'), main = git('rev-parse origin/main');
 const dirty = git('status --porcelain');
 const problems = [];
-if (head !== main) problems.push(`HEAD is ${head.slice(0, 7)} (${git('rev-parse --abbrev-ref HEAD')}), origin/main is ${main.slice(0, 7)}.`);
+// In the push-to-main workflow a newer merge may already be on origin/main and queued
+// behind this run; deploying an ancestor of main is fine there, the next run follows.
+const workflowPush = process.env.GITHUB_EVENT_NAME === 'push' && process.env.GITHUB_REF === 'refs/heads/main';
+const onMain = head === main || (workflowPush && (() => { try { git(`merge-base --is-ancestor ${head} ${main}`); return true; } catch { return false; } })());
+if (!onMain) problems.push(`HEAD is ${head.slice(0, 7)} (${git('rev-parse --abbrev-ref HEAD')}), origin/main is ${main.slice(0, 7)}.`);
 if (dirty) problems.push(`Uncommitted changes:\n${dirty}`);
 if (problems.length) {
   console.error(`Refusing to deploy bridgit.cc: production deploys only from origin/main with a clean tree.\n${problems.join('\n')}\nMerge to main (the Deploy website workflow then deploys it), or set BRIDGIT_DEPLOY_UNCHECKED=1 to deploy this tree anyway.`);
