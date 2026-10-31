@@ -134,13 +134,18 @@ class AdbSetupFragment : Fragment() {
         }
     }
 
-    private fun open(i: Intent) { runCatching { startActivity(i) }.onFailure { Toast.makeText(requireContext(), "Settings didn't open", Toast.LENGTH_SHORT).show() } }
+    // Settings opens in its own task, so tapping Bridgit afterwards shows Bridgit, not the Settings page on top of it.
+    private fun open(i: Intent) {
+        runCatching { startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            .onFailure { Toast.makeText(requireContext(), "Settings didn't open", Toast.LENGTH_SHORT).show() }
+    }
 
-    /** Wireless debugging has no public intent; AOSP and One UI both have this activity. Falls back to Developer options. */
     private fun pair() = AdbPairing.connectOrPair(requireContext()) { if (isAdded) openWirelessDebugging() }
 
+    /** Wireless debugging has no public intent; AOSP has this activity. Falls back to Developer options. */
     private fun openWirelessDebugging() {
         val direct = Intent().setComponent(ComponentName("com.android.settings", "com.android.settings.Settings\$WirelessDebuggingActivity"))
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         // One UI has no such activity: open Developer options with the Wireless debugging row highlighted instead.
         runCatching { startActivity(direct) }.onFailure {
             open(Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS).putExtra(":settings:fragment_args_key", "toggle_adb_wireless"))
