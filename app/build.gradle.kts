@@ -35,10 +35,11 @@ android {
         val sentryDsn = (project.findProperty("bridgitSentryDsn") as String?)
             ?: System.getenv("BRIDGIT_SENTRY_DSN") ?: keystoreProps.getProperty("sentryDsn") ?: ""
         buildConfigField("String", "SENTRY_DSN", "\"${sentryDsn.trim()}\"")
-        // Relay push wake-ups (FCM) use the builder's Firebase app the same way: -PbridgitFcmAppId,
-        // BRIDGIT_FCM_APP_ID or fcmAppId in keystore.properties (and ProjectId, ApiKey, SenderId).
-        // Empty means no push: the relay then reaches the phone only while its socket is up.
-        for (name in listOf("AppId", "ProjectId", "ApiKey", "SenderId")) {
+        // Relay push wake-ups (FCM) use the builder's Firebase project the same way: -PbridgitFcmProjectId,
+        // BRIDGIT_FCM_PROJECT_ID or fcmProjectId in keystore.properties (and ApiKey, SenderId). The App ID
+        // is per package, so it is picked per variant below. Empty means no push: the relay then reaches
+        // the phone only while its socket is up.
+        for (name in listOf("ProjectId", "ApiKey", "SenderId")) {
             val value = (project.findProperty("bridgitFcm$name") as String?)
                 ?: System.getenv("BRIDGIT_FCM_" + name.replace(Regex("(?<=.)([A-Z])"), "_$1").uppercase())
                 ?: keystoreProps.getProperty("fcm$name") ?: ""
@@ -134,6 +135,16 @@ fun gitCommitCount(): Int =
 fun gitDirty(): Boolean = runCatching {
     providers.exec { commandLine("git", "status", "--porcelain") }.standardOutput.asText.get().isNotBlank()
 }.getOrDefault(true)
+
+// Firebase App IDs are bound to a package name: fcmAppId.<applicationId> in keystore.properties
+// (or -PbridgitFcmAppId.<applicationId>), e.g. fcmAppId.cc.bridgit.app.play=1:...:android:...
+androidComponents {
+    onVariants { variant ->
+        val id = variant.applicationId.get()
+        val appId = (project.findProperty("bridgitFcmAppId.$id") as String?) ?: keystoreProps.getProperty("fcmAppId.$id") ?: ""
+        variant.buildConfigFields.put("FCM_APP_ID", com.android.build.api.variant.BuildConfigField("String", "\"${appId.trim()}\"", "Firebase App ID for $id"))
+    }
+}
 
 dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
