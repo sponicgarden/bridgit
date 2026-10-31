@@ -85,3 +85,6 @@
 .hero-logos span{font-size:12.5px;overflow:hidden;text-overflow:ellipsis}
 .hero-logos li{min-height:54px}.hero-logos span{white-space:normal;text-overflow:clip;line-height:1.15;overflow-wrap:anywhere}
 .hero-logos li{padding:10px 8px;gap:6px}.hero-logos span{overflow-wrap:normal;font-size:12px}
+
+/* Only the logo is the home link, so the tagline can be selected. */
+.wordmark .brand-link{display:flex;flex:none;text-decoration:none}
