@@ -71,6 +71,13 @@ object SpeakerRules {
     /** A resolved address that is public (not loopback, private, link-local, CGNAT, ULA, multicast). */
     fun publicAddress(a: InetAddress): Boolean = SafeHttp.isPublic(a)
 
+    /** A say/play reply: "silenced" when the phone is on silent, vibrate, Do Not Disturb or in a call, so nothing will be heard. */
+    fun replyStatus(position: Int, quiet: Boolean): String = when {
+        quiet -> "silenced"
+        position == 0 -> "playing"
+        else -> "queued"
+    }
+
     /** What one queued or playing sound looks like to [status]. */
     data class Entry(val id: String, val agentId: String, val agent: String, val caption: String?)
 
@@ -115,7 +122,7 @@ object SpeakerRules {
 class SpeakerQueue(private val app: BridgeApp) {
     data class Item(val id: String, val agentId: String, val agent: String, val file: File, val caption: String?,
                     val tourId: String?, val urgent: Boolean, val queuedAt: Long = System.currentTimeMillis(),
-                    /** Interaction speech Rahul allowed through silent/DND (urgent) or tapped himself. Never during a call. */
+                    /** Interaction speech the owner allowed through silent/DND (urgent) or tapped themselves. Never during a call. */
                     val allowInQuiet: Boolean = false)
 
     private val lock = Any()
@@ -383,7 +390,7 @@ class SpeakerQueue(private val app: BridgeApp) {
         return if (am.requestAudioFocus(req) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) { focus = req; true } else false
     }
 
-    /** SPK-01: never louder than Rahul's ceiling; put back afterwards unless he changed it meanwhile. */
+    /** SPK-01: never louder than the owner's ceiling; put back afterwards unless they changed it meanwhile. */
     @Synchronized private fun applyCeiling() {
         val max = am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
         val ceiling = max * app.settings.speakerCeiling / 100
@@ -515,7 +522,7 @@ class SpeakerModule(app: BridgeApp) : Capability(app) {
     }
 
     private fun reply(item: SpeakerQueue.Item, pos: Int) = Reply.Json(JSONObject().put("play_id", item.id)
-        .put("position", pos).put("status", if (pos == 0) "playing" else "queued"))
+        .put("position", pos).put("status", SpeakerRules.replyStatus(pos, app.speaker.quiet())))
 
     override fun Route.install(api: ApiServer) = with(api) {
         // Up to 25 MB: switch, rate and queue are checked before the body is read (finding: concurrent big uploads).

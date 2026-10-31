@@ -1,0 +1,131 @@
+<!doctype html>
+<!--
+  Pet monitor: an HTML interaction card (kind "html") an agent sends with POST /v1/interactions.
+  Card rules (docs/spec-agent-inbox.md, CardRules.CSP): no network, inline styles and script only,
+  images as inline SVG or data: URLs, one answer through Bridget.respond(json).
+  The agent fills in the snapshot, bark log and counts from its own monitoring loop:
+  camera snapshots or short clips (GET /v1/camera/snapshot, /v1/video/clip) and short audio
+  clips (POST /v1/audio/record) that its model classifies as barking.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root{--ink:#2b1834;--paper:#fff8ed;--card:#ffffff;--line:#e6dbe9;--muted:#6f5f75;--accent:#704394;--lav:#efe4f7;--alert:#b4471f;--alertbg:#fde9df;--ok:#2f7a4f;--okbg:#e2f3e8}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  main{padding:16px 16px 20px}
+  .eyebrow{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin:0 0 4px}
+  h1{font:600 24px/1.15 Georgia,serif;margin:0 0 4px;letter-spacing:-.3px}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 12px}
+  .feed{position:relative;border-radius:14px;overflow:hidden;background:#d9cbbd;aspect-ratio:4/3}
+  .feed svg{display:block;width:100%;height:100%}
+  .live{position:absolute;left:10px;top:10px;display:flex;gap:6px;align-items:center;background:#2b1834cc;color:#fff;font-size:11px;font-weight:600;padding:4px 8px;border-radius:20px}
+  .live i{width:7px;height:7px;border-radius:50%;background:#ff5a4e;display:inline-block}
+  .stamp{position:absolute;right:10px;bottom:10px;background:#2b1834cc;color:#fff;font-size:11px;padding:3px 8px;border-radius:20px}
+  .tag{position:absolute;left:31%;top:44%;border:2px solid #ffd166;border-radius:8px;width:38%;height:40%}
+  .tag span{position:absolute;top:-22px;left:-2px;background:#ffd166;color:var(--ink);font-size:11px;font-weight:700;padding:2px 6px;border-radius:6px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 10px}
+  .stat b{display:block;font-size:20px;line-height:1.1}
+  .stat small{color:var(--muted);font-size:11px}
+  .alert{display:flex;gap:10px;align-items:flex-start;background:var(--alertbg);border-radius:12px;padding:10px 12px;margin-bottom:12px}
+  .alert .wave{flex:none;width:34px;height:34px;border-radius:10px;background:#fff;display:grid;place-items:center}
+  .alert p{margin:0;font-size:13.5px}
+  .alert strong{color:var(--alert)}
+  h2{font-size:13px;margin:0 0 6px;color:var(--muted);font-weight:600}
+  ol{list-style:none;margin:0 0 14px;padding:0;border-top:1px solid var(--line)}
+  li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+  li em{font-style:normal;font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;align-self:center}
+  .loud{background:var(--alertbg);color:var(--alert)}
+  .soft{background:var(--lav);color:var(--accent)}
+  .calm{background:var(--okbg);color:var(--ok)}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  button{font:600 14px system-ui,-apple-system,sans-serif;border-radius:12px;padding:12px 10px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+  button.primary{grid-column:1/-1;background:var(--ink);color:#fff;border-color:var(--ink)}
+  button:disabled{opacity:.5}
+  .note{font-size:11.5px;color:var(--muted);margin:10px 0 0;text-align:center}
+  #sent{display:none;margin-top:10px;background:var(--okbg);color:var(--ok);border-radius:12px;padding:10px 12px;font-size:13.5px;font-weight:600}
+</style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">Pet monitor · Living room</p>
+  <h1>Biscuit barked 3 times</h1>
+  <p class="sub">Watching video and listening for barks since 1:30 pm.</p>
+
+  <div class="feed" aria-label="Latest camera snapshot of the living room with the dog by the window">
+    <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect width="400" height="300" fill="#e8d9c7"/>
+      <rect x="0" y="215" width="400" height="85" fill="#c9a98a"/>
+      <rect x="236" y="34" width="132" height="132" rx="6" fill="#bcd7ea" stroke="#f6efe6" stroke-width="8"/>
+      <path d="M302 34v132M236 100h132" stroke="#f6efe6" stroke-width="6"/>
+      <rect x="22" y="140" width="150" height="80" rx="16" fill="#8e6fb0"/>
+      <rect x="30" y="118" width="134" height="40" rx="14" fill="#a083c0"/>
+      <ellipse cx="200" cy="246" rx="70" ry="10" fill="#b38f70"/>
+      <g transform="translate(150 150)">
+        <ellipse cx="50" cy="66" rx="46" ry="30" fill="#c98b4a"/>
+        <circle cx="94" cy="38" r="24" fill="#d39a5a"/>
+        <path d="M80 18 70 0l18 10z" fill="#9a6230"/>
+        <path d="M104 16 110 -2l6 20z" fill="#9a6230"/>
+        <ellipse cx="114" cy="44" rx="10" ry="7" fill="#e3b07a"/>
+        <circle cx="119" cy="42" r="3" fill="#2b1834"/>
+        <circle cx="98" cy="32" r="3" fill="#2b1834"/>
+        <path d="M114 52q4 6 10 2" stroke="#2b1834" stroke-width="2" fill="none"/>
+        <rect x="18" y="84" width="12" height="20" rx="5" fill="#b37a40"/>
+        <rect x="70" y="84" width="12" height="20" rx="5" fill="#b37a40"/>
+        <path d="M6 58q-16-10-8-26" stroke="#c98b4a" stroke-width="9" stroke-linecap="round" fill="none"/>
+      </g>
+    </svg>
+    <span class="live"><i></i>Watching · camera + mic</span>
+    <span class="tag"><span>Dog · 97%</span></span>
+    <span class="stamp">Snapshot 2:41 pm</span>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b>3</b><small>barks today</small></div>
+    <div class="stat"><b>12</b><small>motion events</small></div>
+    <div class="stat"><b>18m</b><small>calm now</small></div>
+  </div>
+
+  <div class="alert">
+    <div class="wave" aria-hidden="true"><svg width="22" height="22" viewBox="0 0 22 22"><path d="M2 11h3l2-6 3 12 3-9 2 3h5" fill="none" stroke="#b4471f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    <p><strong>Loud barking at 2:23 pm</strong> for 40 seconds, facing the window. A courier was at the door on the clip.</p>
+  </div>
+
+  <h2>Bark log</h2>
+  <ol>
+    <li><span>2:23 pm · 40 s at the window</span><em class="loud">Loud</em></li>
+    <li><span>1:58 pm · 6 s, toy squeak nearby</span><em class="soft">Short</em></li>
+    <li><span>1:41 pm · 3 s</span><em class="soft">Short</em></li>
+    <li><span>Since 2:24 pm · lying by the sofa</span><em class="calm">Calm</em></li>
+  </ol>
+
+  <div class="actions">
+    <button class="primary" data-action="talk">Talk to Biscuit through the phone</button>
+    <button data-action="clip">Send me the clip</button>
+    <button data-action="snapshot">New snapshot</button>
+    <button data-action="snooze">Mute alerts 30 min</button>
+    <button data-action="stop">Stop monitoring</button>
+  </div>
+  <p id="sent" role="status"></p>
+  <p class="note">Your agent watches camera snapshots and listens to short audio clips with your permission. Every capture is logged on this phone.</p>
+</main>
+<script>
+  // One answer per card: Bridget.respond(json) is accepted once (CardWebView RespondGate).
+  var labels = {talk:'Opening the speaker for Biscuit', clip:'Sending the 2:23 pm clip', snapshot:'Taking a new snapshot', snooze:'Bark alerts muted for 30 minutes', stop:'Monitoring stopped'};
+  document.querySelectorAll('button[data-action]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var answer = {action: button.dataset.action, at: new Date().toISOString()};
+      if (button.dataset.action === 'snooze') answer.minutes = 30;
+      if (window.Bridget && Bridget.respond) Bridget.respond(JSON.stringify(answer));
+      document.querySelectorAll('button[data-action]').forEach(function (b) { b.disabled = true; });
+      var sent = document.getElementById('sent');
+      sent.textContent = '✓ ' + labels[button.dataset.action] + '. Sent to your agent.';
+      sent.style.display = 'block';
+    });
+  });
+</script>
+</body>
+</html>

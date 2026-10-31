@@ -51,7 +51,7 @@ class VideoModule(app: BridgeApp) : Capability(app) {
         val file = File(app.cacheDir, "video-${System.nanoTime()}.mp4")
         var note: Long? = null
         try {
-            if (audio) { if (!app.registry.micLock.tryLock()) throw ErrorCatalog.error("sensor_busy", "Microphone in use."); micLocked = true }
+            if (audio) { if (!app.registry.micLock.tryLock()) throw ErrorCatalog.error("sensor_busy", "Microphone in use."); micLocked = true; app.wake.awaitMicReleased() }
             note = api.service.captureStarted("$agentName is recording $seconds seconds of video")
             withContext(Dispatchers.Main) {
                 val future = ProcessCameraProvider.getInstance(app)

@@ -2,15 +2,15 @@
 
 > **Superseded by [bridgit-spec-v2.md](bridgit-spec-v2.md)** (27 Oct 2026). Kept for history; v2 is the source of truth.
 
-Status: proposed, 26 Oct 2026. Not built. Deep links checked on Rahul's Pixel
+Status: proposed, 26 Oct 2026. Not built. Deep links checked on the owner's Pixel
 10 Pro XL (Android 17) with `cmd package resolve-activity`.
 
 ## Why
 
-Some features need a switch that only Rahul can flip in Android Settings,
+Some features need a switch that only the owner can flip in Android Settings,
 often three or four screens deep. This screen lists every such switch,
 shows whether it's on, and opens the exact page with one tap. Bridgit then
-detects the change by itself when Rahul comes back.
+detects the change by itself when the owner comes back.
 
 ## The screen
 
@@ -41,7 +41,7 @@ Not needed: Read all notifications (the Muse app already does this)  [Show]
 - Each row has a plain-language line saying what it unlocks, and a status
   chip: **On**, **Off**, **Partly** (for example approximate location only),
   or **Blocked** (Android's "restricted settings", see section 4).
-- **One button per row** opens the right place (section 2). When Rahul comes
+- **One button per row** opens the right place (section 2). When the owner comes
   back, the row updates on its own; Bridgit re-checks every time the screen
   is shown.
 - **Show me how** under each button opens numbered steps with Pixel
@@ -55,7 +55,7 @@ Not needed: Read all notifications (the Muse app already does this)  [Show]
 
 "Direct" means it opens Bridgit's own switch, so one more tap finishes it.
 
-| Row | Button opens | Taps for Rahul | Link (intent) |
+| Row | Button opens | Taps for the owner | Link (intent) |
 |---|---|---|---|
 | Camera, Microphone, Photos, Notifications | Android's permission pop-up | 1 | runtime permission request |
 | Location: precise, while in use | Android's pop-up: choose **Precise**, **While using the app** | 2 | `ACCESS_FINE_LOCATION` request |
@@ -80,7 +80,7 @@ on those pages at all.
 
 ## 3. "Show me how" steps (fallback)
 
-Short numbered steps with the exact words on Rahul's Pixel, each with a
+Short numbered steps with the exact words on the owner's Pixel, each with a
 screenshot. Screenshots are taken on the Pixel while this feature is built
 (the phone was locked when this spec was written) and stored in
 `docs/img/access-*.png` plus inside the app. Wording to confirm then:
@@ -109,7 +109,7 @@ screenshot. Screenshots are taken on the Pixel while this feature is built
 ## 4. If a switch is greyed out ("Restricted setting")
 
 Since Android 13, apps installed from a downloaded APK can't be given
-notification access (and some other special access) until Rahul allows it.
+notification access (and some other special access) until the owner allows it.
 Bridgit installed over ADB isn't affected (its install source is "shell").
 A copy installed from the GitHub download may be.
 
@@ -122,11 +122,11 @@ opens App info with these steps:
 ## 5. One tap from an agent's request
 
 When an agent's call fails because a setting is off (`permission_denied`,
-or a new `access_needed` for special access), Bridgit can also send Rahul a
+or a new `access_needed` for special access), Bridgit can also send the owner a
 **notice** (see `spec-agent-inbox.md`): "**Grok wanted your app usage. Turn on
 App usage?**" [Turn on] [Not now]. **Turn on** goes straight to the page in
 the table above. The agent's error includes `"setting": "usage_access"` so it
-can tell Rahul exactly what's missing, and it can retry once the Access
+can tell the owner exactly what's missing, and it can retry once the Access
 screen shows the setting on. At most one such notice per setting per day.
 
 ## 6. Acceptance tests

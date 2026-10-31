@@ -41,7 +41,7 @@ class TourStateTest {
     @Test fun updateKeepsTheCurrentPausedFlag() {
         val s = TourState()
         s.begin(tour("t1"))
-        val stale = s.current()!!      // a tick captured this, then Rahul paused
+        val stale = s.current()!!      // a tick captured this, then the owner paused
         s.setPaused(true)
         s.update("t1") { c -> c.copy(ticks = stale.ticks + 1) }
         assertTrue(s.current()!!.paused)
@@ -59,7 +59,7 @@ class TourStateTest {
     @Test fun endIfOwnedChecksAndEndsInOneStep() {
         val s = TourState()
         s.begin(tour("t1", "a"))
-        // Rahul replaced A's tour with B's before A's DELETE arrived.
+        // The owner replaced A's tour with B's before A's DELETE arrived.
         s.begin(tour("t2", "b"))
         assertNull(s.takeIfOwned("a"))
         assertEquals("t2", s.current()!!.id)

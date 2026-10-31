@@ -1,36 +1,8 @@
 import java.util.Properties
-import java.util.UUID
 
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-}
-
-// Allocate at execution time, so sync/help/clean do not consume a version.
-// Keep the counter outside build/ so `clean` cannot reset it.
-@org.gradle.work.DisableCachingByDefault(because = "Each build needs a fresh APK version")
-abstract class AllocateApkVersion : DefaultTask() {
-    @get:Internal abstract val counterFile: RegularFileProperty
-    @get:OutputFile abstract val versionFile: RegularFileProperty
-
-    init {
-        outputs.upToDateWhen { false }
-        notCompatibleWithConfigurationCache("APK allocation must use a unique invocation output")
-    }
-
-    @TaskAction
-    fun allocate() {
-        val command = listOf(
-            "python3", project.rootProject.file("tools/allocate-apk-version.py").absolutePath,
-            "--counter", counterFile.get().asFile.absolutePath,
-            "--output", versionFile.get().asFile.absolutePath
-        )
-        val process = ProcessBuilder(command).directory(project.rootProject.projectDir)
-            .redirectErrorStream(true).start()
-        val result = process.inputStream.bufferedReader().use { it.readText() }
-        check(process.waitFor() == 0) { "APK version allocation failed: $result" }
-        logger.lifecycle(result.trim())
-    }
 }
 
 // Release signing comes from keystore.properties (gitignored). It points at a
@@ -48,9 +20,21 @@ android {
         applicationId = "net.finleg.bridget"
         minSdk = 34
         targetSdk = 35
+        // Every build is numbered from git: versionCode = commits in HEAD's history, versionName = 1.6.<code>,
+        // so a newer commit always installs over an older build. (Squashing history would lower the count:
+        // pass -PbridgetVersionCode then.) -PbridgetVersionCode / -PbridgetVersionName still override, e.g. to
+        // build an older-looking copy for testing the in-app update path (UPD-03/04).
+        val gitCode = gitCommitCount()
+        versionCode = (project.findProperty("bridgetVersionCode") as String?)?.toInt() ?: gitCode
+        versionName = (project.findProperty("bridgetVersionName") as String?) ?: "1.6.$gitCode"
         buildConfigField("int", "DEFAULT_PORT", "8734")
         buildConfigField("String", "GIT_COMMIT", "\"${gitCommit()}\"")
         buildConfigField("boolean", "DIRTY_BUILD", "${gitDirty()}")
+        // Crash reports (D32) go only where the builder points them: -PbridgitSentryDsn, BRIDGIT_SENTRY_DSN,
+        // or sentryDsn in keystore.properties. Empty (the default, and every fork) means no crash reports.
+        val sentryDsn = (project.findProperty("bridgitSentryDsn") as String?)
+            ?: System.getenv("BRIDGIT_SENTRY_DSN") ?: keystoreProps.getProperty("sentryDsn") ?: ""
+        buildConfigField("String", "SENTRY_DSN", "\"${sentryDsn.trim()}\"")
     }
 
     buildFeatures {
@@ -97,9 +81,11 @@ android {
         unitTests.isReturnDefaultValues = true
         unitTests.isIncludeAndroidResources = true
         // ApiDocsTest writes build/apidocs/api.html for this version (tools/publish-apk.sh passes the APK's).
-        unitTests.all { it.systemProperty("bridget.version", (project.findProperty("bridgetDocsVersion") as String?) ?: "development") }
+        unitTests.all { it.systemProperty("bridget.version", (project.findProperty("bridgetDocsVersion") as String?) ?: defaultConfig.versionName!!) }
     }
     packaging {
+        // Wake words: Vosk's x86 builds only serve emulators (about 20 MB); there wake words report an error instead.
+        jniLibs { excludes += setOf("lib/x86/libvosk.so", "lib/x86_64/libvosk.so") }
         resources {
             excludes += setOf(
                 "META-INF/INDEX.LIST", "META-INF/io.netty.versions.properties",
@@ -133,33 +119,12 @@ fun gitCommit(): String = runCatching {
     providers.exec { commandLine("git", "rev-parse", "--short=12", "HEAD") }.standardOutput.asText.get().trim()
 }.getOrDefault("unknown")
 
+fun gitCommitCount(): Int =
+    providers.exec { commandLine("git", "rev-list", "--count", "HEAD") }.standardOutput.asText.get().trim().toInt()
+
 fun gitDirty(): Boolean = runCatching {
     providers.exec { commandLine("git", "status", "--porcelain") }.standardOutput.asText.get().isNotBlank()
 }.getOrDefault(true)
-
-// An immutable per-invocation file prevents another build in the same checkout
-// from changing values while AGP reads this invocation’s manifest providers.
-val apkVersionInvocation = UUID.randomUUID().toString()
-
-androidComponents {
-    onVariants(selector().all()) { variant ->
-        val allocation = tasks.register<AllocateApkVersion>(
-            "allocate${variant.name.replaceFirstChar { it.uppercaseChar() }}ApkVersion"
-        ) {
-            counterFile.set(rootProject.layout.projectDirectory.file("apk-version.properties"))
-            versionFile.set(layout.buildDirectory.file("generated/apk-version/${variant.name}/$apkVersionInvocation/version.properties"))
-        }
-        val version = allocation.flatMap { it.versionFile }.map { file ->
-            Properties().apply { file.asFile.inputStream().use { load(it) } }
-        }
-        variant.buildConfigFields.put("VERSION_NAME", version.map { com.android.build.api.variant.BuildConfigField("String", "\"${it.getProperty("versionName")}\"", "Allocated APK version") })
-        variant.buildConfigFields.put("VERSION_CODE", version.map { com.android.build.api.variant.BuildConfigField("int", it.getProperty("versionCode"), "Allocated APK version") })
-        variant.outputs.forEach { output ->
-            output.versionCode.set(version.map { it.getProperty("versionCode").toInt() })
-            output.versionName.set(version.map { it.getProperty("versionName") })
-        }
-    }
-}
 
 dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
@@ -190,8 +155,13 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.recyclerview:recyclerview:1.3.2")
     implementation("androidx.viewpager2:viewpager2:1.1.0")
+    // Email alerts: digests and retries survive restarts and wait for a network.
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
     // Crash reports (D32). Core only: no NDK, replay or Gradle plugin, so nothing is uploaded at build time.
     implementation("io.sentry:sentry-android-core:7.18.1")
+    // Wake words (CAP-47): offline keyword spotting. The English model is downloaded on first use, not bundled.
+    implementation("com.alphacephei:vosk-android:0.3.75")
+    implementation("net.java.dev.jna:jna:5.18.1@aar")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")

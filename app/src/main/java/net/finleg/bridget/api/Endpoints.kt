@@ -43,7 +43,7 @@ object Endpoints {
 
     val HEALTH = EndpointSpec("GET", "/health", "status", "Is Bridgit up, and which agent you are",
         example = "GET /v1/health", returns = "status, app, app_version, agent, listener_uptime_seconds, battery_level, charging, bind_address, port")
-    val ME = EndpointSpec("POST", "/me", "status", "Tell Rahul which model you are and what runs you; shown on your agent card (AGT-16)",
+    val ME = EndpointSpec("POST", "/me", "status", "Tell the owner which model you are and what runs you; shown on your agent card (AGT-16)",
         body = listOf(Param("model", "string", "Your model, as exact as you know it, e.g. claude-opus-5-5 or gpt-6.1 (1-60 chars)", required = true),
             Param("harness", "string", "The program running you, e.g. Claude Code, Codex CLI, a Python script (1-40 chars)")),
         example = "POST /v1/me {\"model\":\"claude-opus-5-5\",\"harness\":\"Claude Code\"}", returns = "agent, model, harness",
@@ -52,6 +52,8 @@ object Endpoints {
         example = "GET /v1/capabilities", returns = "per capability: enabled, ready, blocked_reason, details; callback {set, host}")
     val GUIDE = EndpointSpec("GET", "/guide", "status", "This guide, generated live (Markdown)",
         example = "GET /v1/guide", returns = "text/markdown")
+    val DEMO = EndpointSpec("GET", "/demo", "status", "A script for showing the owner what Bridgit can do: offer it, ask a few questions, run the demos that fit (Markdown)",
+        example = "GET /v1/demo", returns = "text/markdown")
     val OPENAPI = EndpointSpec("GET", "/openapi.json", "status", "OpenAPI 3.1 description of every endpoint",
         example = "GET /v1/openapi.json", returns = "application/json")
     val CHANGES = EndpointSpec("GET", "/changes", "status", "What's new in the API since a revision you know (API-14)",
@@ -159,7 +161,7 @@ object Endpoints {
     val FEEDBACK_STATUS = EndpointSpec("POST", "/feedback/{id}/status", "feedback", "Move a report: in_progress, fixed, wont_fix or duplicate (developer agents only; FBK-11a)",
         idempotent = true, developerOnly = true, privateFields = setOf("note"),
         body = listOf(Param("status", "string", "in_progress, fixed, wont_fix or duplicate", required = true),
-            Param("note", "string", "Short note shown to Rahul, e.g. \"Fix in PR #412\" (500 chars)")),
+            Param("note", "string", "Short note shown to the owner, e.g. \"Fix in PR #412\" (500 chars)")),
         example = "POST /v1/feedback/7/status {\"status\":\"in_progress\",\"note\":\"Looking at it\"}", returns = "the report summary",
         errors = listOf("forbidden", "not_found", "invalid_parameter"))
     val FEEDBACK_POST = EndpointSpec("POST", "/feedback", "feedback", "File a bug report or feature request yourself (any agent; images from developer agents only)",
@@ -171,7 +173,7 @@ object Endpoints {
         example = "POST /v1/feedback {\"kind\":\"bug\",\"description\":\"image/last returned 500 twice\"}", returns = "id, number, status",
         errors = listOf("forbidden", "invalid_parameter", "rate_limited"))
 
-    val INTERACTION_CREATE = EndpointSpec("POST", "/interactions", "interactions", "Send Rahul a notice, a question (buttons, text reply, choice, links), an HTML card or a live text panel",
+    val INTERACTION_CREATE = EndpointSpec("POST", "/interactions", "interactions", "Send the owner a notice, a question (buttons, text reply, choice, links), an HTML card or a live text panel",
         idempotent = true, privateFields = setOf("text", "image", "html"),
         body = listOf(
             Param("kind", "string", "notice (one-way), question, html (a card you draw; answer comes from Bridget.respond) or text (a live text panel you stream into with /v1/text/stream)",
@@ -179,11 +181,11 @@ object Endpoints {
             Param("title", "string", "Up to 80 characters", required = true),
             Param("text", "string", "Up to 2,000 characters"),
             Param("image", "object", "{\"gallery_id\"} or {\"data_base64\"}, up to 2 MB"),
-            Param("html", "string", "kind=html: the card's HTML, up to 256 KB. Runs offline: no network, only data:image/* images; call Bridget.respond(json) once (up to 16 KB) to answer"),
+            Param("html", "string", "kind=html: the card's HTML, up to 256 KB. Runs offline: no network, only data:image/* images; call Bridget.respond(json) once per question view (up to 16 KB) to answer. After persistence, bridgit:answered lets the card show its confirmation; the trusted Back to questions control reloads the question for resubmission"),
             Param("controls", "array", "Question: 1-6 of {type: button|text|choice|link, id, label, style?, placeholder?, options?, url?, package?}. Notice: links only"),
             Param("priority", "string", "normal or urgent", enum = listOf("normal", "urgent")),
             Param("speak", "boolean", "Read it aloud on the phone"),
-            Param("expires_in_seconds", "integer", "60 to 604800, default 86400"),
+            Param("expires_in_seconds", "integer", "60 to 604800, default 86400. After it, waits return expired and you get interaction.expired, but a question stays on the owner's phone and they can still answer it late (interaction.answered with late=true)"),
         ),
         example = "POST /v1/interactions {\"kind\":\"question\",\"title\":\"Pay this invoice?\",\"controls\":[{\"type\":\"button\",\"id\":\"yes\",\"label\":\"Pay\",\"style\":\"primary\"},{\"type\":\"button\",\"id\":\"no\",\"label\":\"Not now\"}]}",
         returns = "interaction_id, status, expires_at",
@@ -192,10 +194,10 @@ object Endpoints {
         privateFields = setOf("append"),
         body = listOf(Param("interaction_id", "string", "The panel's interaction_id", required = true),
             Param("append", "string", "Text to add, up to 16 KB per call (the panel keeps the last 200 KB)"),
-            Param("done", "boolean", "true: the stream is finished; the panel stays until Rahul closes it")),
+            Param("done", "boolean", "true: the stream is finished; the panel stays until the owner closes it")),
         example = "POST /v1/text/stream {\"interaction_id\":\"42\",\"append\":\"Claude: running the tests now...\\n\"}",
         returns = "interaction_id, length, status", errors = listOf("not_found", "invalid_parameter", "conflict", "rate_limited"))
-    val CALLBACK_TEST = EndpointSpec("POST", "/callback/test", "interactions", "Send a signed test event to the callback URL Rahul set for you (EVT-05/06)",
+    val CALLBACK_TEST = EndpointSpec("POST", "/callback/test", "interactions", "Send a signed test event to the callback URL the owner set for you (EVT-05/06)",
         example = "POST /v1/callback/test", returns = "delivered, http_status, host", errors = listOf("not_found", "callback_failed"))
     val MCP = EndpointSpec("POST", "/mcp", "status", "Model Context Protocol (Streamable HTTP, JSON replies): every endpoint you can use is an MCP tool",
         maxBody = 2 * 1024 * 1024, privateFields = setOf("params"),
@@ -206,13 +208,13 @@ object Endpoints {
     val INTERACTION_LIST = EndpointSpec("GET", "/interactions", "interactions", "Your interactions, newest first",
         query = listOf(Param("status", "string", "pending, seen, answered, dismissed, expired or cancelled"), Param("limit", "integer", "1-100, default 50")),
         example = "GET /v1/interactions?status=answered", returns = "interactions[]")
-    val INTERACTION_GET = EndpointSpec("GET", "/interactions/{id}", "interactions", "One of your interactions; with wait, holds until Rahul answers or closes it",
+    val INTERACTION_GET = EndpointSpec("GET", "/interactions/{id}", "interactions", "One of your interactions; with wait, holds until the owner answers or closes it",
         query = listOf(Param("wait", "integer", "Hold up to this many seconds (max 55) for the answer")),
         example = "GET /v1/interactions/12?wait=55", returns = "kind, status, answer{button, values}, answered_at, closed_at",
         errors = listOf("not_found", "too_many_waits"))
     val INTERACTION_CANCEL = EndpointSpec("DELETE", "/interactions/{id}", "interactions", "Cancel one of your interactions",
         example = "DELETE /v1/interactions/12", returns = "the interaction", errors = listOf("not_found"))
-    val EVENTS = EndpointSpec("GET", "/events", "interactions", "Your events, oldest first: answers, closes, expiries, switch changes",
+    val EVENTS = EndpointSpec("GET", "/events", "interactions", "Your events, oldest first: answers, closes, expiries, switch changes. Repeated phone answers emit interaction.answered with resubmission=true and previous_answer; agents decide whether to accept the change. An answer given after the question expired comes as interaction.answered with late=true",
         query = listOf(Param("since", "string", "next_cursor from the last call; omit for the last 50"),
             Param("wait", "integer", "With since: hold up to 55 s for a new event"), Param("types", "string", "Comma list, e.g. interaction.answered")),
         example = "GET /v1/events?since=0&wait=55", returns = "events[id, type, at, data], next_cursor",
@@ -231,7 +233,7 @@ object Endpoints {
             Param("tour_id", "string", "Narration for your running City tour"), Param("urgent", "boolean", "Jump the queue (answers to questions)"),
             Param("text", "string", "Caption shown on the phone while it plays")),
         body = listOf(Param("url", "string", "https:// audio file (MP3, M4A, OGG, WAV, FLAC), up to 25 MB")),
-        example = "POST /v1/speaker/play (Content-Type: audio/mpeg, body = the MP3)", returns = "play_id, position, status",
+        example = "POST /v1/speaker/play (Content-Type: audio/mpeg, body = the MP3)", returns = "play_id, position, status (playing, queued or silenced)",
         errors = listOf("capability_disabled", "notifications_required", "invalid_parameter", "payload_too_large", "rate_limited", "not_found"))
     val SPEAKER_SAY = EndpointSpec("POST", "/speaker/say", "speaker", "Read text aloud on the phone (its own text-to-speech)",
         idempotent = true, privateFields = setOf("text"),
@@ -240,14 +242,15 @@ object Endpoints {
             Param("replace", "string", "after_current (default), now, or queue"), Param("tour_id", "string", "Narration for your City tour"),
             Param("urgent", "boolean", "Jump the queue")),
         example = "POST /v1/speaker/say {\"text\":\"On your left is the old town hall, built in 1360.\",\"tour_id\":\"t123\"}",
-        returns = "play_id, position, status", errors = listOf("capability_disabled", "invalid_parameter", "rate_limited", "not_found"))
+        returns = "play_id, position, status (playing, queued, or silenced: the phone is on silent, Do Not Disturb or in a call, so it won't be heard)",
+        errors = listOf("capability_disabled", "invalid_parameter", "rate_limited", "not_found"))
     val SPEAKER_STATUS = EndpointSpec("GET", "/speaker", "speaker", "What's playing, and your queued sounds",
         example = "GET /v1/speaker", returns = "playing{play_id, agent, text} (yours only, else null), busy (someone else's sound is playing), paused, queued[], quiet")
     val SPEAKER_STOP = EndpointSpec("DELETE", "/speaker", "speaker", "Stop your audio and clear your queue",
         example = "DELETE /v1/speaker", returns = "stopped")
-    val TOUR_GET = EndpointSpec("GET", "/tour", "tour", "Your running City tour, if Rahul started one with you (D30)",
+    val TOUR_GET = EndpointSpec("GET", "/tour", "tour", "Your running City tour, if the owner started one with you (D30)",
         example = "GET /v1/tour", returns = "tour{tour_id, kinds, interval_s, started_at, ticks, last_tick_at, distance_m, photos_sent, brief} or null")
-    val TOUR_PHOTO = EndpointSpec("GET", "/tour/photo/{n}", "tour", "A photo Rahul took with Take photo on your tour (n from tour.photo), sized for you",
+    val TOUR_PHOTO = EndpointSpec("GET", "/tour/photo/{n}", "tour", "A photo the owner took with Take photo on your tour (n from tour.photo), sized for you",
         media = true, query = sizing,
         example = "GET /v1/tour/photo/1?size=agent", returns = "taken_at, width_px, height_px, format, size_bytes, data_base64",
         errors = listOf("not_found", "photo_not_found", "payload_too_large"))
@@ -255,15 +258,29 @@ object Endpoints {
         query = listOf(Param("tour_id", "string", "Only end this tour (it must be yours and still running)")),
         example = "DELETE /v1/tour", returns = "ended", errors = listOf("not_found"))
 
-    val SCREEN_CAPTURE = EndpointSpec("POST", "/screen/capture", "screen", "What's on Rahul's screen right now (D17, no prompt once he's turned it on)",
+    val SCREEN_CAPTURE = EndpointSpec("POST", "/screen/capture", "screen", "What's on the owner's screen right now (D17, no prompt once they've turned it on)",
         capture = true, idempotent = true, media = true, query = sizing,
         body = listOf(Param("mode", "string", "private (default): kept in memory, nothing saved", enum = listOf("private"))),
         example = "POST /v1/screen/capture?size=agent", returns = "captured_at, width_px, height_px, format, size_bytes, mode, data_base64 (or raw=1 bytes)",
         errors = listOf("capability_disabled", "access_needed", "notifications_required", "device_locked", "rate_limited", "sensor_busy",
             "not_supported", "capture_timeout", "service_start_blocked", "payload_too_large"))
 
-    val all = listOf(HEALTH, CAPABILITIES, GUIDE, OPENAPI, CHANGES, HELPER, PAIR, SNAPSHOT, MIC, GALLERY_RECENT, GALLERY_PHOTO,
+    val LISTEN = EndpointSpec("GET", "/listen", "wakewords", "Wake words: whether the phone is listening, and the wake words the owner gave you (CAP-47)",
+        example = "GET /v1/listen", returns = "enabled, state (off|listening|hearing|paused), reason, muted_until, model (ready|not_downloaded|downloading|failed), model_name, max_seconds, wake_words[{phrase, send_clip}]. " +
+            "Each hit arrives as a listen.heard event: wake_word, transcript, heard_at, ended_by (pause|max_seconds|no_speech|interrupted), duration_seconds, recogniser, clip_id")
+    val LISTEN_CLIP = EndpointSpec("GET", "/listen/clip/{id}", "wakewords", "The audio after a wake word, when the owner set that wake word to send it (kept 10 minutes)",
+        media = true, example = "GET /v1/listen/clip/c0123abcd", returns = "heard_at, duration_seconds, format (wav), sample_rate_hz, size_bytes, data_base64 (or raw=1 bytes)",
+        errors = listOf("not_found"))
+
+    val SOUNDS = EndpointSpec("GET", "/sounds", "sounds", "Listen for any sounds: whether the phone tells you when the room gets loud (8.23)",
+        example = "GET /v1/sounds", returns = "enabled, for_you, state (off|listening|paused), reason, sensitivity (quiet|normal|loud), send_clip, cooldown_seconds, max_seconds. " +
+            "Each sound arrives as a sound.heard event: heard_at, duration_seconds, peak_dbfs, mean_dbfs, sensitivity, clip_id")
+    val SOUNDS_CLIP = EndpointSpec("GET", "/sounds/clip/{id}", "sounds", "The audio of a sound (up to 10 s, from just before it started), when the owner lets sounds send audio (kept 10 minutes)",
+        media = true, example = "GET /v1/sounds/clip/c0123abcd", returns = "heard_at, duration_seconds, format (wav), sample_rate_hz, size_bytes, data_base64 (or raw=1 bytes)",
+        errors = listOf("not_found"))
+
+    val all = listOf(HEALTH, CAPABILITIES, GUIDE, DEMO, OPENAPI, CHANGES, HELPER, PAIR, SNAPSHOT, MIC, GALLERY_RECENT, GALLERY_PHOTO,
         IMAGE_LAST, SCREEN_CAPTURE, LOG, LOG_ENTRY, LOG_STATS, LOG_EXPORT, LOG_NOTE, AUDIT, FEEDBACK_LIST, FEEDBACK_GET, FEEDBACK_STATUS, FEEDBACK_POST,
         INTERACTION_CREATE, INTERACTION_LIST, INTERACTION_GET, INTERACTION_CANCEL, EVENTS, TEXT_STREAM, CALLBACK_TEST, MCP,
-        LOCATION, SPEAKER_PLAY, SPEAKER_SAY, SPEAKER_STATUS, SPEAKER_STOP, TOUR_GET, TOUR_PHOTO, TOUR_END, ME) + net.finleg.bridget.planned.PlannedEndpoints.all
+        LOCATION, SPEAKER_PLAY, SPEAKER_SAY, SPEAKER_STATUS, SPEAKER_STOP, TOUR_GET, TOUR_PHOTO, TOUR_END, ME, LISTEN, LISTEN_CLIP, SOUNDS, SOUNDS_CLIP) + net.finleg.bridget.planned.PlannedEndpoints.all
 }

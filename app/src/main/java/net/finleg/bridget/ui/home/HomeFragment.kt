@@ -46,11 +46,13 @@ import net.finleg.bridget.databinding.HomeAgentRowBinding
 import net.finleg.bridget.databinding.HomeBannerBinding
 import net.finleg.bridget.databinding.HomeSwitchCardBinding
 import net.finleg.bridget.databinding.TourHomeCardBinding
+import net.finleg.bridget.interact.Interaction
 import net.finleg.bridget.tour.TourKinds
 import net.finleg.bridget.log.LogQuery
 import net.finleg.bridget.ui.common.Fmt
 import net.finleg.bridget.ui.common.themeColor
 import net.finleg.bridget.ui.feedback.handleFeedbackMenu
+import net.finleg.bridget.ui.interactions.InteractionUi
 import java.util.Calendar
 
 /**
@@ -71,6 +73,8 @@ class HomeFragment : Fragment() {
     private data class Today(val requests: Int, val photos: Int, val clips: Int, val errors: Int)
     private var today: Today? = null
     private var lastEndpoint: Map<String, String> = emptyMap()
+    /** Questions the owner hasn't answered, expired ones included (loaded off the main thread). */
+    private var waiting: List<Interaction> = emptyList()
 
     private var heroDescription = ""
     private var bannerKey = ""
@@ -112,8 +116,7 @@ class HomeFragment : Fragment() {
         b.address.setOnClickListener { copyAddress() }
         heroAccessibility()
 
-        // Agents is no longer a tab (Applets took its place), so a plain navigate with Back.
-        b.seeAll.setOnClickListener { findNavController().navigate(R.id.agents) }
+        b.seeAll.setOnClickListener { goTab(R.id.agents) }
         b.addAgent.setOnClickListener { findNavController().navigate(R.id.addAgent) }
         b.today.setOnClickListener { goTab(R.id.activity) }
         buildQuickSwitches()
@@ -125,6 +128,12 @@ class HomeFragment : Fragment() {
                 launch { app.tours.state.collect { renderTourCard() } }
                 launch { dirty.collect { render(); delay(300) } }
                 launch { app.log.latestId.collectLatest { delay(400); loadCounts() } }
+                launch {
+                    app.interactions.changed.collectLatest {
+                        waiting = withContext(Dispatchers.IO) { runCatching { app.interactions.waitingQuestions() }.getOrDefault(emptyList()) }
+                        requestRender()
+                    }
+                }
                 launch { while (true) { tickUptime(); delay(1000) } }
             }
         }
@@ -297,13 +306,23 @@ class HomeFragment : Fragment() {
 
     // ---- Banners (UI-10) ----
 
-    private data class Banner(val key: String, val text: String, val action: String, val error: Boolean, val onClick: () -> Unit)
+    private data class Banner(val key: String, val text: String, val action: String, val error: Boolean,
+                              val icon: Int? = null, val onClick: () -> Unit)
 
-    /** Only when action is needed. Order: nothing works without Tailscale, then what blocks captures. */
+    /** Only when action is needed. Order: questions waiting for the owner, nothing works without Tailscale, then what blocks captures. */
     private fun banners(): List<Banner> {
         val ctx = requireContext()
         val s = app.listener.value
         val out = mutableListOf<Banner>()
+        waiting.singleOrNull()?.let { q ->
+            out += Banner("ask1:${q.id}", getString(R.string.home_banner_question_one, InteractionUi.agentName(q), q.title),
+                getString(R.string.home_banner_answer), false, R.drawable.ic_nav_interactions) {
+                findNavController().navigate(R.id.interactionDetail, bundleOf("interactionId" to q.id))
+            }
+        }
+        if (waiting.size > 1)
+            out += Banner("askN:${waiting.size}", resources.getQuantityString(R.plurals.home_banner_questions, waiting.size, waiting.size),
+                getString(R.string.home_banner_see_questions), false, R.drawable.ic_nav_interactions) { goTab(R.id.interactions) }
         if (!UiActions.isTailscaleInstalled(ctx))
             out += Banner("ts", getString(R.string.home_banner_tailscale_missing), getString(R.string.home_banner_install_tailscale), true) {
                 UiActions.openTailscale(ctx)
@@ -352,7 +371,7 @@ class HomeFragment : Fragment() {
             val bg = if (bn.error) M.attr.colorErrorContainer else M.attr.colorSecondaryContainer
             val fg = ctx.themeColor(if (bn.error) M.attr.colorOnErrorContainer else M.attr.colorOnSecondaryContainer)
             v.root.setCardBackgroundColor(ctx.themeColor(bg))
-            v.icon.setImageResource(if (bn.error) R.drawable.ic_error else R.drawable.ic_warning)
+            v.icon.setImageResource(bn.icon ?: if (bn.error) R.drawable.ic_error else R.drawable.ic_warning)
             v.icon.setColorFilter(fg)
             v.text.text = bn.text
             v.text.setTextColor(fg)

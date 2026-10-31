@@ -12,6 +12,10 @@ captures/
 .kotlin/
 __pycache__/
 
+# Publisher settings for tools/publish-apk.sh.
+tools/publish.env
+
+.wrangler/
 relay/node_modules/
 relay/.wrangler/
 relay/.dry-run/

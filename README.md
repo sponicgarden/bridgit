@@ -2,35 +2,37 @@
 
 Copyright 2026 Sponic Garden, Inc. Licensed under the [Apache License 2.0](LICENSE).
 
-A small sideloaded app for Rahul's Pixel 10 Pro XL. It lets any AI agent you
-pair with it (Muse, Grok, or others) take a photo, record a short audio clip,
-or fetch a gallery photo. It answers only over Tailscale, each agent has its
-own key, and every request is logged on the phone with the agent's name.
+**BRIDGIT Device Manager for Android** turns an Android phone (Android 14+)
+into a device your own AI agents can use: Claude, Grok, Codex or any agent that
+can make HTTP or MCP calls. With your OK, paired agents can take a photo, record
+a short clip, read the screen, send you questions and notices, and more (see
+**More → What can Bridgit do?** in the app). It answers only over your
+Tailscale network, each agent has its own key, every switch starts off and can
+only be changed on the phone, and every request is logged with the agent's name.
 
-Package `net.finleg.bridget`. Version **1.3.0** (phase P1a of
-[`docs/bridgit-spec-v2.md`](docs/bridgit-spec-v2.md), the source of truth).
-1.3.0 is not compatible with 1.2: keys, the log and `/v1/audit` changed, and
-nothing is migrated (spec decision D20). Uninstall 1.2.0, install 1.3.0, and
-add each agent again.
+Package `net.finleg.bridget`, version **1.6.0**. The design and requirements
+live in [`docs/bridgit-spec-v2.md`](docs/bridgit-spec-v2.md). Public release
+work is tracked in [`docs/release-checklist.md`](docs/release-checklist.md).
 
 **For agents:** call `GET /v1/guide` (written for you, generated live) and
 `GET /v1/openapi.json`. [`docs/scenarios.md`](docs/scenarios.md) lists what
 you can do with Bridgit.
 
-## Local planned-feature development
+## Device features added in 1.6.0
 
-The local development build adds the planned device controls, context/sensors, files/sharing, media/OCR/transcription, screen-share grants, usage/Health Connect/notification reads, clipboard approval, and per-agent permissions. See [implementation and supported bounds](docs/planned-features-implementation.md) for phone entry points, exact endpoint paths, validation and device limitations. These additions are not a published release.
+Version 1.6.0 added device controls, context/sensors, files/sharing, media/OCR/transcription, screen-share grants, usage/Health Connect/notification reads, clipboard approval, and per-agent permissions. See [implementation and supported bounds](docs/planned-features-implementation.md) for phone entry points, exact endpoint paths, validation and device limitations.
 
 ## Install
 
-1. Get the APK from the private GitHub release (`sponicgarden/bridgit`, tag
-   `bridget-v1.3.0`), or build it (below). Install it with
-   `adb install -r app-release.apk`, or open it on the Pixel.
-2. Open **Bridgit**. First run explains the app, asks for notifications and
+1. Install [Tailscale](https://tailscale.com/download) on the phone and on the
+   computer your agent runs on, signed in to the same tailnet.
+2. Get the APK from the [GitHub releases](https://github.com/sponicgarden/bridgit/releases)
+   or https://bridgit.cc/download/, or build it (below). Install it with
+   `adb install -r app-release.apk`, or open it on the phone.
+3. Open **Bridgit**. First run explains the app, asks for notifications and
    checks Tailscale. Every feature starts **off**.
 
-Updates from 1.3.0 on install over the top, as long as they are signed with
-the same key.
+Updates install over the top as long as they are signed with the same key.
 
 ## Adding an agent (under a minute)
 
@@ -56,8 +58,8 @@ Agent page: **Rotate key** (old key stops at once and gets
 `unauthorized` with `"reason":"key_rotated"` for 7 days), **Remove**
 (`"reason":"agent_removed"`), **Developer** switch, notes, recent activity.
 
-Keys are stored in Bitwarden as **"Bridget — <Name> agent key"** (login
-username = agent name, password = key, URL = base URL).
+Keep each agent's key in a password manager (username = agent name,
+password = key, URL = base URL). The phone stores only a salted hash.
 
 **After a reboot**, Bridgit starts listening at the first unlock (Android
 sends its boot signal only then), with camera and mic off until you open
@@ -65,7 +67,7 @@ the app once. Home shows a **Fix now** banner for that.
 
 ## API (for agent builders)
 
-Base URL `http://pixel-10-pro-xl.tail9c9221.ts.net:8734/v1` (debug builds:
+Base URL `http://my-phone.tailnet-name.ts.net:8734/v1` (debug builds:
 port **8735**). Every call except `GET /v1/tools/bridget` and `POST /v1/pair`
 needs `Authorization: Bearer brg_...`. Every response has a `request_id`
 (also `X-Request-Id`) that matches its log entry. Full reference:
@@ -135,7 +137,7 @@ capped at 2 MB, so base64 images sent with `interactions_send` or
 
 ### Callbacks
 
-Rahul can give an agent a **Callback URL** in its agent screen (tailnet
+The owner can give an agent a **Callback URL** in its agent screen (tailnet
 addresses only, unless Settings > Allow internet callbacks is on; then a public
 `https://` URL works too). Bridgit then POSTs every event for that agent as
 `{"event": {id, type, at, data}, "agent": "<name>"}`, retrying at 10 s, 60 s and
@@ -168,15 +170,21 @@ receiver didn't answer 2xx).
   a notification and Android's indicator shows. Agent photos never go into
   the gallery.
 - The log (SQLite on the phone) never stores keys, request headers, media or
-  long texts. No analytics, no third-party SDKs other than Ktor (HTTP),
-  CameraX, AndroidX/Material and ZXing (QR).
-- App backup is disabled. The only outgoing call is the update check (from 1.4.0): HTTPS to
-  Sponic's public R2 host, verified before Android asks you to install.
+  long texts. No analytics or ads. Third-party libraries: Ktor (HTTP), CameraX,
+  AndroidX/Material, ZXing (QR), Google ML Kit text recognition (on-device OCR)
+  and Sentry (crash reports, below).
+- App backup is disabled. Outgoing calls: the update check (HTTPS to the
+  publisher's download host, verified before Android asks you to install),
+  crash reports if the build has a Sentry DSN and you leave them on, ML Kit's
+  usage metrics to Google, audio URLs an agent asks the phone to play, and
+  callbacks you set up for an agent.
 
 ## Crash reports
 
-Crashes and freezes (ANRs) go to Sentry, project `bridget-android` in the
-`sponic-gardens-inc` org (decision D32). Sent: the error and stack, app version,
+Official builds send crashes and freezes (ANRs) to the publisher's Sentry
+project (decision D32). Builds made without a DSN send nothing and hide the
+switch: set `-PbridgitSentryDsn=...`, `BRIDGIT_SENTRY_DSN`, or `sentryDsn=` in
+`keystore.properties` to point a build at your own project. Sent: the error and stack, app version,
 Android version and basic device facts (model, battery, memory). Not sent:
 screenshots, photos, keys, request data, install ids or sessions; the project
 drops the IP address and the city inferred from it. Turn it off on
@@ -187,32 +195,35 @@ the phone under Settings > Privacy > Send crash reports.
 Needs JDK 17 and the Android SDK (platform 35, build-tools 35).
 
 ```bash
-export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home
+export JAVA_HOME=/path/to/jdk-17
+export ANDROID_HOME=/path/to/android-sdk   # or sdk.dir in local.properties
+./gradlew assembleDebug     # app/build/outputs/apk/debug/app-debug.apk
 ./gradlew assembleRelease   # app/build/outputs/apk/release/app-release.apk
 ```
 
-Signing reads `keystore.properties` (gitignored):
+Release signing reads `keystore.properties` (gitignored); without it the
+release APK is unsigned:
 
 ```
-storeFile=/Users/otter/.config/almusca-device-bridge/release.jks
-passwordFile=/Users/otter/.config/almusca-device-bridge/keystore.pass
-keyAlias=devicebridge
+storeFile=/path/to/release.jks
+passwordFile=/path/to/keystore.pass
+keyAlias=<alias>
+sentryDsn=<optional Sentry DSN>
 ```
 
-Signing certificate SHA-256:
-`6bbd482d18efdc58ca28de8358405602ebb0405b479cabd36b37ff8242042f61`.
-Backup: Bitwarden item **"Almusca Device Bridge — Android release keystore"**
-(password in the notes, `release.jks` attached; verified 26 Oct 2026). That
-key signs Bridgit; the folder and item keep the original name. Without it, an
-update means uninstalling, which wipes the agents and the audit log.
+Official releases are signed with the certificate whose SHA-256 is
+`6bbd482d18efdc58ca28de8358405602ebb0405b479cabd36b37ff8242042f61`. A build
+signed with another key can't update an installed official build; uninstall
+first (this wipes the agents and the log).
 
 Icon (1.4.0): a phone outline with a mint "B" ribbon and cursor, as an adaptive icon
 (`res/mipmap-*/ic_launcher_foreground.png` on `#022124`, plus a monochrome layer for themed
-icons), generated by `tools/make-launcher-icon.py` from the owner's artwork.
+icons), generated by `tools/make-launcher-icon.py` from the original artwork.
 
-Publishing a release (1.4.0 on): `tools/publish-apk.sh --notes "..."` builds, signs, checks the
-certificate, uploads the APK and `latest.json` to Sponic's public R2 (`bridget/`), verifies the
-download and creates the GitHub release. `--dry-run` checks everything without uploading.
+Publishing a release (maintainers): `tools/publish-apk.sh --notes "..."` builds, signs, checks the
+certificate, uploads the APK and `latest.json` to the public R2 host (`bridget/`), verifies the
+download and creates the GitHub release. Its settings live in `tools/publish.env` (gitignored; see
+`tools/publish.env.example`). `--dry-run` checks everything without uploading.
 
 Debug builds install alongside as `net.finleg.bridget.debug`, listen on port
 8735, and include an ADB-only test hook (`DebugSetupReceiver`, protected by the `DUMP` permission
@@ -222,8 +233,8 @@ tapping the screen. Release builds don't contain it.
 ## Tests
 
 - Unit tests (JVM): `./gradlew testDebugUnitTest`.
-- Device acceptance (TST-03), against the debug build on the Pixel:
-  `tools/acceptance.sh --apk app/build/outputs/apk/debug/app-debug.apk`.
+- Device acceptance (TST-03), against the debug build on a test phone:
+  `BRIDGIT_TEST_PHONE=<tailscale-ip> BRIDGIT_TEST_ADB=<ip>:5555 tools/acceptance.sh --apk app/build/outputs/apk/debug/app-debug.apk`.
   It writes `docs/acceptance/<date>-<version>-debug.md` with PASS, FAIL or
   UNVERIFIED per check. Camera and mic checks need the phone unlocked.
 
@@ -238,7 +249,7 @@ tapping the screen. Release builds don't contain it.
 - `docs/spec-access-screen.md`: an Access tab listing every Android setting
   Bridgit needs, with one-tap links straight to each switch.
 - `docs/spec-agent-inbox.md`: interactions (one-way notices and questions,
-  optionally spoken aloud), files sent to the phone, and things Rahul shares
+  optionally spoken aloud), files sent to the phone, and things the owner shares
   to an agent, all in a new Inbox screen. Works for
   agents without webhooks (long polling).
 
@@ -255,15 +266,20 @@ distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 KIND, either express or implied. See the License for the specific language
 governing permissions and limitations under the License.
 
-Third-party components keep their own licences: Ktor (Apache 2.0), CameraX
-and AndroidX (Apache 2.0), Material Components (Apache 2.0), ZXing (Apache
-2.0), Kotlin coroutines (Apache 2.0).
+Third-party components keep their own licences: Ktor and Netty (Apache 2.0),
+CameraX and AndroidX (Apache 2.0), Material Components (Apache 2.0), ZXing
+(Apache 2.0), Kotlin coroutines (Apache 2.0) and the Sentry Android SDK (MIT).
+Google ML Kit text recognition is **not open source**: it is distributed under
+the [ML Kit Terms of Service](https://developers.google.com/ml-kit/terms).
+
+The "What can Bridgit do?" illustrations were generated with an AI image model
+from the prompts in `docs/whatcan-image-prompts.md`.
 
 ## Bridgit naming and compatibility
 
 The repository is https://github.com/sponicgarden/bridgit and the selected website domain is https://bridgit.cc. The public product name is **BRIDGIT Device Manager for Android**.
 
-Android package `net.finleg.bridget`, stored device preferences, `X-Bridget-*` headers, the `Bridget.respond` JavaScript bridge, pairing identifiers, existing vault item names, updater object paths and historical release tags remain stable so installed apps and paired agents keep working. Use `tools/bridgit`; `tools/bridget` remains a compatibility entry point. Existing `BRIDGET_*` variables and `~/.config/bridget` configuration remain supported.
+Android package `net.finleg.bridget`, stored device preferences, `X-Bridget-*` headers, the `Bridget.respond` JavaScript bridge, pairing identifiers, updater object paths and historical release tags remain stable so installed apps and paired agents keep working. Use `tools/bridgit`; `tools/bridget` remains a compatibility entry point. Existing `BRIDGET_*` variables and `~/.config/bridget` configuration remain supported.
 
 New CLI configuration uses `~/.config/bridgit/env` and `BRIDGIT_KEY`, `BRIDGIT_HOST`, `BRIDGIT_PORT` (or `BRIDGIT_ENV` for an explicit config path). The old names remain accepted; new names take precedence.
 

@@ -42,6 +42,10 @@
                 <include android:id="@+id/bind" layout="@layout/settings_row" />
                 <include android:id="@+id/internetCallbacks" layout="@layout/settings_switch_row" />
 
+                <TextView style="@style/SettingsHeader" android:text="@string/settings_powers" />
+                <include android:id="@+id/everythingOn" layout="@layout/settings_row" />
+                <include android:id="@+id/everythingOff" layout="@layout/settings_row" />
+
                 <TextView style="@style/SettingsHeader" android:text="@string/settings_privacy" />
                 <include android:id="@+id/logVisibility" layout="@layout/settings_row" />
                 <include android:id="@+id/lockscreenText" layout="@layout/settings_switch_row" />
@@ -58,6 +62,13 @@
                 <include android:id="@+id/notifCapture" layout="@layout/settings_row" />
                 <include android:id="@+id/notifQuestions" layout="@layout/settings_row" />
                 <include android:id="@+id/notifNotices" layout="@layout/settings_row" />
+                <include android:id="@+id/openOnArrival" layout="@layout/settings_switch_row" />
+
+                <TextView style="@style/SettingsHeader" android:text="@string/settings_alerts" />
+                <include android:id="@+id/alertFrequency" layout="@layout/settings_row" />
+                <include android:id="@+id/alertRecipient" layout="@layout/settings_row" />
+                <include android:id="@+id/alertTest" layout="@layout/settings_row" />
+                <include android:id="@+id/alertWhat" layout="@layout/settings_row" />
 
                 <TextView style="@style/SettingsHeader" android:text="@string/settings_appearance" />
                 <include android:id="@+id/theme" layout="@layout/settings_row" />

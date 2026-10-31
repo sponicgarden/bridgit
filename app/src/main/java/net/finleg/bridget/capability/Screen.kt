@@ -28,7 +28,7 @@ import kotlin.coroutines.resumeWithException
 /**
  * 8.10 Screenshots (D17, CAP-25/26): an Accessibility service that can only take screenshots.
  * It asks for no events and can't read windows, tap or filter keys (res/xml/accessibility_screenshot.xml).
- * Rahul turns it on once in Android's Accessibility settings; after that agents get the screen on request.
+ * The owner turns it on once in Android's Accessibility settings; after that agents get the screen on request.
  */
 class ScreenshotService : AccessibilityService() {
     override fun onServiceConnected() { instance = this }
@@ -64,7 +64,7 @@ class ScreenshotService : AccessibilityService() {
         @Volatile var instance: ScreenshotService? = null
             private set
 
-        /** Whether Rahul has turned the service on in Accessibility settings (true even before it connects). */
+        /** Whether the owner has turned the service on in Accessibility settings (true even before it connects). */
         fun isEnabled(ctx: Context): Boolean {
             val me = ComponentName(ctx, ScreenshotService::class.java)
             val list = Settings.Secure.getString(ctx.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES) ?: return false
@@ -110,15 +110,15 @@ class ScreenModule(app: BridgeApp) : Capability(app) {
             if (mode != "private") throw ErrorCatalog.error("invalid_parameter", "mode must be \"private\" (system mode isn't built yet).")
             val spec = Sizing.resolve({ arg(it) }, "agent")
             if (!enabled) throw ErrorCatalog.error("capability_disabled",
-                "Screenshots are switched off on the phone. Ask Rahul to turn on Screenshots in Features.", mapOf("setting" to switchKey))
+                "Screenshots are switched off on the phone. Ask the owner to turn on Screenshots in Features.", mapOf("setting" to switchKey))
             if (!ScreenshotService.isEnabled(app)) throw ErrorCatalog.error("access_needed",
-                "Bridgit's screenshot service is off. Ask Rahul to open Bridgit > More > Access > Screenshots and turn it on.",
+                "Bridgit's screenshot service is off. Ask the owner to open Bridgit > More > Access > Screenshots and turn it on.",
                 mapOf("setting" to "accessibility_screenshot"))
             requireUsable()
             val svc = ScreenshotService.instance ?: throw ErrorCatalog.error("service_start_blocked",
                 "The screenshot service is on but Android hasn't started it yet. Retry in a few seconds.")
             if (app.getSystemService(KeyguardManager::class.java)?.isKeyguardLocked == true)
-                throw ErrorCatalog.error("device_locked", "The phone is locked, so there's nothing to see. Ask Rahul to unlock it.")
+                throw ErrorCatalog.error("device_locked", "The phone is locked, so there's nothing to see. Ask the owner to unlock it.")
             admit(agent!!.id)
             if (!lock.tryLock()) throw ErrorCatalog.error("sensor_busy", "A screenshot is already being taken. Retry in a few seconds.")
             val token = api.service.captureStarted(app.getString(R.string.notif_screenshot, agentName))

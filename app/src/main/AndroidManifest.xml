@@ -14,6 +14,8 @@
     <!-- Keeps the listener alive when camera/mic permissions are not granted yet. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- CAP-56: lets a new interaction bring Bridgit to the front (Android blocks background starts otherwise). -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
@@ -92,8 +94,9 @@
             android:exported="true" android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
             <intent-filter><action android:name="android.intent.action.VIEW_PERMISSION_USAGE" /><category android:name="android.intent.category.HEALTH_PERMISSIONS" /></intent-filter>
         </activity-alias>
-        <activity android:name="net.finleg.bridget.planned.OwnerToolsActivity" android:exported="false" />
-        <activity android:name="net.finleg.bridget.planned.ShareActivity" android:exported="true" android:label="Share to Bridgit">
+        <activity android:name=".planned.OwnerToolsActivity" android:exported="false" />
+        <activity android:name=".listen.WakeWordsActivity" android:exported="false" android:label="Wake words" />
+        <activity android:name=".planned.ShareActivity" android:exported="true" android:label="Share to Bridgit">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <action android:name="android.intent.action.SEND_MULTIPLE" />

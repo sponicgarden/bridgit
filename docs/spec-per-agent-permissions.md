@@ -11,7 +11,7 @@ switches. Turning the camera on for one turns it on for all. Each agent should
 get only what it needs. For example, Codex reads screenshots but never uses
 the microphone.
 
-## What changes for Rahul
+## What changes for the owner
 
 - Tapping an agent in the **Agents** list opens its own screen with one switch
   per capability: **Camera**, **Microphone**, **Gallery**, plus later ones
@@ -24,7 +24,7 @@ the microphone.
   WhatsApp images or photos.
 - **Mic limit** per agent: maximum clip length, from 5 to 120 seconds.
 - **Capture rate** per agent: 1-10 captures per minute (default 10).
-- A new agent starts with **everything off** for itself. Rahul turns on what it
+- A new agent starts with **everything off** for itself. The owner turns on what it
   needs while it is being added.
 - The agent screen also shows that agent's recent requests (the audit log
   filtered to it), its last use, and the Rotate key / Remove buttons.
@@ -35,7 +35,7 @@ the microphone.
   gets `"allowed"` (this agent) next to `"enabled"` (master), plus
   `gallery_scope` and `mic_max_seconds`.
 - New error `agent_not_allowed` (403): the master switch is on, but this agent
-  doesn't have that capability. The message names the switch Rahul would turn
+  doesn't have that capability. The message names the switch the owner would turn
   on. `capability_disabled` keeps meaning the master switch is off.
 - Gallery calls outside the agent's scope return `photo_not_found`, so the
   agent can't learn that hidden images exist. `image/last?type=any` returns
@@ -54,7 +54,7 @@ the microphone.
 
 When 1.3 installs over 1.2, the four existing agents keep exactly what they
 can do today: every capability whose master switch is on is allowed, scope is
-*All images*, the mic limit is 120 s, and the rate is 10 per minute. Rahul then
+*All images*, the mic limit is 120 s, and the rate is 10 per minute. The owner then
 narrows them down.
 
 ## Acceptance tests

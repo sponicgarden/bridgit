@@ -172,6 +172,10 @@ object SafeHttp {
     fun post(url: String, policy: Policy, headers: Map<String, String>, body: ByteArray, deadlineMs: Long, extraPort: Int? = null): Int =
         exchange(url, policy, "POST", headers, body, Deadline(deadlineMs), 64 * 1024, extraPort, null).status
 
+    /** DELETE [url]; never follows redirects. Returns the HTTP status. Throws [Failure]. */
+    fun delete(url: String, policy: Policy, headers: Map<String, String>, deadlineMs: Long): Int =
+        exchange(url, policy, "DELETE", headers, null, Deadline(deadlineMs), 64 * 1024, null, null).status
+
     private class Deadline(ms: Long) {
         private val end = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(ms)
         fun remainingMs(): Long = TimeUnit.NANOSECONDS.toMillis(end - System.nanoTime())

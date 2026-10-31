@@ -65,6 +65,9 @@
     <string name="addagent_prompt_intro">Paste this into %1$s. It tells %1$s how to reach this phone and holds %1$s\'s key.</string>
     <string name="addagent_prompt_warning">Anyone who gets this text can use your phone until you rotate the key.</string>
     <string name="addagent_prompt_risk">Pasting it into a hosted AI service is your call; you can rotate the key any time from the agent\'s page.</string>
+    <string name="addagent_trust_title">You\'re handing over this phone</string>
+    <string name="addagent_trust_body">By pasting this into an agent, you are handing control of this phone to that agent. Do not give this to anyone you don\'t trust to manage all actions on your phone.\n\nAnd by trust, this is not just trusting that they will not try to cause you problems, but that you trust them to be able to protect themselves from malicious actors. This includes your level of trust in yourself on this dimension.\n\nIf you need to revoke access to your phone, you can do so in the Agents screen.</string>
+    <string name="addagent_trust_confirm">I understand</string>
     <string name="addagent_prompt_card_desc">Setup prompt</string>
     <string name="addagent_copy_prompt">Copy prompt</string>
     <string name="addagent_share">Share</string>

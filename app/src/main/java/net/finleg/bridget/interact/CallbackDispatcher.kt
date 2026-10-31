@@ -126,7 +126,7 @@ class CallbackDispatcher(private val app: BridgeApp, private val store: Callback
     /** POST /v1/callback/test: stores a `callback.test` event and sends it now (EVT-06). */
     suspend fun test(r: Req): Reply {
         val a = r.agent!!
-        val cfg = store.get(a.id) ?: throw ErrorCatalog.error("not_found", "Rahul hasn't set a callback URL for you. Use GET /v1/events instead.")
+        val cfg = store.get(a.id) ?: throw ErrorCatalog.error("not_found", "The owner hasn't set a callback URL for you. Use GET /v1/events instead.")
         val e = app.interactions.event(a.id, TEST_TYPE, JSONObject().put("note", "Test from Bridgit. If you can read this, your callback works."))
         val out = withContext(Dispatchers.IO) { deliver(cfg, a.name, e) }
         r.params.put("host", out.host)

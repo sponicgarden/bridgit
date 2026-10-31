@@ -1,6 +1,7 @@
 import subprocess,json,urllib.request,urllib.error,re,time,base64,sys
 from pathlib import Path
-ADB='/Users/otter/Library/Android/sdk/platform-tools/adb';DEV='100.94.27.79:5555';PKG='net.finleg.bridget.review';base='http://100.94.27.79:8737/v1';name='ReviewPositive'
+import os,shutil
+ADB=os.environ.get('ADB') or shutil.which('adb') or 'adb';PHONE=os.environ['BRIDGIT_TEST_PHONE'];DEV=os.environ.get('BRIDGIT_TEST_ADB',PHONE+':5555');PKG='net.finleg.bridget.review';base=f'http://{PHONE}:8737/v1';name='ReviewPositive'
 def adb(*args):
  p=subprocess.run([ADB,'-s',DEV,*args],capture_output=True,text=True,timeout=25);assert p.returncode==0,p.stderr;return p.stdout
 def hook(*args):return adb('shell','am','broadcast','--include-stopped-packages','-n',PKG+'/net.finleg.bridget.DebugSetupReceiver','-a','net.finleg.bridget.debug.SETUP',*args)
@@ -35,7 +36,7 @@ try:
  # This safe write must replay after rebuilding the listener rather than creating a second file.
  headers={'Idempotency-Key':'review-rebind-file-20261029'}
  first=call('/files',dict(payload,name='rebind.txt',mime='text/plain'),201,headers=headers)
- hook('--ei','port','8738');base='http://100.94.27.79:8738/v1'
+ hook('--ei','port','8738');base=f'http://{PHONE}:8738/v1'
  for _ in range(40):
   try: call('/health');break
   except urllib.error.URLError: time.sleep(.5)

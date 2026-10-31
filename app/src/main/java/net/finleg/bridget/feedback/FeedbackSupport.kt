@@ -22,9 +22,9 @@ import java.util.Locale
 /** What a report carries automatically (FBK-06, FBK-04 item 7). */
 object FeedbackContext {
     /**
-     * [screen] is the screen Rahul was on ("Activity"), [screenContext] a short hint
+     * [screen] is the screen the owner was on ("Activity"), [screenContext] a short hint
      * such as the selected agent or filter (≤500 chars). Agent names appear only
-     * when Rahul was on an agent screen.
+     * when the owner was on an agent screen.
      */
     fun build(app: BridgeApp, screen: String?, screenContext: String?, captureSource: String): JSONObject {
         val l = app.listener.value
@@ -54,7 +54,7 @@ object FeedbackContext {
 }
 
 /**
- * Tells Rahul when a developer agent marks a report fixed / won't fix / duplicate
+ * Tells the owner when a developer agent marks a report fixed / won't fix / duplicate
  * (FBK-11), with Confirm and Still broken actions (Spotka's verify step).
  */
 object FeedbackNotifier {
@@ -97,7 +97,7 @@ class FeedbackActionReceiver : BroadcastReceiver() {
         val id = intent.getLongExtra("id", -1)
         val to = ReportStatus.of(intent.getStringExtra("to")) ?: return
         runCatching {
-            val r = app.feedback.move(id, to, Actor.OWNER, "Rahul", null)
+            val r = app.feedback.move(id, to, Actor.OWNER, "owner", null)
             app.log.system("audit", "feedback", "You marked report ${r.number} ${if (to == ReportStatus.CONFIRMED) "confirmed" else "still broken"}")
         }
         context.getSystemService(NotificationManager::class.java).cancel(5000 + id.toInt())

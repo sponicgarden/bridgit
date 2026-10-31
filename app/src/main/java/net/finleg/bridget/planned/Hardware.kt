@@ -89,10 +89,9 @@ class Hardware(private val app: BridgeApp) {
                 torch = null; app.registry.cameraLock.unlock()
             }
         } else {
+            val id = torch ?: torchCamera ?: throw ErrorCatalog.error("not_supported", "This device has no flashlight.")
             if (torch == null && !app.registry.cameraLock.tryLock()) throw ErrorCatalog.error("sensor_busy", "Camera is in use.")
             try {
-                val id = torch ?: cameras.cameraIdList.firstOrNull { cameras.getCameraCharacteristics(it).get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true }
-                    ?: throw ErrorCatalog.error("not_supported", "This device has no flashlight.")
                 cameras.setTorchMode(id, true); torch = id
             } catch (e: Exception) {
                 if (torch == null) app.registry.cameraLock.unlock()
@@ -102,6 +101,10 @@ class Hardware(private val app: BridgeApp) {
         }
         notification()
         return JSONObject().put("on", torch != null)
+    }
+    /** The camera whose flash unit is the torch, or null on devices without one (many tablets). */
+    val torchCamera: String? by lazy {
+        runCatching { cameras.cameraIdList.firstOrNull { cameras.getCameraCharacteristics(it).get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true } }.getOrNull()
     }
     @Synchronized fun lightStatus() = JSONObject().put("on", torch != null)
     @Synchronized fun ring(on: Boolean, seconds: Int): JSONObject {
@@ -300,7 +303,8 @@ class TorchModule(app: BridgeApp) : Capability(app) {
     override val switchKey = "flashlight"
     override val permissions = listOf(Manifest.permission.CAMERA)
     override val endpoints = listOf(PlannedEndpoints.TORCH_GET, PlannedEndpoints.TORCH)
-    override fun blockedReason() = missingPermission() ?: if (!app.captureNotificationsOn()) "notifications_off" else null
+    override fun blockedReason() = missingPermission() ?: if (app.hardware.torchCamera == null) "no_hardware"
+        else if (!app.captureNotificationsOn()) "notifications_off" else null
     override fun Route.install(api: ApiServer) = with(api) {
         endpoint(PlannedEndpoints.TORCH_GET) { requireUsable(); Reply.Json(app.hardware.lightStatus()) }
         endpoint(PlannedEndpoints.TORCH) {

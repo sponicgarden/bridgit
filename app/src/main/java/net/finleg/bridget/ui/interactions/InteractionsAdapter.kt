@@ -35,7 +35,7 @@ class InteractionsAdapter(
     private val loadThumb: (Interaction, ImageView) -> Unit,
 ) : ListAdapter<Interaction, InteractionsAdapter.Holder>(DIFF) {
 
-    /** Rahul's choice per id; ids not in here use [InteractionUi.defaultExpanded]. */
+    /** The owner's choice per id; ids not in here use [InteractionUi.defaultExpanded]. */
     val overrides = HashMap<Long, Boolean>()
 
     fun isExpanded(i: Interaction) = overrides[i.id] ?: InteractionUi.defaultExpanded(i)
@@ -80,7 +80,7 @@ class InteractionsAdapter(
         ViewCompat.replaceAccessibilityAction(b.header, AccessibilityActionCompat.ACTION_COLLAPSE,
             if (expanded) ctx.getString(R.string.interactions_collapse) else null, if (expanded) { _, _ -> toggle(h); true } else null)
         if (h.closeActionId != View.NO_ID) { ViewCompat.removeAccessibilityAction(b.header, h.closeActionId); h.closeActionId = View.NO_ID }
-        if (i.status.open) h.closeActionId = ViewCompat.addAccessibilityAction(b.header, ctx.getString(R.string.interactions_close)) { _, _ -> onClose(i); true }
+        if (InteractionUi.waiting(i)) h.closeActionId = ViewCompat.addAccessibilityAction(b.header, ctx.getString(R.string.interactions_close)) { _, _ -> onClose(i); true }
 
         b.chevron.rotation = if (expanded) 180f else 0f
         b.chevron.contentDescription = ctx.getString(if (expanded) R.string.interactions_collapse else R.string.interactions_expand)
@@ -103,7 +103,7 @@ class InteractionsAdapter(
             b.image.isVisible = false; b.image.setImageDrawable(null); b.image.tag = null
         }
 
-        InteractionUi.buildControls(b.controls, i, drafts, { button, values -> onAnswer(i, button, values) }, onLink)
+        InteractionUi.buildControls(b.controls, i, drafts, { button, values -> onAnswer(i, button, values) }, onLink = onLink)
         if (i.kind == IKind.HTML || i.kind == IKind.TEXT) {
             // CAP-34 cards open in the detail screen; D26 text panels in the lower half.
             val open = MaterialButton(ctx, null, com.google.android.material.R.attr.materialButtonOutlinedStyle).apply {
@@ -121,7 +121,7 @@ class InteractionsAdapter(
         b.answer.isVisible = summary != null
         b.answer.text = summary
 
-        b.close.isVisible = i.status.open
+        b.close.isVisible = InteractionUi.waiting(i)
         b.close.contentDescription = ctx.getString(R.string.interactions_close) + ", " + headline
         b.close.setOnClickListener { onClose(i) }
     }

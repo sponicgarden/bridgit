@@ -3,9 +3,9 @@
 > **Superseded by [bridgit-spec-v2.md](bridgit-spec-v2.md)** (27 Oct 2026). Kept for history; v2 is the source of truth.
 
 Status: proposed, 26 Oct 2026. Not built. Covers feature ideas #2 and #6
-(agents reach Rahul with an **interaction**: a one-way **notice**, or a
-**question** that waits for his answer, either of which can be spoken aloud),
-#3 (Rahul shares things to an agent) and #4 (agents send files to the phone),
+(agents reach the owner with an **interaction**: a one-way **notice**, or a
+**question** that waits for their answer, either of which can be spoken aloud),
+#3 (the owner shares things to an agent) and #4 (agents send files to the phone),
 all in one new **Inbox** screen in the app.
 
 ## 1. How agents get answers without a webhook
@@ -17,36 +17,36 @@ setups may, but Codex and Claude Code sessions usually don't. So every
 - **Wait-and-ask (works for every agent):** the agent sends a request such as
   `GET /v1/interactions/{id}?wait=55`. Bridgit holds the request open until there
   is an answer or 55 seconds pass, then the agent asks again. This is called
-  *long polling*. The answer arrives within a moment of Rahul tapping, with no
+  *long polling*. The answer arrives within a moment of the owner tapping, with no
   webhook, no open port and no server on the agent's side. The agent only
   needs something running that keeps asking: a loop script, a cron job, or a
   Claude Code background monitor.
 - **Callback (optional, for agents with a webhook):** if the agent registered
-  a callback URL, Bridgit also POSTs the result there right away. Rahul
+  a callback URL, Bridgit also POSTs the result there right away. The owner
   approves each agent's callback URL on the phone. By default, only addresses
   on the tailnet (`100.64.0.0/10` or `*.ts.net`) can be approved, so Bridgit
-  never talks to the public internet unless Rahul adds a public URL himself.
+  never talks to the public internet unless the owner adds a public URL themselves.
   Every callback is signed (`X-Bridget-Signature`: HMAC-SHA256 of the body
   with a per-agent callback secret shown once at registration), so the
   receiver can check it came from Bridgit.
 
 This changes spec v1.0 section 5.6 ("no network calls other than answering"):
-outbound calls happen only to callback URLs Rahul approved on the phone.
+outbound calls happen only to callback URLs the owner approved on the phone.
 
 ## 2. Interactions: notices and questions
 
 An agent sends a small card to the phone. There are two kinds:
 
 - **notice**: one-way information ("Backup finished", "Your 3pm moved to
-  4pm"). No controls. Rahul can tap **Got it**, and the agent can see whether
-  and when he saw it (`status: "seen"`). It never waits for an answer.
+  4pm"). No controls. The owner can tap **Got it**, and the agent can see whether
+  and when they saw it (`status: "seen"`). It never waits for an answer.
 - **question**: needs an answer, given with buttons, a choice or a text reply.
 
 Either kind can be **spoken aloud** on the phone (feature #6) with
 `"speak": true`. Bridgit reads the title and text with Android's built-in
 text-to-speech, prefixed with the agent's name ("Grok says: ..."). Speaking
 is skipped while the phone is in Do Not Disturb or silent mode, or on a call,
-unless `priority` is `urgent` and Rahul allowed urgent speech for that agent.
+unless `priority` is `urgent` and the owner allowed urgent speech for that agent.
 
 ### Fast template (build first)
 
@@ -88,11 +88,11 @@ GET /v1/interactions/i_8f2c?wait=55
      "answered_at": "..." }
 ```
 
-- `seen` applies to notices (Rahul tapped **Got it** or opened it). Questions
+- `seen` applies to notices (the owner tapped **Got it** or opened it). Questions
   go from `pending` to `answered`, `dismissed` or `expired`.
 - The agent can cancel an interaction that's no longer needed:
   `DELETE /v1/interactions/{id}`. The notification disappears.
-- Rahul can **Dismiss** a question without answering (status `dismissed`).
+- The owner can **Dismiss** a question without answering (status `dismissed`).
 - Limits: 5 open questions per agent (`too_many_open`, 429), and 30 notices
   per agent per hour.
 
@@ -112,7 +112,7 @@ The fast template covers most cases (yes/no, pick one, short reply) and opens
 instantly. HTML mode is for things like a form with many fields or a
 side-by-side comparison.
 
-## 3. Send to phone (agent to Rahul)
+## 3. Send to phone (agent to the owner)
 
 ```
 POST /v1/files
@@ -123,21 +123,21 @@ POST /v1/files
 
 - Max 25 MB per file. PDF, images, text, CSV, audio, video, ZIP. APKs and
   other executables are refused.
-- Files land in the Inbox, kept in Bridgit's private storage. Rahul can open,
+- Files land in the Inbox, kept in Bridgit's private storage. The owner can open,
   share or **Save to Downloads** from there. With `save_to_downloads: true`,
   Bridgit saves a copy to `Downloads/Bridgit/<agent>/` right away.
 - Notification: "**Codex sent** Hostinger invoice Oct.pdf".
-- The agent can check whether Rahul opened it: `GET /v1/files/{id}` returns
+- The agent can check whether the owner opened it: `GET /v1/files/{id}` returns
   `{opened_at, saved_at}`.
 
-## 4. Share to an agent (Rahul to agent)
+## 4. Share to an agent (the owner to agent)
 
 - Bridgit appears in Android's **Share** menu. Android also offers one
   direct-share shortcut per agent ("Grok", "Claude", ...), so sharing a photo,
   PDF, link or text to an agent is two taps. Sharing to plain "Bridgit" asks
   which agent.
 - Each share becomes an item in that agent's **outbox**, with an optional
-  note Rahul types ("what is this rash?").
+  note the owner types ("what is this rash?").
 - The agent collects it the same two ways as interactions:
   `GET /v1/shares?wait=55` (long poll) returns the next items, and
   `GET /v1/shares/{id}` returns the content (images resized like
@@ -167,7 +167,7 @@ v Answered: Muse "Book the 9am?" -> Yes              yesterday
 
 - Newest first, with filters for Interactions (notices and questions),
   Files and Shared (to agents).
-- **Open questions are pinned at the top** with their buttons, so Rahul can
+- **Open questions are pinned at the top** with their buttons, so the owner can
   answer straight from the list.
 - Tapping a row opens it: the full notice or question card (with a
   **Play aloud** button), the file viewer (images
@@ -181,13 +181,13 @@ v Answered: Muse "Book the 9am?" -> Yes              yesterday
 
 Each of these is a per-agent switch (see `spec-per-agent-permissions.md`):
 **Notices**, **Questions** and **Speak aloud** (may send each kind, and
-may have it read out), **Send files**, **Shared items** (Rahul can
+may have it read out), **Send files**, **Shared items** (the owner can
 share to this agent), and **Callback URL** (approved URL or none). All start
 off.
 
 ## 7. Acceptance tests
 
-1. Codex (no webhook) posts a yes/no question, Rahul taps **Yes** in the
+1. Codex (no webhook) posts a yes/no question, the owner taps **Yes** in the
    notification, and Codex's open `wait=55` request returns `answered` within
    a second.
 2. Grok with an approved tailnet callback receives a correctly signed POST
@@ -199,7 +199,7 @@ off.
    and `Bridget.respond` round-trips JSON.
 5. Claude sends a PDF; it appears in the Inbox, opens in-app, and **Save to
    Downloads** puts it in `Downloads/Bridgit/Claude/`.
-6. Rahul shares a screenshot to Grok from Photos; Grok's long poll returns it
+6. The owner shares a screenshot to Grok from Photos; Grok's long poll returns it
    resized to 1568 px; the Inbox shows "picked up".
 7. With the phone locked, the notification text is hidden until unlock.
 
@@ -208,4 +208,4 @@ off.
 1. Should urgent interactions be allowed to override Do Not Disturb, and to
    speak while it's on?
 2. Keep answered questions for 30 days, or longer?
-3. Should Rahul's "Save to Downloads" be the default for files?
+3. Should the owner's "Save to Downloads" be the default for files?

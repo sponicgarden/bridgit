@@ -1,10 +1,14 @@
 {
-  "name": "BRIDGIT Device Manager for Android",
-  "tagline": "Give your Android phone a new job.",
+  "name": "BRIDGIT Device Bridge for Android",
+  "tagline": "Turn any Android device into an agentic appliance.",
   "origin": "https://bridgit.cc",
   "supportEmail": "support@bridgit.cc",
   "privacyEmail": "support@bridgit.cc",
   "playStoreUrl": null,
   "indexable": true,
-  "brand": "BRIDGIT"
+  "brand": "BRIDGIT",
+  "turnstileSiteKey": "0x4AAAAAAFqLA2lWC2s_rxB1",
+  "downloadUrl": "https://pub-3a79691572bc4abc93fce31910fe320b.r2.dev/bridget/bridget-1.6.0.apk",
+  "downloadVersion": "1.6.0",
+  "downloadSha256": "f4ec80f7f1e425b2a0f098b1fba79ace32988fbbf5b83f47b88bcca8c27a9e2a"
 }

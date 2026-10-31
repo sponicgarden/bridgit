@@ -59,7 +59,7 @@ class TourSaidAdapter : ListAdapter<Said, TourSaidAdapter.Holder>(DIFF) {
     }
 
     companion object {
-        /** Tour.kt records Rahul's questions with who = "You". */
+        /** Tour.kt records the owner's questions with who = "You". */
         const val YOU = "You"
         val DIFF = object : DiffUtil.ItemCallback<Said>() {
             override fun areItemsTheSame(a: Said, b: Said) = a.at == b.at && a.who == b.who

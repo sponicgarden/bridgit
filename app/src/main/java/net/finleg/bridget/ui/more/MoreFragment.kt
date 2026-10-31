@@ -34,7 +34,6 @@ class MoreFragment : Fragment() {
         ViewCompat.setOnApplyWindowInsetsListener(b.toolbar) { v, insets ->
             v.updatePadding(top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top); insets
         }
-        row(b.openAgents, R.drawable.ic_nav_agents, R.string.more_agents) { findNavController().navigate(R.id.agents) }
         row(b.openActivity, R.drawable.ic_nav_activity, R.string.more_activity) { findNavController().navigate(R.id.activity) }
         row(b.features, R.drawable.ic_toggle, R.string.more_features) { findNavController().navigate(R.id.features) }
         row(b.access, R.drawable.ic_shield, R.string.more_access) { findNavController().navigate(R.id.access) }

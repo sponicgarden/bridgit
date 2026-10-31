@@ -20,7 +20,7 @@ import org.json.JSONObject
  *
  * tools/list: every endpoint except MCP, pairing, the helper and openapi.json; developer-only ones only
  * for developer agents. Endpoints whose switch is off are listed with a "switched off" note (the list is
- * advertised as not changing, so clients that cache it still see a tool once Rahul turns it on).
+ * advertised as not changing, so clients that cache it still see a tool once the owner turns it on).
  */
 class McpDispatch(private val api: ApiServer) {
 

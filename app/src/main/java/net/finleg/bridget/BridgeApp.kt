@@ -34,6 +34,8 @@ class BridgeApp : Application() {
     val policy by lazy { Policy(this) }
     val audit by lazy { PlatformAudit(this) }
     val platform by lazy { net.finleg.bridget.platform.AgentPlatform(this) }
+    lateinit var alerts: net.finleg.bridget.alerts.Alerts
+    lateinit var wake: net.finleg.bridget.listen.WakeListener
     val pairing = Pairing()
     val requests = net.finleg.bridget.api.RequestState()
 
@@ -66,6 +68,9 @@ class BridgeApp : Application() {
         settings = Settings(this)
         agents = AgentRegistry(settings.agentStorage(this))
         log = LogStore(this) { settings.retention() }
+        alerts = net.finleg.bridget.alerts.Alerts(this)
+        log.onAppended = alerts::onLog
+        runCatching { alerts.poke() }
         createChannels()
         java.io.File(cacheDir, "uploads").listFiles()?.forEach { it.delete() }
         registry = Registry(this)
@@ -79,6 +84,7 @@ class BridgeApp : Application() {
         interactions = net.finleg.bridget.interact.InteractionStore(this)
         speaker = net.finleg.bridget.capability.SpeakerQueue(this)
         tours = net.finleg.bridget.tour.TourManager(this)
+        wake = net.finleg.bridget.listen.WakeListener(this)
         agents.addListener {
             tours.current()?.let { t -> if (agents.get(t.agentId)?.let { it.allows("tour") && it.allows("interactions") && it.allows("location") && it.allows("speaker") } != true) tours.end("Agent access revoked") }
             speaker.recheckAccess()
@@ -87,7 +93,7 @@ class BridgeApp : Application() {
         callbackDispatcher = net.finleg.bridget.interact.CallbackDispatcher(this, callbacks)
         interactions.addEventListener { callbackDispatcher.onEvent(it) } // EVT-06
         interactions.recoverInterruptedTours()
-        // Play aloud (UI-16): Rahul's own tap, so silent/DND don't block it; a call still does. Same queue as everything else.
+        // Play aloud (UI-16): the owner's own tap, so silent/DND don't block it; a call still does. Same queue as everything else.
         net.finleg.bridget.ui.interactions.SpeakHook.speak = { _, agent, title, text ->
             if (!speaker.inCall()) speaker.speakText("owner", agent, net.finleg.bridget.interact.NotifRules.utterance(agent, title, text), allowInQuiet = true)
         }
@@ -101,6 +107,8 @@ class BridgeApp : Application() {
         }
         agents.addListener { platform.recheckCredentials() }
         platform
+        wake.start()
+        agents.addListener { wake.sync() }
         applyAppearance()
     }
 

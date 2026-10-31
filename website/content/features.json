@@ -50,35 +50,35 @@
         },
         {
           "sourceTitle": "Videos and downloads",
-          "sourceStage": "NOW",
-          "title": "Videos and selected downloads",
-          "description": "List accessible gallery videos, retrieve a video or a still frame, and read Downloads files you select for one agent.",
+          "sourceStage": "P3",
+          "title": "Videos and downloads",
+          "description": "Access supported video files or still frames, and files you select from Downloads.",
           "example": "Pull a still frame from a video for your agent to inspect.",
-          "status": "current"
+          "status": "planned"
         },
         {
           "sourceTitle": "Short video clips",
-          "sourceStage": "NOW",
+          "sourceStage": "P5",
           "title": "Short video recordings",
-          "description": "Record 1–30 seconds of video, with audio off by default. HTTP recordings are capped at 40 MB; MCP recordings may stop early at 6 MB.",
+          "description": "Capture a short front- or rear-camera video, with optional audio.",
           "example": "Show a repair specialist how a mechanism moves.",
-          "status": "current"
+          "status": "planned"
         },
         {
           "sourceTitle": "Read text on the phone",
-          "sourceStage": "NOW",
+          "sourceStage": "P5",
           "title": "On-device text recognition",
-          "description": "Recognize Latin-script text from an accessible or supplied image on the phone, without a cloud recognition upload.",
+          "description": "Extract text from a selected image on the phone before sending the result.",
           "example": "Read a serial number without sending the whole photo.",
-          "status": "current"
+          "status": "planned"
         },
         {
           "sourceTitle": "Transcribe clips on the phone",
-          "sourceStage": "NOW",
+          "sourceStage": "P5",
           "title": "On-device transcription",
-          "description": "Optionally transcribe a recorded clip using a compatible Android on-device recognizer and an installed offline language. No cloud-recognizer fallback.",
+          "description": "Turn a microphone clip into text on the phone.",
           "example": "Dictate a short note for your agent.",
-          "status": "current"
+          "status": "planned"
         }
       ]
     },
@@ -131,35 +131,35 @@
         },
         {
           "sourceTitle": "Inbox",
-          "sourceStage": "NOW",
-          "title": "Questions, files and shares",
-          "description": "Review questions and notices in Interactions, with separate histories for received files and shared content.",
+          "sourceStage": "P2",
+          "title": "A shared inbox",
+          "description": "Bring questions, notices, files and shares into one history.",
           "example": "Look up an earlier question and your reply.",
-          "status": "current"
+          "status": "planned"
         },
         {
           "sourceTitle": "Files to your phone",
-          "sourceStage": "NOW",
+          "sourceStage": "P4",
           "title": "Receive files",
-          "description": "Receive supported files in private app storage, then choose whether to open, export or delete them. Up to 25 MB per file, with storage quotas and 30-day retention.",
+          "description": "Receive documents, images and other supported files from an agent.",
           "example": "Send a finished PDF from your agent to your phone.",
-          "status": "current"
+          "status": "planned"
         },
         {
           "sourceTitle": "Share to an agent",
-          "sourceStage": "NOW",
+          "sourceStage": "P4",
           "title": "Share with an agent",
-          "description": "Use Android sharing to send selected photos, links or text to the permitted agent you choose. Each agent can read its own transfer history.",
+          "description": "Use Android sharing to send selected photos, links or text to an agent.",
           "example": "Share a restaurant link with a note about your plans.",
-          "status": "current"
+          "status": "planned"
         },
         {
           "sourceTitle": "Copy to clipboard",
-          "sourceStage": "NOW",
+          "sourceStage": "P6",
           "title": "Copy text with approval",
-          "description": "Review the exact text on the phone and tap Copy before it enters your clipboard. Requests expire after five minutes; Bridgit does not read the clipboard.",
+          "description": "Put agent-provided text on the clipboard after you approve it.",
           "example": "Copy a prepared address to paste into another app.",
-          "status": "current"
+          "status": "planned"
         },
         {
           "sourceTitle": "Events and callbacks",
@@ -188,51 +188,51 @@
         },
         {
           "sourceTitle": "Phone status and context",
-          "sourceStage": "NOW",
+          "sourceStage": "P3",
           "title": "Phone context",
-          "description": "Read battery, network transport, screen, lock and sound status. Context reports in use or unknown, without inferring activities such as sleep.",
+          "description": "Expose selected battery, network, screen, sound and activity information.",
           "example": "Check whether the phone is charging before a long task.",
-          "status": "current"
+          "status": "planned"
         },
         {
           "sourceTitle": "Sensors",
-          "sourceStage": "NOW",
+          "sourceStage": "P3",
           "title": "Sensor readings",
-          "description": "Request fresh light, pressure, motion, orientation or step readings where supported. Missing sensors, stale values and required permissions are reported.",
+          "description": "Request supported light, pressure, motion, orientation or step readings.",
           "example": "Use a light reading as context for a device workflow.",
-          "status": "current"
+          "status": "planned"
         },
         {
           "sourceTitle": "App usage",
-          "sourceStage": "NOW",
+          "sourceStage": "P6",
           "title": "App usage summaries",
-          "description": "Read foreground-time summaries after granting Android Usage access. Queries cover up to seven days; Android’s buckets can extend beyond the requested interval.",
-          "example": "Ask your agent for an approximate weekly app-usage summary.",
-          "status": "current"
+          "description": "Read permitted summaries of app usage and screen time.",
+          "example": "Review where your phone time went this week.",
+          "status": "planned"
         },
         {
           "sourceTitle": "Health Connect",
-          "sourceStage": "NOW",
-          "title": "Health Connect records",
-          "description": "Read explicitly permitted steps, sleep or heart-rate source records. Up to seven days and 100 records per request; no writes or retained health records. Overlapping records are not deduplicated totals.",
+          "sourceStage": "P6",
+          "title": "Health Connect summaries",
+          "description": "Read the health records you explicitly allow through Health Connect.",
           "example": "Bring permitted steps or sleep data into a personal check-in.",
-          "status": "current"
+          "status": "planned"
         },
         {
           "sourceTitle": "Read notifications",
-          "sourceStage": "NOW",
-          "title": "Active notification text",
-          "description": "Read up to 100 active notification texts received while the notification listener is connected. Explicit access is required; memory-only storage clears when paused, disabled or disconnected.",
-          "example": "Summarize accessible notifications that arrived while connected.",
-          "status": "current"
+          "sourceStage": "P6",
+          "title": "Notification summaries",
+          "description": "Read notification text only after you enable notification access.",
+          "example": "Summarize the notifications that arrived during a meeting.",
+          "status": "planned"
         },
         {
           "sourceTitle": "City tour",
-          "sourceStage": "NOW",
+          "sourceStage": "P2",
           "title": "A guided city walk",
-          "description": "Start a City tour session with one agent, location, heading and photos you take. The connected agent supplies commentary; you can pause or end the session.",
+          "description": "Combine location, heading and chosen photos with an agent’s commentary.",
           "example": "Explore a neighborhood with an architecture guide.",
-          "status": "current"
+          "status": "planned"
         },
         {
           "sourceTitle": "Location history and places",
@@ -253,35 +253,35 @@
       "features": [
         {
           "sourceTitle": "Flash the light",
-          "sourceStage": "NOW",
+          "sourceStage": "P3",
           "title": "Flashlight",
-          "description": "Switch the torch on with a bounded auto-off period of up to ten minutes. Camera permission, available hardware and the flashlight switch are required.",
+          "description": "Turn the torch on for a bounded period, then switch it off automatically.",
           "example": "Light the workbench for a photo.",
-          "status": "current"
+          "status": "planned"
         },
         {
           "sourceTitle": "Phone controls",
-          "sourceStage": "NOW",
+          "sourceStage": "P3",
           "title": "Sound and display",
-          "description": "Adjust supported sound, Do Not Disturb and brightness settings, with optional timed restoration and owner Undo. Android restrictions or force-stop can delay restoration; Do Not Disturb can mute alarms.",
+          "description": "Adjust supported sound, Do Not Disturb and brightness settings with timed restoration.",
           "example": "Silence the phone for a meeting, then restore its settings.",
-          "status": "current"
+          "status": "planned"
         },
         {
           "sourceTitle": "Find my phone",
-          "sourceStage": "NOW",
+          "sourceStage": "P3",
           "title": "Find your phone",
-          "description": "Ring and vibrate for up to 60 seconds, respecting Android sound and Do Not Disturb restrictions. Stop from the phone’s notification or Device tools.",
+          "description": "Request a ring and vibration, subject to Android’s sound restrictions.",
           "example": "Locate the phone you left under a cushion.",
-          "status": "current"
+          "status": "planned"
         },
         {
           "sourceTitle": "Screen sharing as a fallback",
-          "sourceStage": "NOW",
+          "sourceStage": "P5",
           "title": "Alternative screen access",
-          "description": "Approve Android’s screen-sharing prompt for one capture or a timed grant. The grant belongs to one agent and ends when you or Android stop it; this is not live video streaming.",
+          "description": "Use an owner-approved screen-sharing grant as an alternative capture method.",
           "example": "Grant screen access for a troubleshooting session.",
-          "status": "current"
+          "status": "planned"
         }
       ]
     },
@@ -325,7 +325,7 @@
           "status": "current"
         },
         {
-          "sourceTitle": "Use Bridget over MCP",
+          "sourceTitle": "Use Bridgit over MCP",
           "sourceStage": "NOW",
           "title": "MCP tools",
           "description": "Connect an MCP-capable agent to enabled device tools using its own key.",
@@ -375,11 +375,11 @@
         },
         {
           "sourceTitle": "Per-agent permissions",
-          "sourceStage": "NOW",
+          "sourceStage": "LATER",
           "title": "Permissions per agent",
-          "description": "Choose a capability grant set for each agent. Existing unrestricted agents retain access allowed by the phone’s switches until you edit their grants.",
+          "description": "Choose different capability grants for different agents.",
           "example": "Give a photo organizer gallery access without camera access.",
-          "status": "current"
+          "status": "planned"
         },
         {
           "sourceTitle": "Everything is logged",
@@ -401,7 +401,7 @@
           "sourceTitle": "Report a bug or ask for a feature",
           "sourceStage": "NOW",
           "title": "Bug reports and feedback",
-          "description": "Create an on-device report with the context you choose for a permitted connected agent to review. This does not automatically email the publisher.",
+          "description": "Send a report with the context you choose; follow its status and confirm a fix.",
           "example": "Report a failed capture with the relevant activity attached.",
           "status": "current"
         },
@@ -418,7 +418,7 @@
     {
       "id": "ideas",
       "title": "Explore what comes next",
-      "intro": "Trigger words and communications access remain ideas. A hosted-agent relay and location history are also marked Exploring in their related groups.",
+      "intro": "Two directions under consideration, with no availability promise.",
       "image": "/assets/features/listen_for_a_word_on_the_phone.webp",
       "alt": "A concept illustration of a person speaking a trigger phrase to a phone.",
       "features": [
@@ -440,11 +440,5 @@
         }
       ]
     }
-  ],
-  "source": {
-    "appVersion": "1.6.0",
-    "apiRevision": 8,
-    "reference": "/api/",
-    "reviewedOn": "2026-10-29"
-  }
+  ]
 }

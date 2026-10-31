@@ -86,18 +86,21 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
     fun listAll(limit: Int = 300): List<Interaction> {
         expireDue()
         return db.query("interactions", null, null, null, null, null,
-            "CASE WHEN status IN ('pending','seen') THEN 0 ELSE 1 END, id DESC", limit.toString()).use { c -> buildList { while (c.moveToNext()) add(row(c)) } }
+            "CASE WHEN status IN ('pending','seen') OR ($WAITING_QUESTION) THEN 0 ELSE 1 END, id DESC", limit.toString()).use { c -> buildList { while (c.moveToNext()) add(row(c)) } }
     }
 
-    /** Questions waiting for an answer plus notices not yet seen: the tab badge. */
-    fun unreadCount(): Int = count("(kind IN ('question','html') AND status IN ('pending','seen')) OR (kind IN ('notice','text') AND status = 'pending')")
+    /** Questions waiting for an answer (expired ones too) plus notices not yet seen: the tab badge. */
+    fun unreadCount(): Int = count("($WAITING_QUESTION) OR (kind IN ('notice','text') AND status = 'pending')")
+
+    /** Questions and cards the owner hasn't answered or closed, newest first, including expired ones (Home). */
+    fun waitingQuestions(limit: Int = 100): List<Interaction> = list(WAITING_QUESTION, emptyArray(), limit)
 
     private fun list(where: String, args: Array<String>, limit: Int): List<Interaction> {
         expireDue()
         return db.query("interactions", null, where, args, null, null, "id DESC", limit.toString()).use { c -> buildList { while (c.moveToNext()) add(row(c)) } }
     }
 
-    /** Rahul opened or saw it (a notice becomes "seen"; a question stays answerable). */
+    /** The owner opened or saw it (a notice becomes "seen"; a question stays answerable). */
     @Synchronized
     fun markSeen(id: Long): Interaction? {
         val i = get(id) ?: return null
@@ -107,32 +110,38 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
         return get(id)!!.also { tell(it, "seen") }
     }
 
-    /** Rahul answered on the phone or in the notification. */
+    /** The owner answered on the phone or in the notification. */
     @Synchronized
-    fun answer(id: Long, button: String?, values: Map<String, String>): Interaction {
+    fun answer(id: Long, button: String?, values: Map<String, String>, resubmission: Boolean = false): Interaction {
         val i = get(id) ?: throw InteractionError("not_found", "No interaction $id.")
-        if (!i.status.open) throw InteractionError("invalid_parameter", "This ${i.kind.id} is already ${i.status.id}.")
+        if (!i.status.acceptsAnswer(resubmission)) throw InteractionError("invalid_parameter", "This ${i.kind.id} is already ${i.status.id}.")
         if (i.kind != IKind.QUESTION) throw InteractionError("invalid_parameter", "Only questions take answers.")
         val ans = InteractionRules.checkAnswer(i.controls, button, values)
         val now = clock()
         update(id, ContentValues().apply { put("status", IStatus.ANSWERED.id); put("answer_json", ans.toString()); put("answered_at", now); put("closed_at", now) })
-        event(i.agentId, "interaction.answered", JSONObject().put("interaction_id", id).put("answer", ans))
+        event(i.agentId, "interaction.answered", JSONObject().put("interaction_id", id).put("answer", ans).apply {
+            if (i.status == IStatus.ANSWERED) put("resubmission", true).put("previous_answer", i.answer)
+            if (i.status == IStatus.EXPIRED) put("late", true)
+        })
         return get(id)!!.also { tell(it, "answered") }
     }
 
     /**
      * An HTML card's page called Bridget.respond(json) (CAP-34). Completes it like a button answer: status
-     * answered, `interaction.answered` with `answer.data`, waits return. Refused once the card isn't open.
+     * answered, `interaction.answered` with `answer.data`, waits return. Explicit phone resubmission also accepts answered cards.
      */
     @Synchronized
-    fun answerCard(id: Long, data: Any): Interaction {
+    fun answerCard(id: Long, data: Any, resubmission: Boolean = false): Interaction {
         val i = get(id) ?: throw InteractionError("not_found", "No interaction $id.")
         if (i.kind != IKind.HTML) throw InteractionError("invalid_parameter", "Only html cards take a card answer.")
-        if (!i.status.open) throw InteractionError("conflict", "This card is already ${i.status.id}.")
+        if (!i.status.acceptsAnswer(resubmission)) throw InteractionError("conflict", "This card is already ${i.status.id}.")
         val ans = JSONObject().put("button", JSONObject.NULL).put("values", JSONObject()).put("data", data)
         val now = clock()
         update(id, ContentValues().apply { put("status", IStatus.ANSWERED.id); put("answer_json", ans.toString()); put("answered_at", now); put("closed_at", now) })
-        event(i.agentId, "interaction.answered", JSONObject().put("interaction_id", id).put("answer", ans))
+        event(i.agentId, "interaction.answered", JSONObject().put("interaction_id", id).put("answer", ans).apply {
+            if (i.status == IStatus.ANSWERED) put("resubmission", true).put("previous_answer", i.answer)
+            if (i.status == IStatus.EXPIRED) put("late", true)
+        })
         return get(id)!!.also { tell(it, "answered") }
     }
 
@@ -152,14 +161,14 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
         return get(id)!!.also { if (done) tell(it, "stream_done") }
     }
 
-    /** The newest open text panel (D26), for the phone's panel when Rahul hasn't picked one. */
+    /** The newest open text panel (D26), for the phone's panel when the owner hasn't picked one. */
     fun latestOpenText(): Interaction? {
         expireDue()
         return db.query("interactions", null, "kind = 'text' AND status IN ('pending','seen')", null, null, null, "id DESC", "1")
             .use { c -> if (c.moveToFirst()) row(c) else null }
     }
 
-    /** Rahul closed it (D26); the agent is told `dismissed`. */
+    /** The owner closed it (D26); the agent is told `dismissed`. */
     @Synchronized
     fun dismiss(id: Long): Interaction? = close(id, IStatus.DISMISSED, "interaction.dismissed")
 
@@ -172,7 +181,9 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
 
     private fun close(id: Long, to: IStatus, eventType: String?): Interaction? {
         val i = get(id) ?: return null
-        if (!i.status.open) return i
+        // An expired question still waits for the owner, so the owner can close it; the agent can't (it already got expired).
+        val ownerClosesExpired = to == IStatus.DISMISSED && i.status == IStatus.EXPIRED && i.kind in setOf(IKind.QUESTION, IKind.HTML)
+        if (!i.status.open && !ownerClosesExpired) return i
         update(id, ContentValues().apply { put("status", to.id); put("closed_at", clock()) })
         eventType?.let { event(i.agentId, it, JSONObject().put("interaction_id", id)) }
         return get(id)!!.also { tell(it, to.id) }
@@ -315,6 +326,8 @@ class InteractionStore(context: Context, private val clock: () -> Long = System:
     companion object {
         const val EVENTS_PER_AGENT = 1000
         const val EVENT_KEEP_MS = 7L * 86_400_000
+        /** A question or card the owner still owes an answer: open, or expired without one (late answers are allowed). */
+        const val WAITING_QUESTION = "kind IN ('question','html') AND status IN ('pending','seen','expired')"
     }
 
     private class Helper(ctx: Context) : SQLiteOpenHelper(ctx, "interactions.db", null, 1) {

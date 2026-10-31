@@ -4,7 +4,7 @@ Prepared 28 October 2026. Brand: BRIDGIT Device Manager for Android. Domain: bri
 
 ## Start here
 
-- Product and technical spec: `../docs/bridgit-appliance-spec-v3.md` (editable companion: https://chatgpt.com/space/page_f0df7818f9d88191abbba0ba64ba3a1a).
+- Product and technical spec: `../docs/bridgit-appliance-spec-v3.md`.
 - Interactive implementation decisions: `../docs/plans/bridgit-appliances.packed.html`.
 - Brand: `brand/brand-guide.md`, SVG masters and PNG exports.
 - Store: `play-store/listing-current.json` is truthful for existing 1.2 features; it is not proof that the build meets Play policy. `listing-future.json` is gated v3 copy, not upload-ready.

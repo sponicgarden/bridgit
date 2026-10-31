@@ -4,7 +4,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URI
 
-/** Interactions (8.13, D26): what agents send Rahul. Pure Kotlin; validation is unit-tested. */
+/** Interactions (8.13, D26): what agents send the owner. Pure Kotlin; validation is unit-tested. */
 enum class IKind(val id: String) {
     NOTICE("notice"), QUESTION("question"), HTML("html"), TEXT("text");
     companion object { fun of(id: String?) = values().firstOrNull { it.id == id } }
@@ -13,6 +13,9 @@ enum class IKind(val id: String) {
 enum class IStatus(val id: String) {
     PENDING("pending"), SEEN("seen"), ANSWERED("answered"), DISMISSED("dismissed"), EXPIRED("expired"), CANCELLED("cancelled");
     val open get() = this == PENDING || this == SEEN
+    /** A question in this state still waits for the owner: open, or expired with no answer yet (late answers are allowed). */
+    val awaitsOwner get() = open || this == EXPIRED
+    fun acceptsAnswer(resubmission: Boolean = false) = awaitsOwner || (resubmission && this == ANSWERED)
     companion object { fun of(id: String?) = values().firstOrNull { it.id == id } }
 }
 
@@ -168,7 +171,7 @@ object InteractionRules {
     }
 
     /**
-     * Checks Rahul's answer against the question's controls: [button] must be one of its buttons
+     * Checks the owner's answer against the question's controls: [button] must be one of its buttons
      * (or null when a text/choice is enough); values only for its text/choice controls.
      */
     fun checkAnswer(controls: List<Control>, button: String?, values: Map<String, String>): JSONObject {

@@ -76,6 +76,10 @@ class FeaturesFragment : Fragment() {
             text = "Device tools, files and special access"
             setOnClickListener { startActivity(android.content.Intent(requireContext(), net.finleg.bridget.planned.OwnerToolsActivity::class.java)) }
         })
+        b.list.addView(com.google.android.material.button.MaterialButton(requireContext()).apply {
+            text = getString(R.string.listening_button)
+            setOnClickListener { openWakeWords() }
+        })
         val groups = app.registry.switchable().groupBy { it.group }
         for ((group, modules) in groups) {
             val header = layoutInflater.inflate(R.layout.features_header, b.list, false) as TextView
@@ -121,7 +125,11 @@ class FeaturesFragment : Fragment() {
                     if (!ctx.granted(Manifest.permission.POST_NOTIFICATIONS)) perms.request(Manifest.permission.POST_NOTIFICATIONS)
                     else UiActions.openAppNotificationSettings(ctx)
                 }
+                reason == "no_hardware" -> Triple(getString(R.string.features_no_hardware), null, null)
                 reason == "listener_off" -> Triple(getString(R.string.features_listener_off), null, null)
+                reason == "model_missing" -> Triple(getString(R.string.wake_needs_model), getString(R.string.wake_set_up)) { openWakeWords() }
+                reason == "no_agent" -> Triple(getString(R.string.sounds_needs_agent), getString(R.string.wake_set_up)) { openWakeWords() }
+                reason == "no_wake_words" -> Triple(getString(R.string.wake_needs_words), getString(R.string.wake_set_up)) { openWakeWords() }
                 else -> Triple(reason, null, null)
             }
             r.readinessText.text = text
@@ -130,6 +138,8 @@ class FeaturesFragment : Fragment() {
             r.readinessAction.setOnClickListener { onClick?.invoke() }
         }
     }
+
+    private fun openWakeWords() = startActivity(android.content.Intent(requireContext(), net.finleg.bridget.listen.WakeWordsActivity::class.java))
 
     private fun toggle(m: Capability) {
         val on = !m.enabled

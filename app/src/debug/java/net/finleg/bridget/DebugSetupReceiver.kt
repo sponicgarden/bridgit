@@ -11,7 +11,7 @@ import net.finleg.bridget.core.Connection
  *   am broadcast -a net.finleg.bridget.debug.SETUP --es agent Tester --ez camera true ...
  * Extras: camera/mic/gallery (bool switches), agent (add + open a pairing window),
  * rotate (agent name: new key + pairing window), remove (agent name), developer (agent name, "name=true|false"), log_visibility (all|own),
- * listener (bool, default true).
+ * listener (bool, default true), wake_word ("<agent name>:<phrase>[:clip]" adds a wake word), wake_clear (removes them all).
  * Result data is the pairing code for a new agent (never the key); the test
  * redeems it with POST /v1/pair, the same way an agent would.
  */
@@ -28,7 +28,7 @@ class DebugSetupReceiver : BroadcastReceiver() {
             if (intent.hasExtra(k)) app.settings.setOn(k, intent.getBooleanExtra(k, false))
         }
         intent.getStringExtra("log_visibility")?.let { app.settings.logVisibility = it }
-        // answer=<id>:<button> and dismiss=<id> stand in for Rahul's tap in tests.
+        // answer=<id>:<button> and dismiss=<id> stand in for the owner's tap in tests.
         intent.getStringExtra("answer")?.let { spec ->
             val (id, button) = spec.split(":", limit = 2).let { it[0].toLong() to it.getOrNull(1) }
             runCatching { app.interactions.answer(id, button, emptyMap()) }
@@ -52,6 +52,16 @@ class DebugSetupReceiver : BroadcastReceiver() {
         intent.getStringExtra("clipboard_decide")?.let { spec ->
             val p = spec.split(":", limit = 2)
             app.clipboardRequests.decide(p[0], p.getOrNull(1) == "approve")
+        }
+        // sounds_agent=<agent name>[:quiet|normal|loud] stands in for the "Any sounds" card.
+        intent.getStringExtra("sounds_agent")?.let { spec ->
+            val p = spec.split(":")
+            app.agents.byName(p[0])?.let { a -> app.wake.saveSoundConfig(net.finleg.bridget.listen.SoundConfig(a.id, p.getOrElse(1) { "normal" })) }
+        }
+        if (intent.hasExtra("wake_clear")) app.wake.saveWords(emptyList())
+        intent.getStringExtra("wake_word")?.let { spec ->
+            val p = spec.split(":")
+            app.agents.byName(p[0])?.let { a -> app.wake.saveWords(app.wake.words() + net.finleg.bridget.listen.WakeWord(p[1], a.id, p.getOrNull(2) == "clip")) }
         }
         var code = ""
         intent.getStringExtra("rotate")?.let { n ->

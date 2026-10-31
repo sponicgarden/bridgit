@@ -67,6 +67,12 @@ class BridgeService : LifecycleService() {
                     app.log.system("audit", "setting", "You paused the listener from the notification")
                 stopEverything(); return START_NOT_STICKY
             }
+            ACTION_WAKE_STOP -> {
+                app.settings.setOn(net.finleg.bridget.listen.WakeListener.SWITCH, false)
+                app.log.system("audit", "setting", "You turned wake words off from the notification")
+                return START_STICKY
+            }
+            ACTION_WAKE_MUTE -> { app.wake.mute(); app.wake.sync(); refreshNotification(); return START_STICKY }
         }
         if (!app.settings.listenerEnabled) { stopEverything(); return START_NOT_STICKY }
         // A null intent means Android restarted us in the background (START_STICKY).
@@ -210,8 +216,19 @@ class BridgeService : LifecycleService() {
         val pause = PendingIntent.getService(this, 1, Intent(this, BridgeService::class.java).setAction(ACTION_PAUSE),
             PendingIntent.FLAG_IMMUTABLE)
         val s = app.listener.value
+        // 8.23: while wake words have the mic, the notification says so and offers Stop and Mute.
+        val wake = app.wake.state.value.takeIf { captureNote == null && it !is net.finleg.bridget.listen.WakeListener.State.Off }
         val title = when {
             captureNote != null -> captureNote!!
+            wake is net.finleg.bridget.listen.WakeListener.State.Hearing -> getString(R.string.wake_notif_hearing, wake.phrase)
+            wake is net.finleg.bridget.listen.WakeListener.State.Paused -> getString(R.string.wake_notif_paused, when (wake.reason) {
+                "muted" -> "muted until " + android.text.format.DateFormat.getTimeFormat(this).format(java.util.Date(app.wake.mutedUntil))
+                "call" -> "on a call"
+                else -> "the microphone is recording" })
+            wake != null -> getString(when {
+                app.wake.running?.words.isNullOrEmpty() -> R.string.wake_notif_title_sounds
+                app.wake.running?.sound != null -> R.string.wake_notif_title_both
+                else -> R.string.wake_notif_title })
             relay.store.enabled -> "Bridgit relay: ${relay.status}"
             boundTo.isEmpty() -> getString(R.string.notif_waiting_tailscale)
             else -> getString(R.string.notif_listening)
@@ -219,6 +236,7 @@ class BridgeService : LifecycleService() {
         val last = app.agents.all().maxByOrNull { it.lastUsedAt }?.takeIf { it.lastUsedAt > 0 }
         val text = when {
             captureNote != null -> getString(R.string.notif_capture_sub)
+            wake != null -> getString(R.string.wake_notif_text, app.wake.agentNames())
             relay.store.enabled -> "Relay on · ${relay.status} · Pause stops all access"
             boundTo.isEmpty() -> getString(R.string.notif_not_reachable)
             last != null -> getString(R.string.notif_last_request, last.name,
@@ -233,8 +251,18 @@ class BridgeService : LifecycleService() {
             .setOngoing(true)
             .setOnlyAlertOnce(captureNote == null)
             .setContentIntent(open)
-            .addAction(0, getString(R.string.action_pause), pause)
-            .addAction(0, getString(R.string.action_open), open)
+            .apply {
+                if (wake != null) {
+                    addAction(0, getString(R.string.wake_notif_stop), PendingIntent.getService(this@BridgeService, 2,
+                        Intent(this@BridgeService, BridgeService::class.java).setAction(ACTION_WAKE_STOP), PendingIntent.FLAG_IMMUTABLE))
+                    addAction(0, getString(R.string.wake_notif_mute), PendingIntent.getService(this@BridgeService, 3,
+                        Intent(this@BridgeService, BridgeService::class.java).setAction(ACTION_WAKE_MUTE), PendingIntent.FLAG_IMMUTABLE))
+                    addAction(0, getString(R.string.action_pause), pause)
+                } else {
+                    addAction(0, getString(R.string.action_pause), pause)
+                    addAction(0, getString(R.string.action_open), open)
+                }
+            }
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
     }
@@ -273,6 +301,8 @@ class BridgeService : LifecycleService() {
         private const val TAG = "BridgeService"
         const val NOTIF_ID = 1
         const val ACTION_PAUSE = "net.finleg.bridget.PAUSE"
+        const val ACTION_WAKE_STOP = "net.finleg.bridget.WAKE_STOP"
+        const val ACTION_WAKE_MUTE = "net.finleg.bridget.WAKE_MUTE"
         const val EXTRA_BACKGROUND = "background"
         const val EXTRA_SILENT = "silent"
         private const val RECHECK_MS = 5 * 60 * 1000L

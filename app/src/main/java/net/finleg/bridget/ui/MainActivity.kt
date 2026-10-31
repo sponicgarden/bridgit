@@ -1,5 +1,6 @@
 package net.finleg.bridget.ui
 
+import android.app.KeyguardManager
 import android.content.ClipboardManager
 import android.content.Intent
 import android.os.Bundle
@@ -28,6 +29,8 @@ import net.finleg.bridget.databinding.ActivityMainBinding
 import net.finleg.bridget.interact.IKind
 import net.finleg.bridget.interact.IStatus
 import net.finleg.bridget.interact.Interaction
+import net.finleg.bridget.interact.InteractionNotifier
+import net.finleg.bridget.interact.MainActivityState
 import net.finleg.bridget.ui.interactions.InteractionUi
 import net.finleg.bridget.ui.interactions.TextPanel
 import net.finleg.bridget.update.UpdateDialog
@@ -41,7 +44,7 @@ class MainActivity : AppCompatActivity() {
     private val app get() = application as BridgeApp
     lateinit var nav: NavController; private set
     private lateinit var panel: TextPanel
-    /** D26: the text panel Rahul picked (list or notification); null = the newest open one, if any. */
+    /** D26: the text panel the owner picked (list or notification); null = the newest open one, if any. */
     private var panelChosen: Long? = null
     private val panelSeen = HashSet<Long>()
     private var navInset = 0
@@ -66,7 +69,7 @@ class MainActivity : AppCompatActivity() {
             navInset = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
             v.updatePadding(bottom = navInset); applyPanelInset(); insets
         }
-        if (savedInstanceState == null) { route(); openReportFrom(intent); openInteractionFrom(intent); openTourFrom(intent) }
+        if (savedInstanceState == null) { route(); openReportFrom(intent); wakeFor(intent); openInteractionFrom(intent); openTourFrom(intent) }
         watchInteractionsBadge()
         watchTextPanel()
     }
@@ -146,8 +149,20 @@ class MainActivity : AppCompatActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         openReportFrom(intent)
+        wakeFor(intent)
         openInteractionFrom(intent)
         openTourFrom(intent)
+    }
+
+    /**
+     * CAP-56: an arriving interaction turns the screen on and asks Android to lift the lock screen. Never shown
+     * over the lock screen, so nobody answers a card without unlocking. Lasts only for this launch.
+     */
+    private fun wakeFor(intent: Intent?) {
+        if (intent?.getBooleanExtra(InteractionNotifier.EXTRA_ARRIVAL, false) != true) return
+        intent.removeExtra(InteractionNotifier.EXTRA_ARRIVAL)
+        setTurnScreenOn(true)
+        getSystemService(KeyguardManager::class.java)?.requestDismissKeyguard(this, null)
     }
 
     /** The City tour notification opens the tour screen. */
@@ -204,10 +219,17 @@ class MainActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
         leftApp = true
+        setTurnScreenOn(false)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        MainActivityState.inFront = false
     }
 
     override fun onResume() {
         super.onResume()
+        MainActivityState.inFront = true
         // A visible start lets Android grant the camera and microphone service types (ARC-03).
         if (app.settings.listenerEnabled && app.agents.count > 0) {
             val s = app.listener.value
@@ -225,7 +247,7 @@ class MainActivity : AppCompatActivity() {
         val cm = getSystemService(ClipboardManager::class.java) ?: return
         val label = runCatching { cm.primaryClipDescription?.label?.toString() }.getOrNull() ?: return
         if (label == CLIP_LABEL) runCatching { cm.clearPrimaryClip() }
-        // The secret's Copy button closes a dialog, which refocuses this window at once: wait until Rahul has been away.
+        // The secret's Copy button closes a dialog, which refocuses this window at once: wait until the owner has been away.
         if (label == CLIP_LABEL_SECRET && leftApp) runCatching { cm.clearPrimaryClip() }
     }
 
@@ -239,7 +261,7 @@ class MainActivity : AppCompatActivity() {
         /** Long extra: open this interaction (from a question or notice notification). */
         const val EXTRA_INTERACTION_ID = "interaction_id"
         /** D26: Activity is no longer a tab; it is opened from More and shows a back arrow. */
-        val TOP_LEVEL = setOf(R.id.home, R.id.interactions, R.id.applets, R.id.more)
+        val TOP_LEVEL = setOf(R.id.home, R.id.interactions, R.id.agents, R.id.more)
         /** Setup screens nothing may open over. */
         private val SETUP = setOf(R.id.addAgent, R.id.pairCode, R.id.firstRun)
     }

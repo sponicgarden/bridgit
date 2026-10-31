@@ -6,10 +6,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.isVisible
-import androidx.core.view.updatePadding
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -20,11 +17,10 @@ import net.finleg.bridget.BridgeApp
 import net.finleg.bridget.R
 import net.finleg.bridget.api.ApiDocs
 import net.finleg.bridget.databinding.FragmentAppletsBinding
-import net.finleg.bridget.ui.feedback.handleFeedbackMenu
 
 /**
- * Applets tab (owner, 27 Oct 2026; replaces the Agents tab): ready-made sessions with an agent.
- * One card per applet. Later applets (Museum guide, Run coach; TOUR-05) get their cards here.
+ * Applets (owner, 27 Oct 2026): ready-made sessions with an agent. Since 30 Oct 2026 a subtab of
+ * Interactions (a child fragment there, under its toolbar), no longer a bottom-bar tab. One card per applet. Later applets (Museum guide, Run coach; TOUR-05) get their cards here.
  */
 class AppletsFragment : Fragment() {
     private var _b: FragmentAppletsBinding? = null
@@ -37,11 +33,6 @@ class AppletsFragment : Fragment() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        ViewCompat.setOnApplyWindowInsetsListener(b.toolbar) { v, insets ->
-            v.updatePadding(top = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top); insets
-        }
-        b.toolbar.inflateMenu(R.menu.feedback_overflow) // Report a bug / Request a feature (FBK-01)
-        b.toolbar.setOnMenuItemClickListener { handleFeedbackMenu(it, "Applets") }
         b.cityTour.setOnClickListener { findNavController().navigate(R.id.tour) }
         val guide = ApiDocs.link(ApiDocs.APPLET_TITLE)
         b.buildAppletOpen.setOnClickListener {

@@ -1,7 +1,5 @@
 # Bridgit Android agentic control audit
 
-> Implementation update: the integrated build now includes the production 1.6.0 code from `de26bf8` and the additive control platform. This audit describes its earlier checkout snapshot. See [current implementation and acceptance](../implementation/agentic-control.md) for the corrected baseline and delivered scope.
-
 29 October 2026. Audit of the local working tree on `codex/agent-appliance-launch-kit`, starting at HEAD `5546eba`, including pre-existing uncommitted code. Feature proposals below are not implementation approvals. Existing application, website and specification changes were preserved.
 
 Bridgit already gives an agent useful physical context. To support a wide range of assisted tasks, its next major addition should be an **observe → authorize → act → verify** contract. A large collection of device endpoints alone will not make cross-app work reliable. The control contract, typed integrations and the proposed appliance runtime should share identity, grants, execution records and cancellation.

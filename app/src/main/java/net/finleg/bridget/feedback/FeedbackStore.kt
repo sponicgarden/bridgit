@@ -32,7 +32,7 @@ class FeedbackStore(private val context: Context, private val clock: () -> Long 
 
     /**
      * Files a report. [images] are already downscaled JPEGs (FBK-07). [captureSource] is
-     * "form" (Rahul) or "agent". Rate limits per FBK-13 are checked here.
+     * "form" (the owner) or "agent". Rate limits per FBK-13 are checked here.
      */
     @Synchronized
     fun create(kind: ReportKind, description: String, noAutofix: Boolean, images: List<ByteArray>,
@@ -59,13 +59,13 @@ class FeedbackStore(private val context: Context, private val clock: () -> Long 
             put("status", ReportStatus.NEW.id); put("created_at", now); put("updated_at", now)
             put("capture_source", captureSource); put("agent_id", agentId); put("agent", agent)
             put("context_json", ctx.toString()); put("log_json", log.toString()); put("images_json", "[]")
-            put("last_by", agent ?: "Rahul")
+            put("last_by", agent ?: "owner")
         })
         val names = images.mapIndexed { i, bytes ->
             "$id-${i + 1}.jpg".also { File(dir, it).apply { writeBytes(bytes); written += this } }
         }
         db.update("reports", ContentValues().apply { put("images_json", JSONArray(names).toString()) }, "id = ?", arrayOf(id.toString()))
-        addHistory(id, ReportStatus.NEW, agent ?: "Rahul", null, now)
+        addHistory(id, ReportStatus.NEW, agent ?: "owner", null, now)
             db.setTransactionSuccessful()
         } catch (e: Exception) {
             written.forEach { it.delete() } // a failed save leaves no report and no stray screenshots

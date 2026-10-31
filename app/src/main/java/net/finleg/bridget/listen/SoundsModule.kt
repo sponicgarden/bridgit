@@ -1,0 +1,46 @@
+package net.finleg.bridget.listen
+
+import android.Manifest
+import android.util.Base64
+import io.ktor.server.routing.Route
+import net.finleg.bridget.BridgeApp
+import net.finleg.bridget.R
+import net.finleg.bridget.api.ApiServer
+import net.finleg.bridget.api.Endpoints
+import net.finleg.bridget.api.ErrorCatalog
+import net.finleg.bridget.api.Reply
+import net.finleg.bridget.capability.Capability
+import net.finleg.bridget.capability.isoAt
+import net.finleg.bridget.capability.wantsRaw
+import org.json.JSONObject
+
+/**
+ * 8.23 Listening, "listen for any sounds": the phone tells one agent when the room gets loud, with a short clip
+ * if the owner allows it. Off by default; the owner picks the agent and how loud on the phone. Shares the
+ * microphone loop with wake words.
+ */
+class SoundsModule(app: BridgeApp) : Capability(app) {
+    override val id = "sounds"
+    override val titleRes = R.string.cap_sounds
+    override val descriptionRes = R.string.cap_sounds_desc
+    override val group = "capture"
+    override val switchKey = WakeListener.SOUND_SWITCH
+    override val permissions = listOf(Manifest.permission.RECORD_AUDIO)
+    override val endpoints = listOf(Endpoints.SOUNDS, Endpoints.SOUNDS_CLIP)
+    override fun blockedReason() = app.wake.soundsMissing()
+    override fun details() = JSONObject().put("cooldown_seconds", WakeRules.SOUND_COOLDOWN_MS / 1000).put("max_seconds", WakeRules.SOUND_MAX_MS / 1000)
+
+    override fun Route.install(api: ApiServer) = with(api) {
+        endpoint(Endpoints.SOUNDS) { Reply.Json(app.wake.soundStatus(agent!!.id)) }
+        endpoint(Endpoints.SOUNDS_CLIP) {
+            val id = path("id") ?: ""
+            val c = app.wake.clip(id, agent!!.id)
+                ?: throw ErrorCatalog.error("not_found", "No clip $id for you. Clips are kept 10 minutes, and only when the owner lets sounds send audio.")
+            bytesOut = c.wav.size.toLong()
+            if (wantsRaw()) Reply.Bytes(c.wav, "audio/wav", mapOf("X-Bridget-Heard-At" to isoAt(c.at)))
+            else Reply.Json(JSONObject().put("heard_at", isoAt(c.at)).put("duration_seconds", Math.round(c.seconds * 10) / 10.0)
+                .put("format", "wav").put("sample_rate_hz", WakeRules.SAMPLE_RATE).put("size_bytes", c.wav.size)
+                .put("data_base64", Base64.encodeToString(c.wav, Base64.NO_WRAP)))
+        }
+    }
+}

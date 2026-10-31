@@ -17,8 +17,11 @@ for (const file of files.filter(f => f.endsWith('.html'))) {
   const text = await readFile(file, 'utf8'); pages.set(file, text);
   if ((text.match(/<h1\b/g) || []).length !== 1) errors.push(`${file}: expected one h1.`);
   if (!text.includes('<html lang="en">')) errors.push(`${file}: missing language.`);
-  if (text.includes('{{SITE_ORIGIN}}') || text.includes('truealder512')) errors.push(`${file}: unresolved/old host identity.`);
-  if (/<script[^>]+src="https?:/i.test(text)) errors.push(`${file}: unexpected remote script.`);
+  if (text.includes('{{SITE_ORIGIN}}') || text.includes('chatgpt.site')) errors.push(`${file}: unresolved/old host identity.`);
+  for (const match of text.matchAll(/<script[^>]+src="(https?:[^"]+)"/gi)) {
+    if (path.relative(dist, file) !== 'download/index.html' || match[1] !== 'https://challenges.cloudflare.com/turnstile/v0/api.js') errors.push(`${file}: unexpected remote script.`);
+  }
+  if (/{{[A-Z_]+}}/.test(text)) errors.push(`${file}: unresolved build placeholder.`);
 }
 let references = 0;
 for (const [file, text] of pages) {

@@ -42,7 +42,7 @@
     "public legal pages matching final behavior"
   ],
   "website": {
-    "url": "https://bridget-appliances.truealder512.chatgpt.site",
+    "url": null,
     "audience": "owner-private",
     "deployment_status": "succeeded",
     "source_commit": "06fc1fe1d7b0d6b058498de35ed5dba5233bd065"

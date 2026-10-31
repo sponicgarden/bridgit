@@ -1,4 +1,4 @@
-const labels = {current:'Implemented', planned:'Planned', exploring:'Exploring'};
+const labels = {current:'Current build', planned:'Planned', exploring:'Exploring'};
 const escape = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function renderFeatureCatalog(catalog) {
   const features = catalog.groups.flatMap(group => group.features);
@@ -19,7 +19,7 @@ export function renderFeatureCatalog(catalog) {
   }).join('\n');
   return `<section class="section feature-catalog" id="features" aria-labelledby="features-title">
 <div class="sectionhead"><div><span class="eyebrow">One phone. Many ways to help.</span><h2 id="features-title">What can Bridgit do?</h2></div><p>Give your agent eyes, ears and a way to reach you. Explore the app’s ${features.length} features, organized into ${catalog.groups.length} practical groups.</p></div>
-<div class="catalog-overview" aria-label="Feature availability"><span><b>${counts.current}</b> implemented</span>${counts.planned ? `<span><b>${counts.planned}</b> planned</span>` : ''}<span><b>${counts.exploring}</b> being explored</span></div>
-<p class="catalog-note">Implemented means present in the <a href="/api/">app ${escape(catalog.source.appVersion)} reference (API ${escape(catalog.source.apiRevision)})</a>. Device acceptance is partial; your installed build, hardware, enabled features, grants and Android permissions determine availability. A compatible connected agent supplies the reasoning and follow-through. This website has no installer or signup form.</p>
+<div class="catalog-overview" aria-label="Feature availability"><span><b>${counts.current}</b> in the current build</span><span><b>${counts.planned}</b> planned</span><span><b>${counts.exploring}</b> being explored</span></div>
+<p class="catalog-note">“Current build” means implemented in the personal app build; availability depends on your version, device, enabled features and Android permissions. A compatible agent supplies the reasoning and follow-through. <a href="/download/">Download the current Android build</a> or request its link by email.</p>
 <div class="feature-grid">${groups}</div></section>`;
 }

@@ -1,57 +1,65 @@
-# Bridgit website
+# BRIDGIT marketing website
 
-Canonical website source for Bridgit. Eight responsive routes: `/`, `/how-it-works/`, `/developers/`, `/api/`, `/support/`, `/privacy/`, `/terms/`, and `/delete-data/`.
+Canonical website source for the BRIDGIT Android repository. Nine responsive pages, original branding, an interactive appliance concept selector and developer information. Current features and planned appliances are labeled separately. The download page offers the signed development APK directly or sends a confirmation/download link by email. Optional release updates require a separate confirmed opt-in.
 
-The site uses plain HTML/CSS/JavaScript and Node’s standard library, with no npm dependencies, external fonts, analytics SDKs or marketing forms. Source is in `public/`; the 47-item feature catalog is in `content/features.json`. The older `launch-kit/site/` remains preserved; make website changes here.
+The site uses plain HTML/CSS/JavaScript and Node's standard library. There are no npm dependencies, lockfile, external font requests, analytics SDKs or marketing forms. The older `launch-kit/site/` preview and its separate hosting repository remain preserved; make new website changes here.
 
-## Local preview and validation
+## Preview
 
-Run `npm --prefix website run dev` and open the printed URL, normally http://127.0.0.1:4173/. The server builds on startup; rebuild after source changes. Set `PORT` to run an independent preview.
+From `website/`, run `npm run dev` and open the printed local URL (default http://127.0.0.1:4173/). The server builds on startup. After editing `public/` or configuration, restart it to rebuild. Set `PORT` if necessary.
 
-Run `npm --prefix website run build`, `npm --prefix website test`, `npm --prefix website run check`, and `npm --prefix website run preflight`. Output is `website/dist/`, ignored by Git. Tests reconcile each feature against the checked-in API evidence and check Worker canonical redirects and asset responses. Link checks cover local anchors, including the API reference.
+## Build and check
 
-## What the content describes
+Run `npm run build`, then `npm run check`. The output is `website/dist/`, which is ignored by Git. Source lives in `public/`; build and preview commands live in `scripts/`.
 
-The reviewed public API reference is **1.6.0 / API revision 8**, fetched 29 October 2026. It lists 43 implemented catalog items and four exploratory ideas. The downloaded updater APK was checked against its manifest hash/size, inspected with aapt (1.6.0/code18, Android 14+) and verified with apksigner. This is evidence for that particular published artifact, not a claim that a repository counter is a released version.
+## Domain and deployment
 
-Device acceptance is partial. Implementation, individual device readiness, installed app version and public availability are distinct. Feature descriptions retain bounds: owner-selected Downloads, active notification text rather than history, read-only Health Connect source records, owner-tapped clipboard copying, Latin-script OCR, device-dependent offline transcription and Android-dependent timed restoration. New feature switches start off. Existing unrestricted agents need review before relying on per-agent grants.
+Set `origin` in `site.config.json` to the real HTTPS origin when chosen, or supply `SITE_ORIGIN` to the build. Also set verified `supportEmail` and `privacyEmail` when those mailboxes exist. Build generates canonical URLs, Open Graph URLs, sitemap and robots rules from that origin. The selected domain is `bridgit.cc` and the configured origin is `https://bridgit.cc`. The zone is active; the repository includes its deployment configuration.
 
-`content/features.json` records the original feature title and stage plus public copy. `scripts/feature-catalog.mjs` requires each item exactly once and renders native HTML details. `tests/catalog.test.mjs` compares every item’s availability with the reviewed API snapshot rather than enforcing historical counts.
+`indexable` is enabled for the public site. The build emits `index,follow`, canonical HTTPS apex URLs and a nine-page sitemap, and robots.txt allows crawling. Run `npm run preflight` to see remaining launch inputs; privacy and terms describe the current app and website, with support/privacy requests sent to `support@bridgit.cc`. Reconcile these disclosures with the actual app release and Play declarations before store submission. A missing domain fails release preflight; unfinished contact/legal details are reported as notes, not fabricated.
 
-City tour and agent-managed sessions are implemented. A general runtime for arbitrary agent-proposed appliances, live camera streaming and voice-triggered help remain future ideas. The home page leads with practical tools; its ten-card carousel is separate from three future appliance concepts. Monitoring concepts are not safety or emergency systems. The four exploratory catalog ideas are relay, trigger words, communications, and location history/places.
+Deploy the contents of `dist/` to any static host with HTTPS and directory-index support. Build command: `npm --prefix website run build`. Publish directory: `website/dist`. For a host rooted directly at `website/`, use `npm run build` and publish `dist`. The `_headers` file supplies basic headers on hosts that support that convention; configure equivalent headers on other hosts. Use the site's ordinary trailing-slash URLs; no SPA fallback is needed.
 
-The website does not offer an installer or signup form. Existing preview users have an in-app update channel. Public reachability of an updater artifact is distinct from launching an enrollment or download program. Support is a contact channel, without a promise of preview or repository access.
+Routes: `/`, `/how-it-works/`, `/developers/`, `/support/`, `/privacy/`, `/terms/`, `/delete-data/`, `/features/`, `/download/`, `/releases/`. The releases page renders `content/releases.json`, a snapshot of the GitHub releases; refresh it with `node scripts/fetch-releases.mjs` after publishing a release.
 
-## API reference and provenance
+There are no hosted BRIDGIT device accounts. Website email signup data can be deleted using the link in the download email. Keep unsupported features labeled as planned; adding a domain does not change feature readiness. The literal "any Android device" tagline describes the product direction; compatibility copy states the current Android 14+ requirement and proposed older-device support.
 
-`public/api/index.html` is a versioned snapshot of the public app-generated reference, served under the site’s own origin. `content/api-provenance.json` records its upstream URL, hash, version/revision, release evidence and editorial changes. Owner-name references were generalized, and obsolete instructions to hardcode Gradle versions were replaced with the automatic APK allocation requirement. It retains upstream attribution and a link to the original. A paired phone’s `/v1/guide`, `/v1/openapi.json` and `/v1/capabilities` remain authoritative for that phone.
+## Branding
 
-Refresh the snapshot deliberately when a new reference is verified. Check all advertised anchors and the source-to-catalog reconciliation; do not silently treat a version counter or development branch as a published reference. Never copy credentials or a real phone address into the snapshot.
+BRIDGIT — “Turn any Android device into an agentic appliance.” Original SVG mark and local social image are in `public/assets/`; brand sources are retained under `launch-kit/brand/`. The site uses Android as a platform descriptor and includes trademark attribution. No Android logo or Google partnership is implied. Public brand/trademark clearance is a separate launch consideration.
 
-## Screenshots and interaction examples
+## Cloudflare
 
-Preserved sample app screens on Home and How it works are privacy-reviewed crops from **1.5.4 on a Pixel 10 Pro XL**; `brand/screenshots/provenance.json` records their provenance. Their version labels are independent of the capability reference. They preserve aspect ratio and link to the full-size PNG. Private connection details remain withheld.
+`wrangler.jsonc` pins the Cloudflare account and the `bridgit` Worker, serving this directory’s static build at `bridgit.cc` and `www.bridgit.cc` through Cloudflare Custom Domains. Cloudflare manages DNS and TLS for these bindings. The domain is already an active Free zone.
 
-The six Grokbot/Muse interaction images show fictional choices and confirmations from a **1.6 development preview**. `brand/screenshots/interactions.json` records their provenance. They do not demonstrate real bookings, payments or a verified native provider integration. These galleries were preserved during the content review.
+From `website/`, run `npm run deploy:check` to build, validate and dry-run the configuration; run `npm run deploy` only when publication is intended. Both commands require Wrangler on PATH, authenticated to the named account. No token belongs in this repository. `workers.dev` and version preview URLs are disabled. The Worker runs before assets and permanently redirects HTTP and www requests to `https://bridgit.cc`, preserving path and query. `npm test` covers redirects and canonical asset/404 behavior.
 
-## Brand and compatibility
+Cloudflare reference: https://developers.cloudflare.com/workers/configuration/routing/custom-domains/
 
-Bridgit is an Agentic Android Device Bridge. The current requirement is **Android 14 or later**. The marketing line is “Give your Android phone a new job.” The hero illustration is labeled as an illustration, separate from real app screenshots.
+Deployment verified 28 October 2026: https://bridgit.cc and https://www.bridgit.cc serve this preview through Worker `bridgit`. All seven pages, robots.txt and sitemap.xml respond successfully; unknown paths return 404. The site initially launched with indexing disabled; the search-indexing update below replaces that setting.
 
-Provider marks in `public/assets/agents/` have provenance in `brand/agent-sources.json`; they imply neither partnership nor universal direct hosted-chat support. The mismatched muse.ai mark was removed from the provider row. OpenRouter is model routing. A compatible agent must have HTTP/MCP tools and a route to the phone’s private Tailscale network. The introduction prompt grants no access and contains no device key or address; it is separate from the app’s pairing prompt.
+## Home page use cases
 
-Software is Apache 2.0 licensed. GitHub confirms the source repository is private; public copy states that access is required. This site does not grant it. Android is a trademark of Google LLC. No Android logo or Google partnership is implied.
+The “What can you do with Bridgit?” carousel contains five concept illustrations in `public/assets/use-cases/`: baby monitor, family help station, desk scanner, pet camera and workshop eye. Edit the slide markup in `public/index.html` to add cases or replace images. Keep image alt text and current/planned feature labels accurate. Native horizontal scrolling works without JavaScript; arrow buttons and keyboard navigation are enhanced by `assets/app.js`. No autoplay is used.
 
-## Domain, indexing and deployment
+The home page and footer link to `https://github.com/sponicgarden/bridgit`. The repository is public.
 
-`site.config.json` sets `https://bridgit.cc`, the verified contact `support@bridgit.cc`, and indexing. Build generates per-route canonicals, Open Graph URLs, sitemap and robots rules. Public source templates begin with noindex; the build applies the configured indexing state. Privacy and Terms are dated 29 October 2026; review their effective date when publishing material changes. Source editing is not publication.
+Search-indexing update, 28 October 2026: all seven public pages allow indexing; HTTP/www variants return 301 to the HTTPS apex. Privacy and terms are dated public pages. The support contact receives mail through Cloudflare Email Routing. Cloudflare manages MX/SPF/DKIM DNS; destination verification and routing rules are account configuration and contain no repository secrets. The receive-only forwarding rule does not itself provision outbound SMTP.
 
-`wrangler.jsonc` configures the existing Cloudflare Worker and custom domains. Account identifiers live in deployment configuration; no credentials belong in the repository. The Worker redirects HTTP/www to HTTPS apex, preserving path/query, before static assets. Unknown paths retain 404. Equivalent security headers must be configured on any alternative host.
+## Feature catalog and identity
 
-`npm --prefix website run deploy:check` builds, tests, validates and performs a Wrangler dry run. `npm --prefix website run deploy` publishes and must only run when publication is authorized. The content review was validated locally without deploying.
+`npm run build` reads the Android app’s `WhatCanData.kt` and creates `/features/` with all 47 current catalog entries, their availability, examples, options and API calls. Images are copied from the app’s WebP illustrations and loaded lazily. Parsing fails rather than silently dropping malformed entries. Source availability labels describe the personal app build, not a Google Play release.
 
-The support address receives mail through Cloudflare Email Routing to the existing support inbox; this does not itself provision outbound SMTP. Do not add support response or access-approval promises without an actual supported process.
+The approved identity is documented in `brand/README.md`. The icon is the actual Android artwork; the wordmark uses outlined glyphs. Phone layouts expose a Features link with at least 44px tap height. Existing illustrated concept carousel content is preserved.
 
-## Review history
+## Download email service
 
-`docs/reviews/2026-10-29-grok-4.7-website-review.md` contains the requested second review and the verified release evidence that supersedes its version uncertainty. The earlier Opus review and Grok findings informed the content changes. No user counts, audits, launch dates or compatibility guarantees were invented.
+The Worker uses the `SIGNUPS` D1 binding, the `EMAIL` send_email binding (Cloudflare Email Sending, beta: needs the Workers Paid plan and bridgit.cc onboarded under Email Service › Email Sending, which adds SPF/DKIM/DMARC/bounce records), and two secrets: `TURNSTILE_SECRET` and `RATE_LIMIT_SALT`. Mail is sent from support@bridgit.cc. The old `RESEND_API_KEY` secret is no longer read and can be deleted. Set secrets using Wrangler stdin; never commit credentials. The public Turnstile site key and current signed APK URL/version/hash are in `site.config.json`. Email Sending does no click/open tracking.
+
+Apply `migrations/0001_download_requests.sql` and `migrations/0002_alert_subscriptions.sql` to the database before deployment. A daily scheduled handler removes expired download-only/pending signup records and old abuse counters. Requests are limited to 20 email sends per 24 hours globally, 3 per network address per hour, and one per email per 15 minutes, after production Turnstile validation. Increase caps deliberately when launch traffic grows.
+
+GET links show a confirmation screen; explicit POST confirms a download and any optional update preference. Tokens are hashed at rest; network counters use a secret-keyed hash. Confirmation/unsubscribe pages are not cached and use origin-only referrers, so tokens do not leak through Referer headers while browser form Origin checks remain valid. Direct APK downloads remain public; email confirmation is not an APK access-control boundary. `npm test` uses Node’s SQLite runtime to exercise the actual database queries and consent flow.
+
+## Agent-activity email alerts
+
+`alerts.mjs` relays the Android app's agent-activity emails (Settings › Email alerts: every action, hourly, daily, weekly or none). It reuses the `EMAIL` binding, `RATE_LIMIT_SALT` and the `SIGNUPS` D1 binding; no new secrets. Email Sending has no idempotency key, so the Worker remembers each install's last batch key and doesn't re-mail a retried batch. The app authenticates with a random per-install Bearer token (only its hash is stored). `POST /api/alerts/subscribe` mails a confirmation link (one per address per 5 minutes, 5 per network address per hour, 50 per day globally); confirmation and unsubscribe need an explicit button POST from bridgit.cc. `POST /api/alerts/send` mails only the confirmed address, at most 200 per install per day, and appends an unsubscribe link. `GET /api/alerts/status` and `DELETE /api/alerts/subscription` let the app check and remove its subscription. Alert contents are not stored. The daily cron removes stale unconfirmed subscriptions and old counters.

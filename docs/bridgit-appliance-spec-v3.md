@@ -1,7 +1,6 @@
 # BRIDGIT agent appliance specification v3
 
-Status: proposal for review, 28 October 2026. Implementation baseline: BRIDGIT 1.2.0, repository commit `6f2ecf0`. This is a new product direction, not a statement that v3 is built. The editable companion lives at https://chatgpt.com/space/page_f0df7818f9d88191abbba0ba64ba3a1a.
-
+Status: proposal for review, 28 October 2026. Implementation baseline: BRIDGIT 1.2.0, repository commit `6f2ecf0`. This is a new product direction, not a statement that v3 is built.
 ## 1. Product
 
 **Turn any Android device into an agentic appliance.** BRIDGIT turns an Android phone into an appliance that an authorized agent can configure and operate. The agent supplies intent and composition; BRIDGIT supplies device capabilities, local execution, owner approval, visibility, and a reliable record. Appliances can be created on demand rather than limited to a vendor's catalog. A preset is an editable starting point, not a separate app or the boundary of the platform.

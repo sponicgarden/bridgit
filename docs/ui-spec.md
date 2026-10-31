@@ -220,7 +220,7 @@ Bottom row: **Skip** (text, left) on pages 1–2; **Next** (filled, right).
 
 Page 2 detail:
 - Tailscale row (card): checking state "Checking Tailscale…" with small
-  circular progress; success **"Tailscale: connected (100.94.27.79)"** with
+  circular progress; success **"Tailscale: connected (100.101.102.103)"** with
   success check, IP in mono; failure "Tailscale isn't connected" with
   **Open Tailscale** (tonal; opens the Tailscale app, or its Play page if
   missing).
@@ -247,7 +247,7 @@ used the phone, what's on.
 2. **Hero card** (`primaryContainer`): beacon dot + state ("Listening" /
    "Paused" / "Capturing" / "Tailscale is down"), **Pause** outlined button
    (becomes filled **Resume** when paused); address in mono
-   `pixel-10-pro-xl.tail9c9221.ts.net:8734` (tap copies, Snackbar "Address
+   `my-phone.tailnet-name.ts.net:8734` (tap copies, Snackbar "Address
    copied"); chips row: "Up 3 h 12 m", "✓ Tailscale", "Battery 64%".
 3. **Banners** (0–n, most urgent first), each one line + one text button:
 
@@ -285,7 +285,7 @@ used the phone, what's on.
 - *Loading:* hero card shows "Starting…" with the dot grey; never blocks.
 
 **A11y:** hero card is one focus stop with a combined description
-("Bridgit is listening. Address pixel-10-pro-xl…, up 3 hours 12 minutes,
+("Bridgit is listening. Address my-phone…, up 3 hours 12 minutes,
 Tailscale connected, battery 64 percent") and an `accessibilityLiveRegion`
 of polite so state changes are announced; Pause is a separate stop. Status
 dots have content descriptions ("Active", "Idle").
@@ -362,7 +362,7 @@ Bottom bar on steps 1–3: **Back** (text, left; hidden on step 1) and
 - Checklist (three or four rows), each with a 24 dp leading state icon:
   pending (small circular progress), pass (success check), fail (error
   icon) and the label: "Listener running", "Tailscale address
-  (100.94.27.79)", "Reachable on port 8734", "Relay reachable" (relay only).
+  (100.101.102.103)", "Reachable on port 8734", "Relay reachable" (relay only).
 - Failed row: one-line reason + **Fix** tonal button (opens the right place:
   start listener, Open Tailscale, Access screen).
 - Self-connection-only failure: warning row in `secondaryContainer`:
@@ -423,7 +423,7 @@ digit by digit.
 **Layout:** toolbar with back + agent name + ⋮ (Rename, Report a bug).
 Scrolling content:
 1. Header: avatar 64 dp, name `HeadlineSmall`, connection chip, "Added 26
-   Oct · last used 2 min ago from `100.110.68.46`".
+   Oct · last used 2 min ago from `100.88.1.2`".
 2. Stats row: three equal tiles — "42 requests today", "1 error", "18 MB
    sent" — with a thin `LinearProgressIndicator` under data sent against the
    SEC-08 limit ("18 of 500 MB today").
@@ -448,7 +448,7 @@ Scrolling content:
 
 ### 5.6 Inbox (UI-15, UI-16, P2) — mockup frame "Inbox"
 
-**Purpose:** everything agents sent to Rahul and he sent to agents.
+**Purpose:** everything agents sent to the owner and they sent to agents.
 
 **Layout:** toolbar **Inbox** (⋮: Mark all read, Report a bug);
 `ChipGroup` single-select filter chips **All · Questions · Notices · Files
@@ -460,7 +460,7 @@ heading as cards with their buttons; the rest under "Earlier" as rows.
 | Open question | agent avatar | "**Grok asks:** Pay this invoice?" | text preview, 2 lines max | time; up to 2 buttons on the card |
 | Notice | `info` on primaryContainer | "**Claude:** Backup finished, 3 files" | — | time; **Got it** text button while unseen |
 | File received | `description` on surfaceContainerHigh | "**Codex sent** a file" | filename + size in mono | time |
-| Shared by Rahul | `upload` | "**You shared** a photo with Claude" | filename in mono · "picked up 14:02" / "waiting for pickup" | time |
+| Shared by the owner | `upload` | "**You shared** a photo with Claude" | filename in mono · "picked up 14:02" / "waiting for pickup" | time |
 | Answered | `check` on successContainer | "You answered Muse" | ""Book the 9am?" · Yes" | date |
 | Expired / cancelled | `schedule`, row at 75 % opacity | "Expired: Grok "Order more coffee?"" | "No answer within 24 hours" | date |
 
@@ -646,7 +646,7 @@ Section headers in `primary` `LabelLarge`.
 | Screenshots | Mode for agents: **Private copy** / **Android screenshot saved to gallery** (radio dialog) · Accessibility service: status + **Turn on** |
 | Privacy | Agents can read the log: **all entries** / **only their own** · Show question text on the lock screen (off) · Log precise locations (off) · Address lookup (off) |
 | Log | Keep: 20,000 entries / 30 days (two number fields) · Export · Clear |
-| Notifications | One row per channel (Listener, Captures, Questions, Notices, Files, Feedback) → opens the Android channel page |
+| Notifications | One row per channel (Listener, Captures, Questions, Notices, Files, Feedback) → opens the Android channel page · Open Bridgit when an agent sends something (switch, off; turning it on opens Android's "Display over other apps" page if not granted, CAP-56) |
 | Feedback | Also send reports to: Off / finleg intranet tasks / GitHub issue |
 | Appearance | System / Light / Dark (radio dialog) |
 | About | Version, build, commit (mono) · Signing certificate SHA-256 (mono, tap to copy) · Licences · Spec |
