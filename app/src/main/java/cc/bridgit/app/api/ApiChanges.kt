@@ -93,6 +93,12 @@ object ApiChanges {
             Item("speaker/say and speaker/play reply status \"silenced\" when the phone is on silent, Do Not Disturb or in a call", "/v1/speaker/say"),
             Item("Flashlight on a device without one: capabilities shows blocked_reason no_hardware and the call fails with not_supported", "/v1/flashlight"),
         )),
+        Revision(14, "1.6.0", "2026-10-31", listOf(
+            Item("ADB control: how to help the owner set it up, and what to run once it's on (no key needed)", "/v1/adb/setup"),
+            Item("ADB setup progress and which grants took effect", "/v1/adb/status"),
+            Item("Run a shell command as Android's shell user (developer agents, owner switch)", "/v1/adb/shell"),
+            Item("Give Bridgit every useful permission and access through ADB", "/v1/adb/grant"),
+        )),
     )
 
     val CURRENT: Int = revisions.maxOf { it.revision }

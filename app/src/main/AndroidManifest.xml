@@ -38,6 +38,9 @@
     <uses-permission android:name="android.permission.WRITE_SETTINGS" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <!-- ADB setup (8.26): granted only over ADB (pm grant / appops). Secure settings lets Bridgit turn Wireless
+         debugging back on after a reboot; the overlay lets it open apps from the background. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.health.READ_STEPS" />
     <uses-permission android:name="android.permission.health.READ_SLEEP" />
     <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
@@ -152,6 +155,9 @@
         </service>
 
         <receiver android:name="cc.bridgit.app.feedback.FeedbackActionReceiver" android:exported="false" />
+
+        <!-- 8.26: the Wireless debugging pairing code, typed into Bridgit's notification. -->
+        <receiver android:name=".adb.AdbPairReceiver" android:exported="false" />
 
         <!-- CAP-33: answers questions from notification buttons and inline reply. -->
         <receiver android:name="cc.bridgit.app.interact.InteractionActionReceiver" android:exported="false" />

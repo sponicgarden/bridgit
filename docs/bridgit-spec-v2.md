@@ -1538,6 +1538,32 @@ one purpose, started by the owner and run together with one agent. The first is
   required (events live behind it). The brief tells the agent to keep looping
   and to greet the owner on the first tick, which carries location and compass.
 
+### 8.26 ADB control and setup (owner request, 31 Oct 2026)
+
+Bridgit is an ADB client of the phone's own adbd (Wireless debugging, Android 11+), the way Shizuku and
+LADB are, so neither the owner nor the agent needs a computer. Library: libadb-android 3.1.1 (Apache-2.0
+option of its dual licence) with Conscrypt, passed to libadb only and never installed app-wide.
+
+- **ADB-01** More → **ADB setup** walks the owner through: (1) Developer options, (2) Wireless debugging,
+  (3) **Pair**: Bridgit finds the pairing dialog by mDNS (`_adb-tls-pairing._tcp`) and posts a
+  notification whose inline reply takes the 6-digit code, because Settings closes the dialog when another
+  app comes to the front. A field on the screen also takes the code (and the port, if mDNS fails) for
+  split screen. Each step shows On/Off live. Access links here too.
+- **ADB-02** **Give Bridgit full access** runs, as uid shell: restricted settings, WRITE_SECURE_SETTINGS,
+  every runtime permission in the manifest, the screenshot accessibility service (CAP-26 unchanged: no
+  window content or gestures), notification listener, Do Not Disturb, usage access, modify system
+  settings, display over other apps, PROJECT_MEDIA, install updates, and no battery limits. Each row shows
+  what Android reports afterwards, not what was attempted.
+- **ADB-03** With WRITE_SECURE_SETTINGS, Bridgit turns Wireless debugging back on after a reboot
+  (`adb_wifi_enabled`, Wi-Fi only) and on connect, so pairing is needed once.
+- **ADB-04** Agents: switch **ADB control** (`adb`, off by default) plus the per-agent **Developer**
+  switch plus the `adb` grant (section 15). `POST /v1/adb/shell` and `POST /v1/adb/grant` are
+  developer-only; `GET /v1/adb/status` shows progress; `GET /v1/adb/setup` (no key) tells an agent how to
+  walk the owner through setup and what to run once it is on. Every command is logged with the agent's
+  name. This answers the 29 Oct audit's "never a default shell tool": the shell exists only after the
+  owner pairs, switches it on, and marks the agent as a developer.
+- **ADB-05** The setup prompt (AGT-09) points every agent at `GET /v1/adb/setup`.
+
 ### 8.22 Communications (not scheduled)
 
 - **CAP-43 [Open]** SMS read/send, contacts, calendar, call log. v1 excluded

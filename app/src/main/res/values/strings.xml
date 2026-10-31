@@ -138,6 +138,8 @@
     <string name="cap_downloads">Selected Downloads</string>
     <string name="cap_downloads_desc">Select individual files in Device tools; agents cannot browse your Downloads folder.</string>
     <string name="cap_clipboard">Copy with approval</string>
+    <string name="cap_adb">ADB control</string>
+    <string name="cap_adb_desc">Developer agents can run shell commands: tap, type, open apps, change settings. Set up in More → ADB setup.</string>
     <string name="cap_clipboard_desc">Every request needs your Copy tap in Device tools; expires after five minutes.</string>
     <string name="cap_usage">App usage summaries</string>
     <string name="cap_usage_desc">Read foreground-time summaries after granting Usage access.</string>

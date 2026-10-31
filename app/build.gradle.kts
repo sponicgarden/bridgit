@@ -184,6 +184,13 @@ dependencies {
     implementation("com.alphacephei:vosk-android:0.3.75")
     implementation("net.java.dev.jna:jna:5.18.1@aar")
 
+    // ADB setup (8.26): Bridgit pairs with this device's own Wireless debugging and runs shell commands as uid shell.
+    // Apache-2.0 option of the dual licence. Conscrypt supplies the TLS that pairing needs.
+    // main already ships the newer BouncyCastle (bcprov-jdk18on); the same classes twice fail the build.
+    implementation("com.github.MuntashirAkon:libadb-android:3.1.1") { exclude(group = "org.bouncycastle", module = "bcprov-jdk15to18") }
+    implementation("org.conscrypt:conscrypt-android:2.5.3")
+    implementation("com.github.MuntashirAkon:sun-security-android:1.1")
+
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
 }

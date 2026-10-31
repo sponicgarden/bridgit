@@ -35,6 +35,7 @@
         <argument android:name="agentId" app:argType="string" app:nullable="true" android:defaultValue="@null" />
         <argument android:name="auto" app:argType="boolean" android:defaultValue="false" />
     </fragment>
+    <fragment android:id="@+id/adbSetup" android:name="cc.bridgit.app.ui.adb.AdbSetupFragment" />
     <fragment android:id="@+id/settings" android:name="cc.bridgit.app.ui.more.SettingsFragment" />
     <!-- P1b feedback (section 11). reportForm: kind = "bug" | "feature"; optional logEntryId attaches one log entry. -->
     <fragment android:id="@+id/reportForm" android:name="cc.bridgit.app.ui.feedback.ReportFormFragment">

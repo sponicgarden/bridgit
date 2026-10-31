@@ -1,8 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <!-- ADB control (8.26) is private-build only. -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:node="remove" tools:ignore="ProtectedPermissions" />
     <application>
         <!-- Lint 31.7 reads each source overlay independently; retain the real inherited FGS declaration here too. -->
         <service android:name="cc.bridgit.app.BridgeService" android:foregroundServiceType="camera|microphone|location|mediaPlayback|specialUse" />
         <service android:name="cc.bridgit.app.capability.ScreenshotService" tools:node="remove" />
         <service android:name="cc.bridgit.app.planned.NotificationReaderService" tools:node="remove" />
+        <receiver android:name="cc.bridgit.app.adb.AdbPairReceiver" tools:node="remove" />
     </application>
 </manifest>

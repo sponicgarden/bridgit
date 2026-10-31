@@ -84,6 +84,7 @@ class Registry(app: BridgeApp) {
         cc.bridgit.app.planned.TransferModule(app, "files"), cc.bridgit.app.planned.TransferModule(app, "shares"),
         cc.bridgit.app.planned.TransferModule(app, "downloads"), cc.bridgit.app.planned.ClipboardModule(app),
         cc.bridgit.app.planned.VideoModule(app), cc.bridgit.app.planned.GalleryVideoModule(app), cc.bridgit.app.planned.OcrModule(app),
+        cc.bridgit.app.adb.AdbModule(app),
     )
 
     fun caps(): List<cc.bridgit.app.api.CapInfo> = modules.map { it.status() }

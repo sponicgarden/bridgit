@@ -127,7 +127,7 @@
     <string name="agents_rotate_confirm">Rotate</string>
     <string name="agents_rotated_log">You rotated %1$s\'s key</string>
     <string name="agents_section_developer">Developer</string>
-    <string name="agents_developer_switch">Developer - can read bug reports and their screenshots</string>
+    <string name="agents_developer_switch">Developer - can read bug reports and run ADB shell commands</string>
     <string name="agents_developer_hint">Developer agents can read your reports in More → My reports and mark them fixed.</string>
     <string name="agents_developer_on_log">You made %1$s a developer agent</string>
     <string name="agents_developer_off_log">%1$s is no longer a developer agent</string>

@@ -350,6 +350,9 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED && intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
         val app = context.applicationContext as BridgeApp
+        // ADB setup (8.26): Wireless debugging turns off on reboot; with the secure-settings grant Bridgit turns it back on.
+        if (BuildConfig.PRIVATE_CONTROL && app.settings.isOn("adb") && cc.bridgit.app.adb.AdbGrants.holdsSecureSettings(app))
+            runCatching { android.provider.Settings.Global.putInt(app.contentResolver, cc.bridgit.app.adb.AdbClient.ADB_WIFI_ENABLED, 1) }
         if (!app.settings.listenerEnabled || app.agents.count == 0) return
         app.log.system("diagnostic", "service", "Starting after ${if (intent.action == Intent.ACTION_BOOT_COMPLETED) "reboot" else "update"}")
         runCatching { BridgeService.startInBackground(context) }

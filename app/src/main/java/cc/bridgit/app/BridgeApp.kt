@@ -38,6 +38,8 @@ class BridgeApp : Application() {
     lateinit var usage: cc.bridgit.app.core.Usage
     lateinit var wake: cc.bridgit.app.listen.WakeListener
     val pairing = Pairing()
+    /** ADB setup (8.26): Bridgit's own client of this device's Wireless debugging. */
+    val adb by lazy { cc.bridgit.app.adb.AdbClient(this) }
     val requests = cc.bridgit.app.api.RequestState()
 
     /** What the listener is doing, for Home, the notification and the Add-agent check. */

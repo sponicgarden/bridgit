@@ -12,6 +12,7 @@ import androidx.navigation.fragment.findNavController
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import cc.bridgit.app.BridgeApp
 import cc.bridgit.app.BuildConfig
+import androidx.core.view.isVisible
 import cc.bridgit.app.R
 import cc.bridgit.app.ui.home.UiActions
 import cc.bridgit.app.capability.appVersion
@@ -38,6 +39,8 @@ class MoreFragment : Fragment() {
         row(b.openActivity, R.drawable.ic_nav_activity, R.string.more_activity) { findNavController().navigate(R.id.activity) }
         row(b.features, R.drawable.ic_toggle, R.string.more_features) { findNavController().navigate(R.id.features) }
         row(b.access, R.drawable.ic_shield, R.string.more_access) { findNavController().navigate(R.id.access) }
+        if (cc.bridgit.app.BuildConfig.PRIVATE_CONTROL) row(b.adbSetup, R.drawable.ic_settings, R.string.more_adb_setup) { findNavController().navigate(R.id.adbSetup) }
+        else b.adbSetup.root.isVisible = false
         row(b.relay, R.drawable.ic_shield, R.string.more_relay) { startActivity(android.content.Intent(requireContext(), cc.bridgit.app.relay.RelayActivity::class.java)) }
         row(b.settings, R.drawable.ic_settings, R.string.more_settings) { findNavController().navigate(R.id.settings) }
         row(b.reportBug, R.drawable.feedback_ic_bug, R.string.more_report_bug) {
