@@ -4,7 +4,7 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.application.call
-import io.ktor.server.cio.CIO
+import cc.bridgit.app.api.engine.GuardedCio
 import io.ktor.server.engine.ApplicationEngine
 import io.ktor.server.engine.applicationEngineEnvironment
 import io.ktor.server.engine.connector
@@ -110,7 +110,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                 }
             }
         }
-        engine = embeddedServer(CIO, env) { connectionIdleTimeoutSeconds = 90 }.start(wait = false)
+        engine = embeddedServer(GuardedCio, env) { connectionIdleTimeoutSeconds = 90 }.start(wait = false)
     }
 
     fun stop() {
