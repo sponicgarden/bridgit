@@ -7,6 +7,7 @@
 
 package cc.bridgit.app.api.engine
 
+import io.ktor.events.raiseCatching
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpProtocolVersion
 import io.ktor.http.HttpStatusCode
@@ -105,7 +106,7 @@ class GuardedCioEngine(
         serverJob.start()
         runBlocking {
             startupJob.await()
-            environment.monitor.raise(ServerReady, environment)
+            environment.monitor.raiseCatching(ServerReady, environment, environment.log)
             if (wait) serverJob.join()
         }
         return this
