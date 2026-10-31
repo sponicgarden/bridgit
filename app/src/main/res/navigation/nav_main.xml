@@ -29,9 +29,11 @@
     <fragment android:id="@+id/pairCode" android:name="cc.bridgit.app.ui.addagent.PairCodeFragment" />
     <fragment android:id="@+id/features" android:name="cc.bridgit.app.ui.more.FeaturesFragment" />
     <fragment android:id="@+id/access" android:name="cc.bridgit.app.ui.more.AccessFragment" />
-    <!-- Maximum powers: every switch on, then each Android permission in one guided pass. agentId = the agent just given every grant. -->
+    <!-- Maximum powers: every switch on, then each Android permission in one guided pass. agentId = the agent just given every grant.
+         auto = start at once and move on after each step without Continue taps (Max power on Home). -->
     <fragment android:id="@+id/powers" android:name="cc.bridgit.app.ui.power.PowersFragment">
         <argument android:name="agentId" app:argType="string" app:nullable="true" android:defaultValue="@null" />
+        <argument android:name="auto" app:argType="boolean" android:defaultValue="false" />
     </fragment>
     <fragment android:id="@+id/adbSetup" android:name="cc.bridgit.app.ui.adb.AdbSetupFragment" />
     <fragment android:id="@+id/settings" android:name="cc.bridgit.app.ui.more.SettingsFragment" />

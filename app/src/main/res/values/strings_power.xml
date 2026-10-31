@@ -6,11 +6,11 @@
     <string name="power_limited_desc">Nothing new is turned on. You switch on each feature yourself in Features.</string>
     <string name="power_maximum">Maximum powers</string>
     <string name="power_maximum_desc">Turns on every feature and walks you through each Android permission in one pass.</string>
-    <string name="power_change_later">You can change this any time on the agent\'s page, or turn everything off in Settings.</string>
+    <string name="power_change_later">You can change this any time on the agent\'s page, or turn everything off with Max control on Home or in Settings.</string>
 
     <string name="power_confirm_title">Give %1$s maximum powers?</string>
-    <string name="power_confirm_body">This turns on every feature switch (%2$s) and lets %1$s use all of them, including features added in later updates.\n\nNext, Android asks you for each permission and special access on its own screens. Skip any you don\'t want.\n\nEverything stays revocable: Pause on Home stops every agent, and Settings has Turn everything off.</string>
-    <string name="power_confirm_body_device">This turns on every feature switch (%1$s) for the agents you allow.\n\nNext, Android asks you for each permission and special access on its own screens. Skip any you don\'t want.\n\nEverything stays revocable: Pause on Home stops every agent, and Settings has Turn everything off.</string>
+    <string name="power_confirm_body">This turns on every feature switch (%2$s) and lets %1$s use all of them, including features added in later updates.\n\nNext, Android asks you for each permission and special access on its own screens. Skip any you don\'t want.\n\nEverything stays revocable: Pause on Home stops every agent, and Max control on Home or in Settings turns everything off.</string>
+    <string name="power_confirm_body_device">This turns on every feature switch (%1$s) for the agents you allow.\n\nNext, Android asks you for each permission and special access on its own screens. Skip any you don\'t want.\n\nEverything stays revocable: Pause on Home stops every agent, and Max control on Home or in Settings turns everything off.</string>
     <string name="power_confirm_yes">Turn everything on</string>
     <string name="power_off_title">Turn everything off?</string>
     <string name="power_off_body">Every feature switch goes off, so agents can only check status until you turn features back on. Android permissions stay granted; Access lists each one if you want to remove it.</string>
@@ -21,6 +21,8 @@
     <string name="power_title">Maximum powers</string>
     <string name="power_intro">Every feature switch is on. Now Android needs your OK for each permission below. Tap Continue to go through them in order; skip any you don\'t want.</string>
     <string name="power_intro_agent">Every feature switch is on and %1$s may use all of them. Now Android needs your OK for each permission below. Tap Continue to go through them in order; skip any you don\'t want.</string>
+    <string name="power_intro_auto">Every feature switch is on. Android now asks for each permission on its own screens, one after another; Bridgit moves on by itself. Skip one and it stops here, so you can pick up later.</string>
+    <string name="power_intro_auto_agent">Every feature switch is on and %1$s may use all of them. Android now asks for each permission on its own screens, one after another; Bridgit moves on by itself. Skip one and it stops here, so you can pick up later.</string>
     <string name="power_android_header">Android access</string>
     <string name="power_features_header">Features</string>
     <string name="power_open_features">Open Features</string>
@@ -56,11 +58,17 @@
     <string name="power_restricted_unlocks">Android blocks accessibility and notification access for apps installed from a file. In App info, tap ⋮ then Allow restricted settings, then come back and try again.</string>
     <string name="power_other_unlocks">Another permission a Bridgit feature uses.</string>
 
+    <string name="power_max">Max power</string>
+    <string name="power_max_on">Max power is on</string>
+    <string name="power_max_desc">Turns on every feature and goes straight to Android\'s own prompts</string>
+    <string name="power_max_switched">Every feature is on</string>
+    <string name="undo">Undo</string>
+
     <string name="settings_powers">Agent powers</string>
-    <string name="settings_everything_on">Turn everything on</string>
-    <string name="settings_everything_on_desc">Every feature switch on, then each Android permission in one pass</string>
+    <string name="settings_max_control">Max control</string>
+    <string name="settings_max_control_on_desc">Every feature is on. Turn off to switch every feature off; agents stay paired.</string>
+    <string name="settings_max_control_off_desc">Turn on for every feature, then each Android permission in one pass</string>
     <string name="settings_everything_off">Turn everything off</string>
-    <string name="settings_everything_off_desc">Every feature switch off. Agents stay paired.</string>
     <string name="agents_powers">Powers</string>
     <string name="agents_powers_maximum">Maximum powers</string>
     <string name="agents_powers_limited">Limited powers</string>

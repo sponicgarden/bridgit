@@ -175,7 +175,7 @@ class CameraCapture(private val context: Context, private val owner: LifecycleOw
 
     private suspend fun <T> com.google.common.util.concurrent.ListenableFuture<T>.await(): T =
         suspendCancellableCoroutine { cont ->
-            addListener({ runCatching { get() }.fold({ cont.resume(it) }, { cont.cancel(it) }) },
+            addListener({ if(cont.isActive) runCatching { get() }.fold({ cont.resume(it) }, { cont.cancel(it) }) },
                 ContextCompat.getMainExecutor(context))
         }
 }

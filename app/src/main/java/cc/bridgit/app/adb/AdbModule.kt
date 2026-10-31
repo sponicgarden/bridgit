@@ -25,6 +25,8 @@ class AdbModule(app: BridgeApp) : Capability(app) {
     override val endpoints = ENDPOINTS
 
     override fun blockedReason(): String? = when {
+        // The Play build leaves out ADB control, like Accessibility and the notification listener.
+        !cc.bridgit.app.BuildConfig.PRIVATE_CONTROL -> "private_build_required"
         !AdbClient.developerOptions(app) -> "developer_options_off"
         !AdbClient.wirelessDebugging(app) && !app.adb.connected && !AdbGrants.holdsSecureSettings(app) -> "wireless_debugging_off"
         !app.adb.paired -> "adb_not_paired"
@@ -66,6 +68,8 @@ class AdbModule(app: BridgeApp) : Capability(app) {
     }
 
     private fun usable() {
+        if (!cc.bridgit.app.BuildConfig.PRIVATE_CONTROL) throw ErrorCatalog.error("service_start_blocked",
+            "ADB control is only in the private Bridgit build, not the Play Store one.", mapOf("blocked_reason" to "private_build_required"))
         if (!enabled) throw ErrorCatalog.error("capability_disabled",
             "ADB control is switched off. Ask the owner to turn it on in Bridgit: More → ADB setup → Let agents use ADB.", mapOf("setting" to switchKey))
         // Not paired yet is no reason to refuse: an allowed `adb tcpip` port connects without pairing.
@@ -81,6 +85,11 @@ class AdbModule(app: BridgeApp) : Capability(app) {
 
     /** GET /v1/adb/setup: how an agent helps the owner turn ADB on, and what to do once it's on. No key needed. */
     fun setupGuide(): String = buildString {
+        if (!cc.bridgit.app.BuildConfig.PRIVATE_CONTROL) {
+            appendLine("# Bridgit ADB setup"); appendLine()
+            appendLine("ADB control is only in the private Bridgit build. This phone has the Play Store build, so there is nothing to set up.")
+            return@buildString
+        }
         val s = statusJson()
         appendLine("# Bridgit ADB setup")
         appendLine()

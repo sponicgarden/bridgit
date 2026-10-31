@@ -102,7 +102,7 @@ class AccessFragment : Fragment() {
         b.toolbar.setNavigationOnClickListener { findNavController().navigateUp() }
         b.showHow.setOnClickListener { HowSheet().show(childFragmentManager, "how") }
         b.appInfo.setOnClickListener { openAppInfo() }
-        b.accessContent.addView(com.google.android.material.button.MaterialButton(requireContext()).apply {
+        if (cc.bridgit.app.BuildConfig.PRIVATE_CONTROL) b.accessContent.addView(com.google.android.material.button.MaterialButton(requireContext()).apply {
             text = "ADB setup: give Bridgit full access at once"
             setOnClickListener { findNavController().navigate(R.id.adbSetup) }
         })

@@ -64,6 +64,10 @@ object Compat {
         if (Build.VERSION.SDK_INT >= 30) pm.getInstallSourceInfo(pkg).installingPackageName
         else pm.getInstallerPackageName(pkg)
 
+    /** Android 14 lets apps mark fields as sensitive; earlier versions only have password fields. */
+    fun sensitive(node: android.view.accessibility.AccessibilityNodeInfo): Boolean =
+        node.isPassword || (Build.VERSION.SDK_INT >= 34 && node.isAccessibilityDataSensitive)
+
     /** The window's full size in pixels, for sizing a screen capture. */
     @Suppress("DEPRECATION")
     fun windowBounds(activity: Activity): Rect =

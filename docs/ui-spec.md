@@ -649,7 +649,8 @@ Section headers in `primary` `LabelLarge`.
 | Notifications | One row per channel (Listener, Captures, Questions, Notices, Files, Feedback) → opens the Android channel page · Open Bridgit when an agent sends something (switch, off; turning it on opens Android's "Display over other apps" page if not granted, CAP-56) |
 | Feedback | Also send reports to: Off / Sponic intranet tasks / GitHub issue |
 | Appearance | System / Light / Dark (radio dialog) |
-| About | Version, build, commit (mono) · Signing certificate SHA-256 (mono, tap to copy) · Licences · Spec |
+| About | Version, build, commit (mono) · Signing certificate SHA-256 (mono, tap to copy) · Licences · Spec · Privacy policy · Terms of use |
+| Reset | Delete all Bridgit data (confirm; restores agent-changed phone settings, cancels email alerts, then clears all app storage; next open is first run) |
 
 Port change warning dialog: **"Every agent's setup prompt has the old port.
 Agents will need new prompts (Rotate key)."** [Change port] [Cancel].

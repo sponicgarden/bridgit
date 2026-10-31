@@ -78,7 +78,7 @@ object SetupPrompt {
         else if ("mic" in on) sb.appendLine("- POST /v1/mic/record {\"duration_seconds\":5}       record a short clip")
         if (on.none { it in CAPTURE_IDS }) sb.appendLine("- The owner hasn't switched on any features yet. Check GET /v1/capabilities later.")
         sb.appendLine("- GET  /v1/log?agent=me&limit=20  what you did recently")
-        sb.appendLine("- GET  /v1/adb/setup  ADB: tap, type, open apps (setup steps)")
+        if (cc.bridgit.app.BuildConfig.PRIVATE_CONTROL) sb.appendLine("- GET  /v1/adb/setup  ADB: tap, type, open apps (setup steps)")
         sb.appendLine("POSTs: send Idempotency-Key (any UUID) so a retry never runs twice.")
         sb.appendLine()
         sb.appendLine("RULES")

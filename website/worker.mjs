@@ -1,5 +1,6 @@
 import { handleDownloads, cleanupSubscribers } from './email.mjs';
 import { handleAlerts, cleanupAlerts } from './alerts.mjs';
+import { handleUsage, cleanupUsage } from './usage.mjs';
 const canonicalOrigin = 'https://bridgit.cc';
 
 export default {
@@ -15,7 +16,9 @@ export default {
     if (handled) return handled;
     const alert = await handleAlerts(request, env);
     if (alert) return alert;
+    const usage = await handleUsage(request, env);
+    if (usage) return usage;
     return env.ASSETS.fetch(request);
   },
-  async scheduled(event, env) { await cleanupSubscribers(env); await cleanupAlerts(env); }
+  async scheduled(event, env) { await cleanupSubscribers(env); await cleanupAlerts(env); await cleanupUsage(env); }
 };

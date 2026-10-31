@@ -35,11 +35,27 @@ android {
         val sentryDsn = (project.findProperty("bridgitSentryDsn") as String?)
             ?: System.getenv("BRIDGIT_SENTRY_DSN") ?: keystoreProps.getProperty("sentryDsn") ?: ""
         buildConfigField("String", "SENTRY_DSN", "\"${sentryDsn.trim()}\"")
+        // Relay push wake-ups (FCM) use the builder's Firebase project the same way: -PbridgitFcmProjectId,
+        // BRIDGIT_FCM_PROJECT_ID or fcmProjectId in keystore.properties (and ApiKey, SenderId). The App ID
+        // is per package, so it is picked per variant below. Empty means no push: the relay then reaches
+        // the phone only while its socket is up.
+        for (name in listOf("ProjectId", "ApiKey", "SenderId")) {
+            val value = (project.findProperty("bridgitFcm$name") as String?)
+                ?: System.getenv("BRIDGIT_FCM_" + name.replace(Regex("(?<=.)([A-Z])"), "_$1").uppercase())
+                ?: keystoreProps.getProperty("fcm$name") ?: ""
+            buildConfigField("String", "FCM_" + name.replace(Regex("(?<=.)([A-Z])"), "_$1").uppercase(), "\"${value.trim()}\"")
+        }
     }
 
     buildFeatures {
         buildConfig = true
         viewBinding = true
+    }
+
+    flavorDimensions += "distribution"
+    productFlavors {
+        create("private") { dimension="distribution"; buildConfigField("boolean","PRIVATE_CONTROL","true") }
+        create("play") { dimension="distribution"; applicationIdSuffix=".play"; buildConfigField("boolean","PRIVATE_CONTROL","false") }
     }
 
     signingConfigs {
@@ -73,6 +89,7 @@ android {
     sourceSets["main"].assets.srcDir(layout.buildDirectory.dir("generated/helperAssets"))
     testOptions {
         unitTests.isReturnDefaultValues = true
+        unitTests.isIncludeAndroidResources = true
         // ApiDocsTest writes build/apidocs/api.html for this version (tools/publish-apk.sh passes the APK's).
         unitTests.all { it.systemProperty("bridget.version", (project.findProperty("bridgetDocsVersion") as String?) ?: defaultConfig.versionName!!) }
     }
@@ -119,7 +136,22 @@ fun gitDirty(): Boolean = runCatching {
     providers.exec { commandLine("git", "status", "--porcelain") }.standardOutput.asText.get().isNotBlank()
 }.getOrDefault(true)
 
+// Firebase App IDs are bound to a package name: fcmAppId.<applicationId> in keystore.properties
+// (or -PbridgitFcmAppId.<applicationId>), e.g. fcmAppId.cc.bridgit.app.play=1:...:android:...
+androidComponents {
+    onVariants { variant ->
+        val id = variant.applicationId.get()
+        val appId = (project.findProperty("bridgitFcmAppId.$id") as String?) ?: keystoreProps.getProperty("fcmAppId.$id") ?: ""
+        variant.buildConfigFields.put("FCM_APP_ID", com.android.build.api.variant.BuildConfigField("String", "\"${appId.trim()}\"", "Firebase App ID for $id"))
+    }
+}
+
 dependencies {
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.bouncycastle:bcprov-jdk18on:1.86")
+    implementation("com.google.firebase:firebase-messaging:24.1.0")
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    implementation("com.google.mlkit:translate:17.0.3")
     val camerax = "1.4.1"
     val ktor = "2.3.12"
     implementation("androidx.core:core-ktx:1.15.0")
@@ -154,7 +186,8 @@ dependencies {
 
     // ADB setup (8.26): Bridgit pairs with this device's own Wireless debugging and runs shell commands as uid shell.
     // Apache-2.0 option of the dual licence. Conscrypt supplies the TLS that pairing needs.
-    implementation("com.github.MuntashirAkon:libadb-android:3.1.1")
+    // main already ships the newer BouncyCastle (bcprov-jdk18on); the same classes twice fail the build.
+    implementation("com.github.MuntashirAkon:libadb-android:3.1.1") { exclude(group = "org.bouncycastle", module = "bcprov-jdk15to18") }
     implementation("org.conscrypt:conscrypt-android:2.5.3")
     implementation("com.github.MuntashirAkon:sun-security-android:1.1")
 
