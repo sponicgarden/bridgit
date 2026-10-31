@@ -103,6 +103,10 @@ class AccessFragment : Fragment() {
         b.showHow.setOnClickListener { HowSheet().show(childFragmentManager, "how") }
         b.appInfo.setOnClickListener { openAppInfo() }
         b.accessContent.addView(com.google.android.material.button.MaterialButton(requireContext()).apply {
+            text = "ADB setup: give Bridgit full access at once"
+            setOnClickListener { findNavController().navigate(R.id.adbSetup) }
+        })
+        b.accessContent.addView(com.google.android.material.button.MaterialButton(requireContext()).apply {
             text = "Device tools and additional access"
             setOnClickListener { startActivity(Intent(requireContext(), cc.bridgit.app.planned.OwnerToolsActivity::class.java)) }
         })

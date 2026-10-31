@@ -28,6 +28,7 @@
             <include android:id="@+id/open_activity" layout="@layout/more_row" />
             <include android:id="@+id/features" layout="@layout/more_row" />
             <include android:id="@+id/access" layout="@layout/more_row" />
+            <include android:id="@+id/adb_setup" layout="@layout/more_row" />
             <include android:id="@+id/settings" layout="@layout/more_row" />
 
             <com.google.android.material.divider.MaterialDivider

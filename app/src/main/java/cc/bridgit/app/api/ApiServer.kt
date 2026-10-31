@@ -179,7 +179,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
                 if (agent!!.knownApiRevision < ApiChanges.CURRENT)
                     call.response.header("X-Bridget-Whats-New", "/v1/changes?since=${agent!!.knownApiRevision}")
                 if (spec.developerOnly && !agent!!.developer) throw ErrorCatalog.error("forbidden",
-                    "Only developer agents can read bug reports. Ask the owner to turn on Developer for ${agent!!.name}.", mapOf("reason" to "developer_only"))
+                    "Only developer agents can use ${spec.fullPath}. Ask the owner to turn on Developer for ${agent!!.name}.", mapOf("reason" to "developer_only"))
             }
             // Pairing has no key, but wrong codes count as failed sign-ins (SEC-06).
             if (spec.path == "/pair" && limiter.count("auth:$source") >= RateLimiter.AUTH_FAILS_PER_IP) throw authBlockedError(source)
@@ -384,7 +384,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
             requireGrant(agent, spec)
             val block = handlers[handlerKey(spec)] ?: throw ErrorCatalog.error("not_found", "No such endpoint.")
             if (spec.developerOnly && !agent.developer) throw ErrorCatalog.error("forbidden",
-                "Only developer agents can read bug reports. Ask the owner to turn on Developer for ${agent.name}.", mapOf("reason" to "developer_only"))
+                "Only developer agents can use ${spec.fullPath}. Ask the owner to turn on Developer for ${agent.name}.", mapOf("reason" to "developer_only"))
             idemKey = idempotencyKey?.trim()?.takeIf { spec.idempotent }
             if (idemKey != null) {
                 if (!IdempotencyCache.KEY_RE.matches(idemKey)) { idemKey = null
