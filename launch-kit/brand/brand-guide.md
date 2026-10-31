@@ -24,7 +24,7 @@ Useful, direct, capable. "Choose what this phone can do." "Your agent proposed a
 
 ## Files
 
-logo-mark.svg, logo-wordmark.svg, favicon.svg: editable masters. play-icon-512.png: 512×512 RGBA. play-feature-1024x500.png: 1024×500 RGB. social-card-1200x630.png: 1200×630 RGB. brand-board.png: review board. The logo is original artwork for review, not evidence of trademark availability. Product name and registered domain remain owner inputs.
+logo-mark.svg, logo-wordmark.svg, favicon.svg: editable masters. play-icon-512.png: 512×512 RGBA, the app launcher icon (phone, bridge and cursor on #2B1834), built from app/src/main/res/mipmap-xxxhdpi/ic_launcher_foreground.png. play-feature-1024x500.png: 1024×500 RGB. social-card-1200x630.png: 1200×630 RGB. brand-board.png: review board. The logo is original artwork for review, not evidence of trademark availability. Product name and registered domain remain owner inputs.
 
 Brand clarification, 28 October 2026: BRIDGIT is deliberately Android-specific. The primary tagline appears beneath the app name. “Any Android device” is the product ambition; state the actual supported OS/hardware nearby. bridgetandroid.com is under consideration, not registered or selected by this document. Check Android trademark guidance before public branding: https://developer.android.com/distribute/marketing-tools/brand-guidelines
 

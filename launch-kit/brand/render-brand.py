@@ -16,7 +16,7 @@ def mark(im,x,y,s,color=ink):
   t=i/100;u=1-t;xx=u**3*24+3*u*u*t*34+3*u*t*t*66+t**3*76;yy=u**3*64+3*u*u*t*38+3*u*t*t*38+t**3*64;pts.append(pt(xx,yy))
  d.line(pts,fill=color,width=w,joint='curve');cx,cy=pt(76,22);rad=7*scale;d.ellipse((cx-rad,cy-rad,cx+rad,cy+rad),fill=color)
 def save(im,n):im.save(b/n,optimize=True)
-im=Image.new('RGBA',(1536,1536),lime);mark(im,115,75,1300);save(im.resize((512,512),Image.Resampling.LANCZOS),'play-icon-512.png')
+# play-icon-512.png is not drawn here: it is the app launcher icon (plum background + ic_launcher_foreground).
 im=Image.new('RGB',(1024,500),paper);d=ImageDraw.Draw(im);d.rectangle((715,0,1024,500),fill=lime)
 d.text((58,68),'BRIDGIT',font=font(17,bold=True),fill=teal)
 d.text((55,132),'Turn any Android device',font=font(42,True),fill=ink);d.text((55,191),'into an agentic',font=font(42,True),fill=ink);d.text((55,250),'appliance.',font=font(42,True),fill=ink)
@@ -43,5 +43,5 @@ d.line((72,857,1370,857),fill='#C7CEC1',width=2)
 d.text((72,897),'YOUR PHONE. YOUR AGENT. YOUR PERMISSIONS.',font=font(23,bold=True),fill=ink)
 d.text((72,956),'System sans + editorial serif / Original bridge and beacon / 28 October 2026',font=font(19),fill=teal)
 save(im,'brand-board.png')
-for name in ['play-icon-512.png','play-feature-1024x500.png','social-card-1200x630.png','brand-board.png']:
+for name in ['play-feature-1024x500.png','social-card-1200x630.png','brand-board.png']:
  im=Image.open(b/name);print(name,im.size,im.mode,(b/name).stat().st_size)
