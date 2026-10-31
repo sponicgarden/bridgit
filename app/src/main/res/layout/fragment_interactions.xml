@@ -150,7 +150,7 @@
     <!-- Applets subtab (was a bottom-bar tab, 27 to 30 Oct 2026). -->
     <androidx.fragment.app.FragmentContainerView
         android:id="@+id/applets"
-        android:name="net.finleg.bridget.ui.tour.AppletsFragment"
+        android:name="cc.bridgit.app.ui.tour.AppletsFragment"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:visibility="gone" />

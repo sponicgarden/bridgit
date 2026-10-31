@@ -12,7 +12,7 @@
     android:paddingTop="6dp"
     android:paddingBottom="6dp">
 
-    <net.finleg.bridget.ui.common.AgentAvatarView
+    <cc.bridgit.app.ui.common.AgentAvatarView
         android:id="@+id/avatar"
         android:layout_width="32dp"
         android:layout_height="32dp"
