@@ -50,6 +50,7 @@ import java.text.NumberFormat
  * Log, Notifications, Appearance, About.
  * Allow internet callbacks (EVT-05) sits under Listener. Email alerts sit after Notifications.
  * Send crash reports (D32) and Send feature-use tallies (with See what would be sent) sit under Privacy.
+ * About links the privacy policy and terms; Reset deletes all Bridgit data.
  * Not shown yet (later phases): Screenshots, Feedback,
  * precise locations, address lookup, Licences, and the Files / Feedback notification channels.
  */
@@ -152,6 +153,14 @@ class SettingsFragment : Fragment() {
         b.cert.value.text = cert ?: "?"
         row(b.spec, R.string.settings_spec, onClick = null)
         b.spec.value.setText(R.string.settings_spec_value)
+        row(b.privacyPolicy, R.string.settings_privacy_policy) { openUrl(R.string.settings_privacy_url) }
+        b.privacyPolicy.value.setText(R.string.settings_privacy_url)
+        row(b.terms, R.string.settings_terms) { openUrl(R.string.settings_terms_url) }
+        b.terms.value.setText(R.string.settings_terms_url)
+
+        // Reset
+        row(b.deleteAll, R.string.settings_delete_all) { askDeleteAll() }
+        b.deleteAll.value.setText(R.string.settings_delete_all_desc)
 
         bind()
         viewLifecycleOwner.lifecycleScope.launch {
@@ -215,7 +224,7 @@ class SettingsFragment : Fragment() {
         b.alertTest.root.isEnabled = confirmed
         b.alertTest.root.alpha = if (confirmed) 1f else 0.5f
         b.alertTest.value.setText(if (confirmed) R.string.alerts_test_ready else R.string.alerts_test_desc)
-        listOf(b.port, b.bind, b.logVisibility, b.keep, b.theme, b.alertFrequency, b.alertRecipient, b.alertTest, b.alertWhat, b.version, b.checkUpdates, b.commit, b.cert, b.spec, b.export, b.clear,
+        listOf(b.port, b.bind, b.logVisibility, b.keep, b.theme, b.alertFrequency, b.alertRecipient, b.alertTest, b.alertWhat, b.version, b.checkUpdates, b.commit, b.cert, b.spec, b.privacyPolicy, b.terms, b.deleteAll, b.export, b.clear,
             b.notifListener, b.notifCapture, b.notifQuestions, b.notifNotices).forEach { it.root.contentDescription = "${it.title.text}, ${it.value.text}" }
     }
 
@@ -415,6 +424,39 @@ class SettingsFragment : Fragment() {
                 .setNegativeButton(R.string.cancel, null)
                 .show()
         }
+    }
+
+    private fun openUrl(url: Int) {
+        val uri = getString(url)
+        if (!UiActions.openUrl(requireContext(), uri)) Snackbar.make(b.root, getString(R.string.settings_no_browser, uri), Snackbar.LENGTH_LONG).show()
+    }
+
+    /**
+     * Wipes every store at once with Android's own "Clear storage" (prefs, databases, files, cache and
+     * Keystore keys), so no store can be missed; Android then kills the process and the next start is first run.
+     * Before that: put back phone settings agents changed (their leases live in that storage) and cancel email alerts.
+     */
+    private fun askDeleteAll() {
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.settings_delete_all_title)
+            .setMessage(R.string.settings_delete_all_confirm)
+            .setPositiveButton(R.string.settings_delete_all_action) { _, _ ->
+                val ctx = requireContext().applicationContext
+                b.deleteAll.root.isEnabled = false
+                // NonCancellable: leaving or rotating mid-way must not skip the wipe after the restores ran.
+                viewLifecycleOwner.lifecycleScope.launch(kotlinx.coroutines.NonCancellable) {
+                    withContext(Dispatchers.IO) {
+                        runCatching { app.hardware.stop(owner = true) }
+                        if (app.settings.alertEmail != null) runCatching { app.alerts.relay.unsubscribe() }
+                    }
+                    val am = ctx.getSystemService(android.app.ActivityManager::class.java)
+                    if (!am.clearApplicationUserData()) {
+                        _b?.let { it.deleteAll.root.isEnabled = true; Snackbar.make(it.root, R.string.settings_delete_all_failed, Snackbar.LENGTH_LONG).show() }
+                    }
+                }
+            }
+            .setNegativeButton(R.string.cancel, null)
+            .show()
     }
 
     private fun askAppearance() {

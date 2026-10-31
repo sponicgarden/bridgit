@@ -1,5 +1,5 @@
 {
-  "sourceCount": 47,
+  "sourceCount": 49,
   "groups": [
     {
       "id": "capture",
@@ -50,35 +50,51 @@
         },
         {
           "sourceTitle": "Videos and downloads",
-          "sourceStage": "P3",
+          "sourceStage": "NOW",
           "title": "Videos and downloads",
           "description": "Access supported video files or still frames, and files you select from Downloads.",
           "example": "Pull a still frame from a video for your agent to inspect.",
-          "status": "planned"
+          "status": "current"
         },
         {
           "sourceTitle": "Short video clips",
-          "sourceStage": "P5",
+          "sourceStage": "NOW",
           "title": "Short video recordings",
-          "description": "Capture a short front- or rear-camera video, with optional audio.",
+          "description": "Capture a 1 to 30 second front- or rear-camera video; audio is off unless you allow the microphone.",
           "example": "Show a repair specialist how a mechanism moves.",
-          "status": "planned"
+          "status": "current"
         },
         {
           "sourceTitle": "Read text on the phone",
-          "sourceStage": "P5",
+          "sourceStage": "NOW",
           "title": "On-device text recognition",
           "description": "Extract text from a selected image on the phone before sending the result.",
           "example": "Read a serial number without sending the whole photo.",
-          "status": "planned"
+          "status": "current"
         },
         {
           "sourceTitle": "Transcribe clips on the phone",
-          "sourceStage": "P5",
+          "sourceStage": "NOW",
           "title": "On-device transcription",
           "description": "Turn a microphone clip into text on the phone.",
           "example": "Dictate a short note for your agent.",
-          "status": "planned"
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Wake words",
+          "sourceStage": "NOW",
+          "title": "Wake words",
+          "description": "Choose up to 10 words, each sent to one agent. They are recognised offline on the phone, and only what you say after one leaves it. Off by default.",
+          "example": "Say your word, then ask your agent to remind you to water the plants.",
+          "status": "current"
+        },
+        {
+          "sourceTitle": "Listen for any sounds",
+          "sourceStage": "NOW",
+          "title": "Sound alerts",
+          "description": "One agent hears when the room gets loud, with up to 10 seconds of audio if you allow it, at most once every 30 seconds. Off by default.",
+          "example": "Get told when the baby cries or someone knocks.",
+          "status": "current"
         }
       ]
     },
@@ -131,35 +147,35 @@
         },
         {
           "sourceTitle": "Inbox",
-          "sourceStage": "P2",
+          "sourceStage": "NOW",
           "title": "A shared inbox",
           "description": "Bring questions, notices, files and shares into one history.",
           "example": "Look up an earlier question and your reply.",
-          "status": "planned"
+          "status": "current"
         },
         {
           "sourceTitle": "Files to your phone",
-          "sourceStage": "P4",
+          "sourceStage": "NOW",
           "title": "Receive files",
           "description": "Receive documents, images and other supported files from an agent.",
           "example": "Send a finished PDF from your agent to your phone.",
-          "status": "planned"
+          "status": "current"
         },
         {
           "sourceTitle": "Share to an agent",
-          "sourceStage": "P4",
+          "sourceStage": "NOW",
           "title": "Share with an agent",
           "description": "Use Android sharing to send selected photos, links or text to an agent.",
           "example": "Share a restaurant link with a note about your plans.",
-          "status": "planned"
+          "status": "current"
         },
         {
           "sourceTitle": "Copy to clipboard",
-          "sourceStage": "P6",
+          "sourceStage": "NOW",
           "title": "Copy text with approval",
           "description": "Put agent-provided text on the clipboard after you approve it.",
           "example": "Copy a prepared address to paste into another app.",
-          "status": "planned"
+          "status": "current"
         },
         {
           "sourceTitle": "Events and callbacks",
@@ -188,51 +204,51 @@
         },
         {
           "sourceTitle": "Phone status and context",
-          "sourceStage": "P3",
+          "sourceStage": "NOW",
           "title": "Phone context",
           "description": "Expose selected battery, network, screen, sound and activity information.",
           "example": "Check whether the phone is charging before a long task.",
-          "status": "planned"
+          "status": "current"
         },
         {
           "sourceTitle": "Sensors",
-          "sourceStage": "P3",
+          "sourceStage": "NOW",
           "title": "Sensor readings",
           "description": "Request supported light, pressure, motion, orientation or step readings.",
           "example": "Use a light reading as context for a device workflow.",
-          "status": "planned"
+          "status": "current"
         },
         {
           "sourceTitle": "App usage",
-          "sourceStage": "P6",
+          "sourceStage": "NOW",
           "title": "App usage summaries",
           "description": "Read permitted summaries of app usage and screen time.",
           "example": "Review where your phone time went this week.",
-          "status": "planned"
+          "status": "current"
         },
         {
           "sourceTitle": "Health Connect",
-          "sourceStage": "P6",
+          "sourceStage": "NOW",
           "title": "Health Connect summaries",
           "description": "Read the health records you explicitly allow through Health Connect.",
           "example": "Bring permitted steps or sleep data into a personal check-in.",
-          "status": "planned"
+          "status": "current"
         },
         {
           "sourceTitle": "Read notifications",
-          "sourceStage": "P6",
+          "sourceStage": "NOW",
           "title": "Notification summaries",
           "description": "Read notification text only after you enable notification access.",
           "example": "Summarize the notifications that arrived during a meeting.",
-          "status": "planned"
+          "status": "current"
         },
         {
           "sourceTitle": "City tour",
-          "sourceStage": "P2",
+          "sourceStage": "NOW",
           "title": "A guided city walk",
           "description": "Combine location, heading and chosen photos with an agent’s commentary.",
           "example": "Explore a neighborhood with an architecture guide.",
-          "status": "planned"
+          "status": "current"
         },
         {
           "sourceTitle": "Location history and places",
@@ -253,35 +269,35 @@
       "features": [
         {
           "sourceTitle": "Flash the light",
-          "sourceStage": "P3",
+          "sourceStage": "NOW",
           "title": "Flashlight",
           "description": "Turn the torch on for a bounded period, then switch it off automatically.",
           "example": "Light the workbench for a photo.",
-          "status": "planned"
+          "status": "current"
         },
         {
           "sourceTitle": "Phone controls",
-          "sourceStage": "P3",
+          "sourceStage": "NOW",
           "title": "Sound and display",
           "description": "Adjust supported sound, Do Not Disturb and brightness settings with timed restoration.",
           "example": "Silence the phone for a meeting, then restore its settings.",
-          "status": "planned"
+          "status": "current"
         },
         {
           "sourceTitle": "Find my phone",
-          "sourceStage": "P3",
+          "sourceStage": "NOW",
           "title": "Find your phone",
           "description": "Request a ring and vibration, subject to Android’s sound restrictions.",
           "example": "Locate the phone you left under a cushion.",
-          "status": "planned"
+          "status": "current"
         },
         {
           "sourceTitle": "Screen sharing as a fallback",
-          "sourceStage": "P5",
+          "sourceStage": "NOW",
           "title": "Alternative screen access",
           "description": "Use an owner-approved screen-sharing grant as an alternative capture method.",
           "example": "Grant screen access for a troubleshooting session.",
-          "status": "planned"
+          "status": "current"
         }
       ]
     },
@@ -375,11 +391,11 @@
         },
         {
           "sourceTitle": "Per-agent permissions",
-          "sourceStage": "LATER",
+          "sourceStage": "NOW",
           "title": "Permissions per agent",
           "description": "Choose different capability grants for different agents.",
           "example": "Give a photo organizer gallery access without camera access.",
-          "status": "planned"
+          "status": "current"
         },
         {
           "sourceTitle": "Everything is logged",

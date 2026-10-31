@@ -21,6 +21,8 @@
     <string name="power_title">Maximum powers</string>
     <string name="power_intro">Every feature switch is on. Now Android needs your OK for each permission below. Tap Continue to go through them in order; skip any you don\'t want.</string>
     <string name="power_intro_agent">Every feature switch is on and %1$s may use all of them. Now Android needs your OK for each permission below. Tap Continue to go through them in order; skip any you don\'t want.</string>
+    <string name="power_intro_auto">Every feature switch is on. Android now asks for each permission on its own screens, one after another; Bridgit moves on by itself. Skip one and it stops here, so you can pick up later.</string>
+    <string name="power_intro_auto_agent">Every feature switch is on and %1$s may use all of them. Android now asks for each permission on its own screens, one after another; Bridgit moves on by itself. Skip one and it stops here, so you can pick up later.</string>
     <string name="power_android_header">Android access</string>
     <string name="power_features_header">Features</string>
     <string name="power_open_features">Open Features</string>
@@ -55,6 +57,12 @@
     <string name="power_restricted">Allow restricted settings</string>
     <string name="power_restricted_unlocks">Android blocks accessibility and notification access for apps installed from a file. In App info, tap ⋮ then Allow restricted settings, then come back and try again.</string>
     <string name="power_other_unlocks">Another permission a Bridgit feature uses.</string>
+
+    <string name="power_max">Max power</string>
+    <string name="power_max_on">Max power is on</string>
+    <string name="power_max_desc">Turns on every feature and goes straight to Android\'s own prompts</string>
+    <string name="power_max_switched">Every feature is on</string>
+    <string name="undo">Undo</string>
 
     <string name="settings_powers">Agent powers</string>
     <string name="settings_everything_on">Turn everything on</string>

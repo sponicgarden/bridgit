@@ -106,6 +106,14 @@ object PowerPlan {
     /** The next step the guided pass opens: runtime prompts first, then each page in order. Declined steps are skipped. */
     fun next(steps: List<Step>, status: Map<String, Status>): Step? = steps.firstOrNull { status[it.id] == Status.OFF }
 
+    /**
+     * Max power moves on to the next step by itself only while the owner turns on what they were
+     * just shown ([shown]); one skip stops it on the list. Back from Allow restricted settings it
+     * goes on, so the blocked services are tried again.
+     */
+    fun autoContinue(shown: Collection<String>, declined: Set<String>): Boolean =
+        shown.isNotEmpty() && shown.none { it != RESTRICTED && it in declined }
+
     /** Every runtime permission still to ask for, in one batch (Android shows its dialogs one after another). */
     fun pendingRuntime(steps: List<Step>, status: Map<String, Status>, permissionGranted: (String) -> Boolean): List<String> =
         steps.filter { it.kind == Kind.RUNTIME && status[it.id] == Status.OFF && it.id != "health" }

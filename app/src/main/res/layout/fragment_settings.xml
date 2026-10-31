@@ -81,6 +81,11 @@
                 <include android:id="@+id/commit" layout="@layout/settings_row" />
                 <include android:id="@+id/cert" layout="@layout/settings_row" />
                 <include android:id="@+id/spec" layout="@layout/settings_row" />
+                <include android:id="@+id/privacyPolicy" layout="@layout/settings_row" />
+                <include android:id="@+id/terms" layout="@layout/settings_row" />
+
+                <TextView style="@style/SettingsHeader" android:text="@string/settings_reset" />
+                <include android:id="@+id/deleteAll" layout="@layout/settings_row" />
             </LinearLayout>
         </androidx.core.widget.NestedScrollView>
     </LinearLayout>
