@@ -29,6 +29,12 @@
     <string name="settings_crash_reports">Send crash reports</string>
     <string name="settings_crash_reports_desc">When Bridgit crashes or freezes, it sends the error, app version and phone model to Sentry. Never photos, screenshots, keys, your location or what agents asked.</string>
     <string name="settings_changed_crash_reports">You turned crash reports %1$s</string>
+    <string name="settings_usage_tallies">Send feature-use tallies</string>
+    <string name="settings_usage_tallies_desc">Once a day, Bridgit sends bridgit.cc a count of which features were used. Only the counts: no install or device id, no agent names, no times, nothing agents sent or received.</string>
+    <string name="settings_changed_usage_tallies">You turned feature-use tallies %1$s</string>
+    <string name="settings_usage_what">See what would be sent</string>
+    <string name="settings_usage_what_desc">The counts waiting for the next daily batch</string>
+    <string name="settings_usage_none">Nothing is waiting to be sent.</string>
     <string name="settings_speak_urgent">Read urgent questions aloud even in Do Not Disturb</string>
     <string name="settings_speak_urgent_desc">Only when the agent marks it urgent and asks for it to be read.</string>
     <string name="settings_changed_lockscreen">You turned question text on the lock screen %1$s</string>

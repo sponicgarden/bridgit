@@ -50,7 +50,8 @@ import java.text.NumberFormat
  * Max control (one switch: every feature and Android permission on, or every feature off), Listener, Privacy (log visibility, lock-screen question text, urgent read-aloud in DND),
  * Log, Notifications, Appearance, About.
  * Allow internet callbacks (EVT-05) sits under Listener. Email alerts sit after Notifications.
- * Send crash reports (D32) sits under Privacy. About links the privacy policy and terms; Reset deletes all Bridgit data.
+ * Send crash reports (D32) and Send feature-use tallies (with See what would be sent) sit under Privacy.
+ * About links the privacy policy and terms; Reset deletes all Bridgit data.
  * Not shown yet (later phases): Screenshots, Feedback,
  * precise locations, address lookup, Licences, and the Files / Feedback notification channels.
  */
@@ -100,6 +101,9 @@ class SettingsFragment : Fragment() {
         prefSwitch(b.speakUrgent, R.string.settings_speak_urgent, R.string.settings_speak_urgent_desc,
             InteractionNotifier.PREF_SPEAK_URGENT_IN_DND, R.string.settings_changed_speak_urgent)
         crashSwitch()
+        usageSwitch()
+        row(b.usageWhat, R.string.settings_usage_what) { showUsage() }
+        b.usageWhat.value.setText(R.string.settings_usage_what_desc)
 
         // Log
         row(b.keep, R.string.settings_keep) { askKeep() }
@@ -287,6 +291,33 @@ class SettingsFragment : Fragment() {
             else cc.bridgit.app.core.CrashReports.stop()
             audit(getString(R.string.settings_changed_crash_reports, getString(if (on) R.string.home_on else R.string.home_off)))
         }
+    }
+
+    /** Feature-use tallies: on unless turned off; turning them off also deletes the counts not yet sent. */
+    private fun usageSwitch() {
+        val r = b.usageTallies
+        r.title.setText(R.string.settings_usage_tallies)
+        r.value.setText(R.string.settings_usage_tallies_desc)
+        r.root.contentDescription = getString(R.string.settings_usage_tallies) + ", " + getString(R.string.settings_usage_tallies_desc)
+        UiActions.asSwitch(r.root) { app.usage.enabled() }
+        r.root.setOnClickListener {
+            val on = !app.usage.enabled()
+            app.usage.setEnabled(on)
+            r.toggle.isChecked = on
+            audit(getString(R.string.settings_changed_usage_tallies, getString(if (on) R.string.home_on else R.string.home_off)))
+        }
+    }
+
+    /** The exact counts the next batch would carry, so the owner can check there's nothing personal in it. */
+    private fun showUsage() {
+        val pending = app.usage.pending()
+        val text = if (pending.isEmpty()) getString(R.string.settings_usage_none)
+            else pending.entries.sortedBy { it.key }.joinToString("\n") { "${it.value}  ${it.key}" }
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.settings_usage_what)
+            .setMessage(text)
+            .setPositiveButton(android.R.string.ok, null)
+            .show()
     }
 
     private fun setListener(on: Boolean) {
