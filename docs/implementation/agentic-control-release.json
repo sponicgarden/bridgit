@@ -1,6 +1,6 @@
 {
   "artifact": "/Users/otter/.codex/worktrees/agentic-control/bridgit/app/build/outputs/verified/bridgit-1.6.40-57.apk",
-  "package": "net.finleg.bridget",
+  "package": "cc.bridgit.app",
   "versionName": "1.6.40",
   "versionCode": 57,
   "sha256": "814677f246d534d5a15dfe3a1b7e350582c3b770905f4eadd0c5b4421a38957c",

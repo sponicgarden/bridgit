@@ -1,6 +1,6 @@
 {
   "artifact": "/Users/otter/.codex/worktrees/bridgit-relay/bridgit/app/build/outputs/verified/bridgit-relay-1.6.59-76.apk",
-  "package": "net.finleg.bridget",
+  "package": "cc.bridgit.app",
   "versionName": "1.6.59",
   "versionCode": 76,
   "sha256": "8ed31fd40fc57e639f63e9f994acc9d61ca6692b27332af6df8ab78c3294ac63",

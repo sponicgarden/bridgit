@@ -7,14 +7,14 @@ import argparse,base64,http.client,importlib.machinery,importlib.util,io,json,os
 p=argparse.ArgumentParser();p.add_argument('--device',required=True);p.add_argument('--apk',required=True);p.add_argument('--report',required=True);p.add_argument('--host',default='100.94.27.79');a=p.parse_args()
 root=pathlib.Path(__file__).resolve().parents[2]
 loader=importlib.machinery.SourceFileLoader('bridgit_transport',str(root/'tools/bridgit')); spec=importlib.util.spec_from_loader(loader.name,loader); transport=importlib.util.module_from_spec(spec);loader.exec_module(transport)
-pkg='net.finleg.bridget.agentictest'; checks=[]
+pkg='cc.bridgit.app.agentictest'; checks=[]
 def adb(*args,check=True):
  r=subprocess.run(['adb','-s',a.device,*args],capture_output=True,text=True,timeout=90)
  if check and r.returncode: raise AssertionError('ADB failed: '+r.stderr[:200])
  return r.stdout
 
 def hook(**extras):
- args=['shell','am','broadcast','-n',pkg+'/net.finleg.bridget.DebugSetupReceiver','-a','net.finleg.bridget.debug.SETUP']
+ args=['shell','am','broadcast','-n',pkg+'/cc.bridgit.app.DebugSetupReceiver','-a','cc.bridgit.app.debug.SETUP']
  for key,value in extras.items(): args.extend(['--es',key,str(value)])
  return adb(*args)
 class MemorySocket:
@@ -55,11 +55,11 @@ def paired(name):
 def record(label): checks.append(label);print('PASS:',label,flush=True)
 previous=adb('shell','settings','get','secure','enabled_accessibility_services').strip()
 previous_enabled=adb('shell','settings','get','secure','accessibility_enabled').strip()
-component=pkg+'/net.finleg.bridget.platform.DeviceControlService'
+component=pkg+'/cc.bridgit.app.platform.DeviceControlService'
 try:
  assert pkg in subprocess.check_output([str(pathlib.Path.home()/'Library/Android/sdk/build-tools/35.0.0/aapt'),'dump','badging',a.apk],text=True).splitlines()[0]
  adb('install','-r',a.apk); adb('shell','pm','grant',pkg,'android.permission.POST_NOTIFICATIONS')
- adb('shell','am','start','-n',pkg+'/net.finleg.bridget.DebugControlCenter');time.sleep(1)
+ adb('shell','am','start','-n',pkg+'/cc.bridgit.app.DebugControlCenter');time.sleep(1)
  token=paired('AgenticSmoke')
  scopes='diagnostics,interactions,events.read,files,workflows,intents,screen.observe,screen.control,images.ocr,images.barcode'
  hook(platform_grants='AgenticSmoke:'+scopes)
@@ -90,7 +90,7 @@ try:
  record('Approved bounded local workflow, native template and code rejection')
  enabled=[x for x in previous.split(':') if x and x!='null'] if previous_enabled=='1' else [];enabled.append(component)
  adb('shell','settings','put','secure','enabled_accessibility_services',':'.join(dict.fromkeys(enabled)));adb('shell','settings','put','secure','accessibility_enabled','1');time.sleep(2)
- adb('shell','am','start','-n',pkg+'/net.finleg.bridget.ControlFixtureActivity');time.sleep(.6)
+ adb('shell','am','start','-n',pkg+'/cc.bridgit.app.ControlFixtureActivity');time.sleep(.6)
  session=success(token,call(token,'session.request',{'apps':[pkg],'purpose':'Reversible local form fixture','duration_seconds':300}));hook(platform_session_approve=session['id']);time.sleep(.4)
  observation=call(token,'screen.observe',{'session_id':session['id'],'screenshot':False})
  def nodes(n):
@@ -117,7 +117,7 @@ try:
  stopped=success(token,call(token,'session.stop',{'id':session['id']}));assert stopped['status']=='stopped'
  call(token,'screen.observe',{'session_id':session['id'],'screenshot':False},expect=409)
  record('Stopping the session invalidates further control')
- adb('shell','am','start','-n',pkg+'/net.finleg.bridget.DebugControlCenter');time.sleep(.5)
+ adb('shell','am','start','-n',pkg+'/cc.bridgit.app.DebugControlCenter');time.sleep(.5)
  crashes=adb('shell','dumpsys','activity','exit-info',pkg)
  assert 'REASON_CRASH' not in crashes
  record('Owner control center opens after the complete flow without a recorded crash')

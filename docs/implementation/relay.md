@@ -83,7 +83,7 @@ mock cipher.
   the new relay setup supplies its distinct URL/credential/mode and MCP
   contract. No parallel website work was overwritten.
 
-The signed private artifact is **1.6.59 / code 76**, package `net.finleg.bridget`,
+The signed private artifact is **1.6.59 / code 76**, package `cc.bridgit.app`,
 SHA-256 `8ed31fd40fc57e639f63e9f994acc9d61ca6692b27332af6df8ab78c3294ac63`.
 Its original certificate, manifest, clean source provenance and 16KiB native
 alignment were verified; debug fixture components are absent. Source commit:

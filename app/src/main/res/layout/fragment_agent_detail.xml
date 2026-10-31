@@ -40,7 +40,7 @@
                 android:orientation="horizontal"
                 android:paddingTop="8dp">
 
-                <net.finleg.bridget.ui.common.AgentAvatarView
+                <cc.bridgit.app.ui.common.AgentAvatarView
                     android:id="@+id/avatar"
                     android:layout_width="64dp"
                     android:layout_height="64dp" />

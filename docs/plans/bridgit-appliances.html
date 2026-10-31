@@ -5,7 +5,7 @@
     require(run.destinations.all { it in grant.destinations })
     require(!grant.revoked)
     require(clock.now() < grant.expiresAt)
-}</script></doc-code><doc-claim at="app/src/main/java/net/finleg/bridget/ApiServer.kt:309"><p>ApiServer.kt:309 · require()</p><doc-code src="app/src/main/java/net/finleg/bridget/ApiServer.kt" lines="309-323"></doc-code></doc-claim></doc-claim></doc-claim>
+}</script></doc-code><doc-claim at="app/src/main/java/cc/bridgit/app/ApiServer.kt:309"><p>ApiServer.kt:309 · require()</p><doc-code src="app/src/main/java/cc/bridgit/app/ApiServer.kt" lines="309-323"></doc-code></doc-claim></doc-claim></doc-claim>
 <doc-claim><p>The phone runs approved workflows when the agent disconnects.</p><doc-machine name="workflow" caption="The phone shows the actual state."><script type="text/plain">machine workflow initial draft
 state draft # The agent proposes a workflow.
 state review # The owner reviews the change.

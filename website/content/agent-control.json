@@ -10,7 +10,7 @@
       "title": "Capability readiness",
       "description": "Discover device identity, Android access, enabled features and exact readiness blockers.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/Capabilities.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/Capabilities.kt",
       "tools": [
         "capabilities"
       ]
@@ -20,7 +20,7 @@
       "title": "Expiring agent permissions",
       "description": "Grant individual capabilities on the phone for a bounded time and revoke active work.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/AgentPlatform.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/AgentPlatform.kt",
       "tools": []
     },
     {
@@ -28,7 +28,7 @@
       "title": "Owner-started control sessions",
       "description": "Approve selected apps and a duration, with one controller, heartbeat expiry and a visible Stop control.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/AgentPlatform.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/AgentPlatform.kt",
       "tools": [
         "session.request",
         "session.heartbeat",
@@ -40,7 +40,7 @@
       "title": "Durable action outcomes",
       "description": "Inspect operation state, safely reuse an idempotency key and reconcile interrupted or unknown outcomes.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/PlatformStore.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/PlatformStore.kt",
       "tools": [
         "operation.get",
         "operation.list"
@@ -51,7 +51,7 @@
       "title": "Fresh screen context",
       "description": "Use Android-approved screen sharing or private screen capture; UI trees require a scoped private session.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/DeviceControlService.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/DeviceControlService.kt",
       "tools": [
         "screen.observe"
       ]
@@ -61,7 +61,7 @@
       "title": "Semantic element targeting",
       "description": "Find snapshot-bound elements by their labels, roles and state; protected fields are excluded.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/DeviceControlService.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/DeviceControlService.kt",
       "tools": [
         "screen.observe"
       ]
@@ -71,7 +71,7 @@
       "title": "Reviewed app actions",
       "description": "Review one app action or up to eight exact steps together. The private runtime checks each target and postcondition before continuing; changed or ambiguous targets stop the sequence.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/DeviceControlService.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/DeviceControlService.kt",
       "tools": [
         "ui.action",
         "ui.sequence"
@@ -82,7 +82,7 @@
       "title": "Wait and verify",
       "description": "Check an explicit postcondition after an action, and distinguish input dispatch from an observed result.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/DeviceControlService.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/DeviceControlService.kt",
       "tools": [
         "screen.wait"
       ]
@@ -92,7 +92,7 @@
       "title": "Branded questions and approvals",
       "description": "Review the authenticated agent identity and exact action, answer a question, decline or cancel.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/ControlCenterActivity.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/ControlCenterActivity.kt",
       "tools": [
         "interaction.create",
         "interaction.get"
@@ -103,7 +103,7 @@
       "title": "Supported app drafts",
       "description": "Open reviewed links and apps, prepare calendar or message drafts, and leave final completion to the owner.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/DeviceTools.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/DeviceTools.kt",
       "tools": [
         "device.action"
       ]
@@ -113,7 +113,7 @@
       "title": "REST and MCP tools",
       "description": "Use the same scoped command path through the additive v2 API and the private build\u2019s MCP endpoint.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/PlatformApi.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/PlatformApi.kt",
       "tools": []
     },
     {
@@ -121,7 +121,7 @@
       "title": "Selected notification replies",
       "description": "Read only owner-allowlisted notification apps and approve a reply where that app exposes inline reply.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/NotificationBridge.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/NotificationBridge.kt",
       "tools": [
         "notification.list",
         "notification.reply"
@@ -132,7 +132,7 @@
       "title": "Selected files and sharing",
       "description": "Transfer bounded images, text, PDFs or audio and choose an agent from the Android Sharesheet.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/DeviceFiles.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/DeviceFiles.kt",
       "tools": [
         "file.put",
         "file.get"
@@ -143,7 +143,7 @@
       "title": "Local reading and translation",
       "description": "Use local OCR, barcode recognition, speech output, supported on-device dictation and downloaded translation models.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/DeviceTools.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/DeviceTools.kt",
       "tools": [
         "images.ocr",
         "images.barcode",
@@ -156,7 +156,7 @@
       "title": "Productivity assistance",
       "description": "Prepare appointments, timers, alarms, dialer and communications drafts through supported Android intents.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/DeviceTools.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/DeviceTools.kt",
       "tools": [
         "device.action"
       ]
@@ -166,7 +166,7 @@
       "title": "Native local workflows",
       "description": "Approve a bounded workflow with a button, interval, charging or geofence trigger and native button/status/help template. Android may defer background checks.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/WorkflowEngine.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/WorkflowEngine.kt",
       "tools": [
         "workflow.validate",
         "workflow.propose",
@@ -178,7 +178,7 @@
       "title": "Device diagnostics",
       "description": "Inspect lock, power, storage, network and permission readiness, with Android access links on the phone.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/DeviceTools.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/DeviceTools.kt",
       "tools": [
         "diagnostics",
         "phone.status"
@@ -189,7 +189,7 @@
       "title": "Bounded camera and help sessions",
       "description": "Approve time-limited JPEG monitoring with viewer-only credentials, or a help button that queues signed alerts to approved recipients. No continuous audio/video or emergency guarantee.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/CameraMonitor.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/CameraMonitor.kt",
       "tools": [
         "stream.start",
         "stream.status",
@@ -211,7 +211,7 @@
       "title": "Specialist device adapters",
       "description": "Use barcode images, reviewed Bluetooth scans/GATT operations, bounded USB bulk transfers and owner-started NFC reads where hardware and permissions allow.",
       "status": "development",
-      "implementation": "app/src/main/java/net/finleg/bridget/platform/PeripheralTools.kt",
+      "implementation": "app/src/main/java/cc/bridgit/app/platform/PeripheralTools.kt",
       "tools": [
         "peripheral.list",
         "peripheral.action"

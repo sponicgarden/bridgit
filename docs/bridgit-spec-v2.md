@@ -6,7 +6,7 @@
 | **Version** | 2.1, 27 Oct 2026: revised after the Grok 4.7 review (`reviews/2026-10-27-grok-4.7-review.md`) |
 | **Owner** | The phone's owner (sole user, sole device) |
 | **Product** | Bridgit, a general-purpose Android bridge for personal AI agents |
-| **Package** | `net.finleg.bridget` (sideloaded, not on the Play Store) |
+| **Package** | `cc.bridgit.app` (sideloaded, not on the Play Store) |
 | **Device** | Google Pixel 10 Pro XL, Android 17 (API 37); minimum Android 14 (API 34) |
 | **Current build** | Bridgit 1.2.0 (installed 26 Oct 2026); 1.3.0 (P1a) in review |
 | **Supersedes** | the v1.0 spec (as amended), `spec-per-agent-permissions.md`, `spec-agent-inbox.md`, `spec-flashlight.md`, `spec-screenshot.md`, `spec-access-screen.md` |
@@ -89,8 +89,8 @@ should treat these as settled unless a serious problem is found.
 | D1 | 26 Oct 2026 | The listener is **always on** (one foreground service with a permanent notification), not "only while the app is open". | Decided |
 | D2 | 26 Oct 2026 | Gallery access is **full** access. Selected-photos mode is still detected and reported. | Decided |
 | D3 | 26 Oct 2026 | Source lives in `android/` in a private monorepo. Superseded by D19. | Superseded |
-| D19 | 27 Oct 2026 | Bridgit is **its own repo**, `sponicgarden/bridgit` (private), owned by Sponic Garden, Inc., under the **Apache License 2.0**. History moved from finleg's `android/` folder. | Decided |
-| D4 | 26 Oct 2026 | The app is named **Bridgit** (was "Almusca Device Bridge"). Package `net.finleg.bridget`. | Decided |
+| D19 | 27 Oct 2026 | Bridgit is **its own repo**, `sponicgarden/bridgit` (private), owned by Sponic Garden, Inc., under the **Apache License 2.0**. History moved from the previous monorepo's `android/` folder. | Decided |
+| D4 | 26 Oct 2026 | The app is named **Bridgit** (was "Almusca Device Bridge"). Package `cc.bridgit.app`. | Decided |
 | D5 | 26 Oct 2026 | Bridgit is **general-purpose**: any number of named agents, each with its own key, with nothing tied to one agent vendor. | Decided |
 | D6 | 26 Oct 2026 | Four agents are paired: **Muse, Grok, Claude, Codex**. Keys are kept in the owner's password manager. | Decided |
 | D7 | 26 Oct 2026 | Fast "last image" endpoint, sized for AI vision: long edge **1568 px, JPEG quality 85**, optional raw JPEG body. | Decided |
@@ -308,7 +308,7 @@ Agent host (on tailnet) ──WireGuard (Tailscale)──▶ Pixel: Bridgit
 
 - **ARC-10 [Decided]** Reachable only over Tailscale. MagicDNS name
   `my-phone.tailnet-name.ts.net`, IP 100.101.102.103, port 8734
-  (configurable). Debug builds (`net.finleg.bridget.debug`) default to
+  (configurable). Debug builds (`cc.bridgit.app.debug`) default to
   **8735**, so they never clash with a release build.
 - **ARC-11 [Decided]** Agent hosts running Tailscale in **userspace mode**
   (for example Grok's box) can't open direct connections to tailnet devices.
@@ -337,7 +337,7 @@ message wakes the phone, and the phone fetches the job, runs it and posts the
 result back.
 
 ```
-Agent (anywhere) ──HTTPS──▶ Relay (Supabase edge function + tables + storage, finleg project)
+Agent (anywhere) ──HTTPS──▶ Relay (Supabase edge function + tables + storage, shared Sponic project)
                                 │  stores job (encrypted), sends push
                                 ▼
                      FCM high-priority data message ──▶ Pixel: Bridgit wakes
@@ -376,7 +376,7 @@ Agent ◀── long-poll / webhook ── Relay ◀─────────�
   - **Device credential.** The phone authenticates to the relay with its own
     device credential (Keystore-backed), never an agent key.
   - **Isolation.** The relay runs in its own Supabase project with row-level
-    security, so a leaked finleg service key can't read the mailbox.
+    security, so a leaked shared-project service key can't read the mailbox.
 - **ARC-15a [Proposed] Lost phone in relay mode.** The relay has a
   **device disable** switch the owner can flip from any browser (signed in to the
   relay admin page); once set, the relay refuses new jobs and deletes queued
@@ -1808,8 +1808,8 @@ somewhere is optional (11.6).
 ### 11.6 Optional upload
 
 - **FBK-14 [Open]** **Settings → Feedback → Also send reports to:** Off
-  (default) | finleg intranet tasks | GitHub issue in `sponicgarden/bridgit`.
-  Proposed default target if turned on: a new finleg Supabase edge function
+  (default) | Sponic intranet tasks | GitHub issue in `sponicgarden/bridgit`.
+  Proposed default target if turned on: a new Sponic Supabase edge function
   `bridget-feedback` that writes a `tasks` row labelled `bridget bug report`
   or `bridget feature request`, with screenshots in storage, authenticated by
   a per-install feedback key (not an agent key). Uploads queue offline and
@@ -2120,7 +2120,7 @@ its debug builds; Bridgit's is for its **release** build.
   (the publisher's public R2 host)
   under `bridget/`: the APK as `bridget/bridget-<version>.apk` and a manifest
   `bridget/latest.json`:
-  `{"package":"net.finleg.bridget","version_name","version_code","url","sha256","size_bytes","published_at","notes"}`.
+  `{"package":"cc.bridgit.app","version_name","version_code","url","sha256","size_bytes","published_at","notes"}`.
   `tools/publish-apk.sh` builds, signs, uploads both and creates the GitHub
   release. The APK contains no secrets, so a public download is acceptable.
 - **UPD-02 [P1b]** **More → Check for updates** (and Settings → About) runs a
@@ -2265,7 +2265,7 @@ Implementation update, 28 October 2026: the local `codex/planned-capabilities` d
 | Q3 | Should urgent interactions be allowed to override Do Not Disturb and speak aloud during it? | No |
 | Q4 | Keep answered interactions 30 days, or longer? | 30 days |
 | Q5 | Location: is "while in use" (with the always-on service) enough, or request "Allow all the time"? | While in use |
-| Q6 | Feedback upload target (11.6): off, finleg intranet tasks, or GitHub issues? | Off (stored on phone, readable by agents) |
+| Q6 | Feedback upload target (11.6): off, Sponic intranet tasks, or GitHub issues? | Off (stored on phone, readable by agents) |
 | Q7 | Bundle JetBrains Mono (about 300 KB) or use the system monospace font? | Bundle |
 | Q8 | HTTPS on the tailnet with Tailscale certificates (`tailscale cert`)? | No (WireGuard already encrypts) |
 | Q9 | For relay wake-up: Firebase Cloud Messaging (best delivery, adds Firebase) or UnifiedPush/ntfy (no Google, weaker in Doze)? | FCM |
@@ -2311,7 +2311,7 @@ decided; Q18 holds the decision. Play policy statements are marked
 | Health Connect (8.17) | Health apps need a Play declaration, a privacy policy and a review of each data type | Possible, with a public privacy policy page |
 | Package visibility (launching other apps, 8.20) | Seeing all installed apps needs justification | Use explicit `<queries>` for common apps instead |
 | Data safety form | Must describe every data type collected or shared | Bridgit sends data only to the user's own agents; the form must still list camera, audio, photos, location and so on as "shared with the user's chosen apps" |
-| Privacy policy | Required, public URL | New page, for example on finleg.net |
+| Privacy policy | Required, public URL | New page, for example on bridgit.cc |
 
 ### 18.3 Signing and moving over
 
@@ -2323,9 +2323,9 @@ decided; Q18 holds the decision. Play policy statements are marked
   log. Agents need new setup prompts afterwards.
 - **PLY-05 [Proposed]** Keep two builds from one codebase:
   - **play** flavour: Play-safe capability set (18.2), package
-    `net.finleg.bridget`;
+    `cc.bridgit.app`;
   - **full** flavour: everything in this spec, sideloaded, package
-    `net.finleg.bridget.full`, so both can be installed side by side.
+    `cc.bridgit.app.full`, so both can be installed side by side.
   Each capability module (ARC-05) declares which flavours include it.
 
 ### 18.4 Account and listing
@@ -2421,7 +2421,7 @@ Key handling in the template: on agent hosts, the key MUST be written to the
 env file with the agent's file-writing tool, not passed as a shell argument,
 so it doesn't land in shell history. Where several bots share one OS user
 (Grok's box), any of them can read that file; this is an accepted risk,
-recorded in section 5.5, and the same as the finleg router key already there.
+recorded in section 5.5, and the same as the shared router key already there.
 
 The sections follow AGT-09's order. `{if …}` lines appear only when that
 switch is on (AGT-07).
@@ -2553,7 +2553,7 @@ Call /v1/health, then tell the owner you're connected and which features are on.
 
 | Access | Intent | Lands on |
 |---|---|---|
-| Usage access | `android.settings.USAGE_ACCESS_SETTINGS` + `package:net.finleg.bridget` | Bridgit's own switch (`AppUsageAccessSettingsActivity`) |
+| Usage access | `android.settings.USAGE_ACCESS_SETTINGS` + `package:cc.bridgit.app` | Bridgit's own switch (`AppUsageAccessSettingsActivity`) |
 | Do Not Disturb access | `android.settings.NOTIFICATION_POLICY_ACCESS_DETAIL_SETTINGS` + package | Bridgit's own switch (`ZenAccessDetailSettingsActivity`); fallback `NOTIFICATION_POLICY_ACCESS_SETTINGS` (list) |
 | Modify system settings | `android.settings.action.MANAGE_WRITE_SETTINGS` + package | Bridgit's own switch (`AppWriteSettingsActivity`) |
 | Notification access | `android.settings.NOTIFICATION_LISTENER_DETAIL_SETTINGS` + component extra | Bridgit's own switch (`NotificationAccessDetailsActivity`) |

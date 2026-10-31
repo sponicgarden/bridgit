@@ -365,7 +365,7 @@ details or keys.
 - [ ] **[SHOULD] Developer verification for the sideload APK.** Android developer
   verification is enforced in Brazil, Indonesia, Singapore and Thailand since 30 Sep
   2026, and globally in 2027, whatever the download source. Register the package
-  `net.finleg.bridget` and its signing key under the verified publisher.
+  `cc.bridgit.app` and its signing key under the verified publisher.
 
 ## 5. App code and privacy fixes
 
@@ -538,7 +538,7 @@ Everything in `launch-kit/play-store/` was written for 1.2 (camera, mic, gallery
   the same custom domain and the same signing key.
 - [ ] **[SHOULD]** Play and sideload builds of one package can't both be installed if
   signed differently, and Play App Signing re-signs. Decide whether the Play build gets
-  its own applicationId (e.g. `cc.bridgit.app`) or shares `net.finleg.bridget`. Either
+  its own applicationId or shares the sideload package `cc.bridgit.app`. Either
   way, document the migration for existing sideload users.
 - [ ] **[SHOULD]** Developer verification (§4) applies to this APK from 2027 worldwide.
 

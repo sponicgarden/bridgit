@@ -3,11 +3,11 @@
      without tapping the screen. Never part of the release APK. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
-        <receiver android:name="net.finleg.bridget.DebugSetupReceiver" android:exported="true"
+        <receiver android:name="cc.bridgit.app.DebugSetupReceiver" android:exported="true"
             android:permission="android.permission.DUMP">
-            <intent-filter><action android:name="net.finleg.bridget.debug.SETUP" /></intent-filter>
+            <intent-filter><action android:name="cc.bridgit.app.debug.SETUP" /></intent-filter>
         </receiver>
-        <activity android:name="net.finleg.bridget.ControlFixtureActivity" android:exported="true" android:permission="android.permission.DUMP" />
-        <activity-alias android:name="net.finleg.bridget.DebugControlCenter" android:targetActivity="net.finleg.bridget.platform.ControlCenterActivity" android:exported="true" android:permission="android.permission.DUMP" />
+        <activity android:name="cc.bridgit.app.ControlFixtureActivity" android:exported="true" android:permission="android.permission.DUMP" />
+        <activity-alias android:name="cc.bridgit.app.DebugControlCenter" android:targetActivity="cc.bridgit.app.platform.ControlCenterActivity" android:exported="true" android:permission="android.permission.DUMP" />
     </application>
 </manifest>

@@ -1,8 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <application>
         <!-- Lint 31.7 reads each source overlay independently; retain the real inherited FGS declaration here too. -->
-        <service android:name="net.finleg.bridget.BridgeService" android:foregroundServiceType="camera|microphone|location|mediaPlayback|specialUse" />
-        <service android:name="net.finleg.bridget.capability.ScreenshotService" tools:node="remove" />
-        <service android:name="net.finleg.bridget.planned.NotificationReaderService" tools:node="remove" />
+        <service android:name="cc.bridgit.app.BridgeService" android:foregroundServiceType="camera|microphone|location|mediaPlayback|specialUse" />
+        <service android:name="cc.bridgit.app.capability.ScreenshotService" tools:node="remove" />
+        <service android:name="cc.bridgit.app.planned.NotificationReaderService" tools:node="remove" />
     </application>
 </manifest>

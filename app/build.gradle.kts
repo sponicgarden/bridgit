@@ -13,11 +13,11 @@ val keystoreProps = Properties().apply {
 }
 
 android {
-    namespace = "net.finleg.bridget"
+    namespace = "cc.bridgit.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "net.finleg.bridget"
+        applicationId = "cc.bridgit.app"
         minSdk = 34
         targetSdk = 35
         // Every build is numbered from git: versionCode = commits in HEAD's history, versionName = 1.6.<code>,

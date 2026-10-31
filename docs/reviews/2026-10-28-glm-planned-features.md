@@ -9,7 +9,7 @@ Review complete. I read the full uncommitted diff and all files under `planned/`
 ## P0
 
 **1. `consent_expired` is not in `ErrorCatalog` → the main screen-share error path throws `IllegalStateException` and returns 500.**
-`ErrorCatalog.http()` does `byCode[code] ?: error("Unknown error code $code")` (`app/src/main/java/net/finleg/bridget/api/Errors.kt:58`). `ScreenSharing.kt:71`, `:126`, `:139` throw `ErrorCatalog.error("consent_expired", …)` but no such catalog entry exists (only `screen_denied`, unused). So the most common case — `POST /v1/screen/share/capture` with no active grant — dies as 500 `internal_error` instead of the documented 403, and the poll/consent flow the agent is told to follow never explains itself. Add `Entry(403, "consent_expired", …)` to the catalog.
+`ErrorCatalog.http()` does `byCode[code] ?: error("Unknown error code $code")` (`app/src/main/java/cc/bridgit/app/api/Errors.kt:58`). `ScreenSharing.kt:71`, `:126`, `:139` throw `ErrorCatalog.error("consent_expired", …)` but no such catalog entry exists (only `screen_denied`, unused). So the most common case — `POST /v1/screen/share/capture` with no active grant — dies as 500 `internal_error` instead of the documented 403, and the poll/consent flow the agent is told to follow never explains itself. Add `Entry(403, "consent_expired", …)` to the catalog.
 
 ## P1
 

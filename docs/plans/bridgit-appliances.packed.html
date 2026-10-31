@@ -1872,7 +1872,7 @@ if (document.readyState === 'loading') document.addEventListener('DOMContentLoad
     require(run.destinations.all { it in grant.destinations })
     require(!grant.revoked)
     require(clock.now() < grant.expiresAt)
-}</script></doc-code><doc-claim at="app/src/main/java/net/finleg/bridget/ApiServer.kt:309"><p>ApiServer.kt:309 · require()</p><doc-code src="app/src/main/java/net/finleg/bridget/ApiServer.kt" lines="309-323" file="app/src/main/java/net/finleg/bridget/ApiServer.kt" start="309" sha="6f2ecf0+wt"><script type="text/plain">
+}</script></doc-code><doc-claim at="app/src/main/java/cc/bridgit/app/ApiServer.kt:309"><p>ApiServer.kt:309 · require()</p><doc-code src="app/src/main/java/cc/bridgit/app/ApiServer.kt" lines="309-323" file="app/src/main/java/cc/bridgit/app/ApiServer.kt" start="309" sha="6f2ecf0+wt"><script type="text/plain">
     private fun require(c: Policy.Capability, perm: String, ready: Boolean) {
         if (!policy.isEnabled(c)) throw ApiError(403, "capability_disabled", "${c.key} is switched off on the phone")
         if (!service.granted(perm)) throw ApiError(403, "permission_denied", "Grant $perm on the phone",
@@ -1920,11 +1920,11 @@ ready -stop-> stopped : stop
         targetSdk = 36
     }
 }</script></doc-code><doc-claim at="app/build.gradle.kts:17"><p>app/build.gradle.kts:17 · android</p><doc-code src="app/build.gradle.kts" lines="15-25" file="app/build.gradle.kts" start="15" sha="6f2ecf0"><script type="text/plain">android {
-    namespace = "net.finleg.bridget"
+    namespace = "cc.bridgit.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "net.finleg.bridget"
+        applicationId = "cc.bridgit.app"
         minSdk = 34
         targetSdk = 35
         versionCode = 3

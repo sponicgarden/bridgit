@@ -1,7 +1,7 @@
 {
   "title": "Full-screen interactions \u2014 development 1.6",
   "device": "Pixel 10 Pro XL",
-  "package": "net.finleg.bridget.debug",
+  "package": "cc.bridgit.app.debug",
   "appVersion": "1.6.0",
   "versionCode": 17,
   "releaseStatus": "Development review only; not part of release 1.5.4 or the Play Store upload set",

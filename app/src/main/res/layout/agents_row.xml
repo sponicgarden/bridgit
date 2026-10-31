@@ -17,7 +17,7 @@
         android:importantForAccessibility="noHideDescendants"
         android:orientation="horizontal">
 
-        <net.finleg.bridget.ui.common.AgentAvatarView
+        <cc.bridgit.app.ui.common.AgentAvatarView
             android:id="@+id/avatar"
             android:layout_width="40dp"
             android:layout_height="40dp" />
