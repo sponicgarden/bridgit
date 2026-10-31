@@ -1,5 +1,5 @@
 {
-  "sourceCount": 49,
+  "sourceCount": 48,
   "groups": [
     {
       "id": "capture",
@@ -434,18 +434,10 @@
     {
       "id": "ideas",
       "title": "Explore what comes next",
-      "intro": "Two directions under consideration, with no availability promise.",
+      "intro": "A direction under consideration, with no availability promise.",
       "image": "/assets/features/listen_for_a_word_on_the_phone.webp",
       "alt": "A concept illustration of a person speaking a trigger phrase to a phone.",
       "features": [
-        {
-          "sourceTitle": "Listen for a word on the phone",
-          "sourceStage": "IDEA",
-          "title": "Local trigger words",
-          "description": "Explore on-device word detection for explicitly enabled voice workflows.",
-          "example": "Say a chosen phrase to begin a voice note.",
-          "status": "exploring"
-        },
         {
           "sourceTitle": "Messages, contacts, calendar, calls",
           "sourceStage": "IDEA",
