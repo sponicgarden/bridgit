@@ -69,9 +69,10 @@
 .hero{padding-top:52px;padding-bottom:28px}@media(max-width:680px){.hero{padding-top:36px}}
 .hero-logos li{min-height:0;padding:9px 8px}.hero-logos span small{display:none}
 
-/* Hero phone shows a real interaction card instead of the concept mock-up */
-.screen.screen-shot{padding:0;overflow:hidden;min-height:0;aspect-ratio:392/640;background:#1c1220}
-.screen.screen-shot img{display:block;width:100%;height:auto}
+/* Hero phone shows a real interaction card instead of the concept mock-up, at the screenshot's full phone ratio */
+.heroart:has(.screen-shot){min-height:510px}.phone:has(.screen-shot){width:196px}
+.screen.screen-shot{padding:0;overflow:hidden;min-height:0;aspect-ratio:392/820;background:#1c1220}
+.screen.screen-shot img{display:block;width:100%;height:100%;object-fit:cover;object-position:top}
 .conceptlabel{z-index:2;background:#f0e7f7;padding:3px 7px;border-radius:4px}
 
 /* Logo row: every icon in the same box at the same left offset, names on one line */
