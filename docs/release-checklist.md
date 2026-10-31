@@ -86,7 +86,8 @@ details or keys.
       1.2 code, so they would need a port
     - the AI vendor logos
     - the unpacked plan page: it needs local stylesheets
-- [ ] **[DECIDE] Version counter.**
+- [x] **[DECIDE] Version counter.** Settled 31 Oct 2026: `main` numbers builds by git
+  commit count. The relay merge into PR #25 removed the allocator.
   - The branch's automatic allocator (`tools/allocate-apk-version.py`,
     `apk-version.properties`, the Gradle task and AGENTS.md rules) has reached
     **1.6.13 / versionCode 30**. `main` still hard-codes **1.6.0 / 18**.

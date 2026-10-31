@@ -12,8 +12,8 @@ const requireValue = (ok, message) => {
   if (!ok) errors.push(message);
 };
 requireValue(
-  c.account_id === "394b5de665bbfdea54cdd57be9094762",
-  "Use the specified Sponic Cloudflare account",
+  c.account_id === "3d2c7c0c8130fa935e40001315fab2d7",
+  "Use the Bridgit Cloudflare account",
 );
 let origin;
 try {

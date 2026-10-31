@@ -65,8 +65,10 @@ mock cipher.
   without battery exemption, process restart/reboot behavior, battery use and
   owner approval/cancellation remain unverified. A foreground socket is not a
   delivery guarantee. FCM is not implemented.
-- The existing Wrangler context lists the specified Sponic Cloudflare account.
-  The deploy bundle validates in dry-run, but the checked-in default has no
+- The relay targets the Bridgit Cloudflare account (`3d2c7c0c…`), which is
+  empty as of 31 October 2026. The `bridgit.cc` zone is still in the original
+  account (`9cd3a280…`), so `relay.bridgit.cc` needs the zone moved first, or the
+  relay deployed where the zone is. The deploy bundle validates in dry-run, but the checked-in default has no
   public route and deliberately fails production configuration validation.
   Owner-only Access team/audience, final hostname and exact hosted client
   registrations need a concrete reviewed production configuration and owner

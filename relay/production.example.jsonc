@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "bridgit-relay",
   "main": "src/worker.mjs",
-  "account_id": "394b5de665bbfdea54cdd57be9094762",
+  "account_id": "3d2c7c0c8130fa935e40001315fab2d7",
   "compatibility_date": "2026-10-29",
   "workers_dev": false,
   "preview_urls": false,

@@ -9,8 +9,9 @@ has been created by this change.
 
 ## Authority and enrolment
 
-The account is `394b5de665bbfdea54cdd57be9094762`, the existing Sponic update-bucket
-account. This does not authorize changes to the Sponic product.
+The account is `3d2c7c0c8130fa935e40001315fab2d7`, the Bridgit Cloudflare account.
+The `bridgit.cc` zone is still in the original account, so `relay.bridgit.cc`
+can only be attached once the zone is in this account.
 
 The owner opens **More → Relay** on the phone. **Show phone enrolment keys**
 exports only its stable device ID, Keystore P-256 signing public key and HPKE
