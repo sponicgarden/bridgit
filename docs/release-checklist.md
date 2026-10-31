@@ -271,9 +271,9 @@ details or keys.
     rationale activity.
   - Recommendation: leave it out of the first Play release (flavor-gate it), then apply
     later with an explicit per-transfer consent flow.
-- [ ] **[BLOCKER] Privacy policy link inside the app.** No link exists in `java/` or
-  `res/values/`. Add one to first run, More > About, Settings > Privacy and the Health
-  rationale screen.
+- [x] **[BLOCKER] Privacy policy link inside the app.** Done 31 Oct 2026: first run
+  (last page), More > About, Settings > About (with Terms of use) and the Health
+  rationale screen all open https://bridgit.cc/privacy/.
 - [ ] **[BLOCKER] Upload an AAB.** `tools/publish-apk.sh:100` only runs `assembleRelease`.
   Add `bundleRelease` for the `play` flavor and enroll in Play App Signing. Decide
   whether to keep the current signing key as the upload key so it stays continuous
@@ -376,16 +376,18 @@ details or keys.
 - [ ] **[SHOULD] Turn on R8.** `isMinifyEnabled = false` (`build.gradle.kts:56`). Enable
   minify and shrinkResources with keep rules for Ktor, Netty and Sentry. Turning it on
   needs a full regression run.
-- [ ] **[SHOULD] "Delete all Bridgit data" in Settings.** It should wipe agents, keys,
-  the log, the inbox, transfers and caches. The website `/delete-data/` page should
-  describe it.
+- [x] **[SHOULD] "Delete all Bridgit data" in Settings.** Done 31 Oct 2026: Settings >
+  Reset puts back agent-changed phone settings, cancels email alerts, then uses Android's
+  Clear storage (every pref, database, file, cache and Keystore key). Checked on a
+  tablet: Android also revokes runtime permissions and notification access; usage
+  access stays. Still to do: the website `/delete-data/` page should describe it.
 - [ ] **[SHOULD] Hide unbuilt features in the Play build.** The "Needs your OK" ideas in
-  What can (`ui/more/WhatCanData.kt:272-283`: relay, messages/contacts/calendar/calls,
-  location history, listen for a word) read as features that exist, which is a
-  misleading-claims risk.
+  What can (`ui/more/WhatCanData.kt`: relay, messages/contacts/calendar/calls,
+  location history) read as features that exist, which is a misleading-claims risk.
+  "Listen for a word" was removed on 31 Oct 2026: it shipped as Wake words.
 - [ ] **[SHOULD]** Remove "sponicgarden/bridgit" from About
-  (`res/values/strings_home.xml:98`) or make it the real public repo link. Fix the
-  misplaced manifest comment above `READ_MEDIA_VIDEO` (manifest:28).
+  (`res/values/strings_home.xml:98`) or make it the real public repo link. (The
+  misplaced manifest comment above `READ_MEDIA_VIDEO` was fixed on 31 Oct 2026.)
 - [ ] **[SHOULD] Localization readiness.** About 42 English UI strings are hardcoded in
   Kotlin (`OwnerToolsActivity.kt:70-80`, `ShareActivity` 152–170,
   `HealthPrivacyActivity.kt:4`, and the manifest share label at line 94). Move them to
