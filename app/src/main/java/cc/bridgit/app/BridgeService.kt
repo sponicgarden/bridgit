@@ -132,6 +132,7 @@ class BridgeService : LifecycleService() {
         while (lifecycleScope.isActive) {
             val why = withTimeoutOrNull(RECHECK_MS) { recheck.receive() } ?: "periodic"
             server?.maintenance()
+            lifecycleScope.launch(Dispatchers.IO) { runCatching { app.usage.flushIfDue() } }
             if (why != "start" && why != "periodic") delay(1500) // let the VPN settle after a change
             val addrs = tailscaleAddresses()
             val port = app.settings.port

@@ -278,6 +278,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
             val r = req
             r?.params?.keys()?.forEach { logParams.put(it, r.params.get(it)) }
             if (spec.path == "/pair") logParams.remove("code")
+            app.usage.count("api:${spec.method} ${spec.fullPath}:$result")
             val name = agent?.name
             val msg = r?.message ?: describe(name, spec, http, result)
             app.log.append(LogEntry(
@@ -434,6 +435,7 @@ class ApiServer(val service: BridgeService, private val hosts: List<String>, val
             return Outcome(500, "application/json", err.toJson(rid).toString().toByteArray(), emptyMap(), err)
         } finally {
             r.params.keys().forEach { logParams.put(it, r.params.get(it)) }
+            app.usage.count("mcp:${spec.method} ${spec.fullPath}:$result")
             val msg = r.message?.let { if ("MCP" in it) it else "$it (via MCP)" } ?: (describe(agent.name, spec, http, result) + " (via MCP)")
             app.log.append(LogEntry(
                 ts = started, channel = "audit", kind = "request",
