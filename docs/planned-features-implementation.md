@@ -45,10 +45,10 @@ Verified on the final source:
 - Website build, 16 Node tests, and `check`: passed; nine pages and 267 local links/assets verified.
 - `git diff --check`: passed.
 - GLM 5.3 Flash performed an initial review and a focused second review. Its P0/P1 findings were fixed; the second review reported none remaining. Remaining actionable race/cancellation issues were corrected afterward.
-- A separate `.planned` application was installed during testing; it does not replace `net.finleg.bridget` or `net.finleg.bridget.debug`. The installed test copy is an earlier iteration, not the final APK. A concurrent-build/network install attempt failed to parse its APK; the final APK is available locally. The isolated app was explicitly stopped.
+- A separate `.planned` application was installed during testing; it does not replace `cc.bridgit.app` or `cc.bridgit.app.debug`. The installed test copy is an earlier iteration, not the final APK. A concurrent-build/network install attempt failed to parse its APK; the final APK is available locally. The isolated app was explicitly stopped.
 - Live Pixel acceptance is **pending**. USB disconnected; the network-connected device reported **Device locked**, and the ADB test setup did not open a pairing window. No successful live API/sensor/owner-approval acceptance is claimed. Release/debug user app data were not reset or overwritten.
 
-The final debug APK uses `net.finleg.bridget.planned`, port `8736`, version `1.6.0-dev` / code `17`, using the isolated build command below. Default debug builds retain their ordinary `.debug` suffix/8735 port unless those properties are supplied. New feature switches default off.
+The final debug APK uses `cc.bridgit.app.planned`, port `8736`, version `1.6.0-dev` / code `17`, using the isolated build command below. Default debug builds retain their ordinary `.debug` suffix/8735 port unless those properties are supplied. New feature switches default off.
 
 `tools/planned_acceptance.py --isolated-planned-app` is an opt-in starter harness for the dedicated test package; it has not passed on the locked Pixel. It never targets the release/debug packages.
 
@@ -75,7 +75,7 @@ The earlier implementation pass was local. The subsequent 1.6.0 release and Opus
 
 ## Pixel follow-up acceptance, 29 October 2026
 
-After the owner unlocked the Pixel, the final code-17 `net.finleg.bridget.planned` APK was installed successfully over the network using a stable APK copy and `adb install --no-streaming -r`. This supersedes the earlier locked-device/failed-install status above. The release and ordinary debug packages were untouched.
+After the owner unlocked the Pixel, the final code-17 `cc.bridgit.app.planned` APK was installed successfully over the network using a stable APK copy and `adb install --no-streaming -r`. This supersedes the earlier locked-device/failed-install status above. The release and ordinary debug packages were untouched.
 
 `python3 tools/planned_acceptance.py --isolated-planned-app` passed **22 live checks** on the Pixel 10 Pro XL:
 

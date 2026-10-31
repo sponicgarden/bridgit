@@ -104,3 +104,14 @@ test('a retried batch is not mailed twice and a failing Email Sending binding re
  delete s.env.EMAIL;
  assert.equal((await send()).status,503, 'no binding means unavailable');
 });
+
+test('alert emails carry one-click unsubscribe headers that work without an Origin', async()=>{
+ const s=setup(),now=Date.now(); await subscribe(s,now);
+ assert.match(s.messages[0].html,/alerts\/confirm\/\?token=[a-f0-9]{64}/);
+ await handleAlerts(form('/api/alerts/confirm',confirmToken(s.messages[0])),s.env,{now:()=>now});
+ await handleAlerts(app('/api/alerts/send',install,'POST',{subject:'x',text:'y'}),s.env,{now:()=>now});
+ const h=s.messages[1].headers; assert.equal(h['List-Unsubscribe-Post'],'List-Unsubscribe=One-Click');
+ const url=/<(.+)>/.exec(h['List-Unsubscribe'])[1];
+ assert.equal((await handleAlerts(new Request(url,{method:'POST',body:'List-Unsubscribe=One-Click'}),s.env,{now:()=>now})).status,200);
+ assert.equal(s.sql.prepare('SELECT COUNT(*) n FROM alert_subscriptions').get().n,0);
+});

@@ -37,6 +37,14 @@
     <string name="home_banner_fix">Fix</string>
     <string name="home_banner_permission">%1$s permission was removed.</string>
     <string name="home_banner_grant">Grant</string>
+    <!-- Questions from agents the owner hasn't answered yet, including expired ones (they can still be answered). -->
+    <string name="home_banner_question_one">%1$s asked you something: %2$s</string>
+    <plurals name="home_banner_questions">
+        <item quantity="one">%1$d question from your agents is waiting for you.</item>
+        <item quantity="other">%1$d questions from your agents are waiting for you.</item>
+    </plurals>
+    <string name="home_banner_answer">Answer</string>
+    <string name="home_banner_see_questions">See them</string>
 
     <!-- Home: agents, today, quick switches (UI-11) -->
     <string name="home_agents">Agents</string>
@@ -108,6 +116,7 @@
     <string name="features_open_once">Needs the app opened once</string>
     <string name="features_notifications_off">Notifications are off.</string>
     <string name="features_listener_off">Listener is paused</string>
+    <string name="features_needs_newer_android">Needs a newer Android version</string>
     <string name="features_grant">Grant</string>
     <string name="features_turn_on">Turn on</string>
     <string name="perm_word_camera">camera</string>

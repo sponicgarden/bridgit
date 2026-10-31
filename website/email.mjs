@@ -15,8 +15,9 @@ export function page(title, body, status = 200) {
  return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>${escape(title)} — bridgit</title><link rel="stylesheet" href="/assets/style.css"></head><body><div class="wrap"><nav><a class="wordmark" href="/" aria-label="Bridgit home"><img class="brand-icon" src="/assets/logo-mark.svg" alt=""><img class="brand-name" src="/assets/logo-wordmark.svg" alt=""></a></nav><main class="article"><h1>${escape(title)}</h1>${body}</main><footer><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a></footer></div></body></html>`, { status, headers: { ...replyHeaders, 'Referrer-Policy': 'strict-origin', 'Content-Type': 'text/html; charset=utf-8' } });
 }
 // All mail goes out through Cloudflare Email Sending (the EMAIL send_email binding in wrangler.jsonc).
-export async function sendMail(env, to, subject, text) {
- try { await env.EMAIL.send({ from: { email: 'support@bridgit.cc', name: 'bridgit' }, to, replyTo: 'support@bridgit.cc', subject, text }); return true; }
+// `extra` adds an html part and/or headers (for example List-Unsubscribe).
+export async function sendMail(env, to, subject, text, extra = {}) {
+ try { await env.EMAIL.send({ from: { email: 'support@bridgit.cc', name: 'Bridgit' }, to, replyTo: 'support@bridgit.cc', subject, text, ...extra }); return true; }
  catch (e) { console.error('email send failed', e?.code || e?.name || 'error'); return false; }
 }
 export async function cleanupSubscribers(env, now = Date.now()) {

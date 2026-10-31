@@ -1,14 +1,14 @@
 import subprocess,json,urllib.request,urllib.error,re,time,sys
 import os,shutil
-ADB=os.environ.get('ADB') or shutil.which('adb') or 'adb'; PHONE=os.environ['BRIDGIT_TEST_PHONE'];DEV=os.environ.get('BRIDGIT_TEST_ADB',PHONE+':5555'); PKG='net.finleg.bridget.planned'; BASE=f'http://{PHONE}:8736/v1'
+ADB=os.environ.get('ADB') or shutil.which('adb') or 'adb'; PHONE=os.environ['BRIDGIT_TEST_PHONE'];DEV=os.environ.get('BRIDGIT_TEST_ADB',PHONE+':5555'); PKG='cc.bridgit.app.planned'; BASE=f'http://{PHONE}:8736/v1'
 def adb(*args):
  return subprocess.run([ADB,'-s',DEV,*args],capture_output=True,text=True,timeout=15).stdout
 if len(sys.argv) == 2 and sys.argv[1] == '--isolated-review-app':
- PKG='net.finleg.bridget.review'; BASE=f'http://{PHONE}:8737/v1'
+ PKG='cc.bridgit.app.review'; BASE=f'http://{PHONE}:8737/v1'
 elif len(sys.argv) != 2 or sys.argv[1] != '--isolated-planned-app':
  print('Usage: python3 tools/planned_acceptance.py --isolated-planned-app or --isolated-review-app (dedicated test builds only, Pixel unlocked)');sys.exit(2)
 name='PlannedTestA'
-r=adb('shell','am','broadcast','--include-stopped-packages','-n',PKG+'/net.finleg.bridget.DebugSetupReceiver','-a','net.finleg.bridget.debug.SETUP','--es','agent',name,'--ez','phone','true','--ez','files','true','--ez','clipboard','true','--ez','sensors','true')
+r=adb('shell','am','broadcast','--include-stopped-packages','-n',PKG+'/cc.bridgit.app.DebugSetupReceiver','-a','cc.bridgit.app.debug.SETUP','--es','agent',name,'--ez','phone','true','--ez','files','true','--ez','clipboard','true','--ez','sensors','true')
 m=re.search(r'data="?(\d{6})',r)
 if not m: print('BLOCKED: test hook did not open pairing:',r.strip());sys.exit(1)
 def call(path,body=None,key=None,expected=200,method=None):
@@ -55,7 +55,7 @@ try:
  check('generated OpenAPI',lambda:call('/openapi.json',key=key))
  check('MCP discovery',lambda:call('/mcp',{'jsonrpc':'2.0','id':1,'method':'tools/list','params':{}},key=key))
  # A second paired agent must not be able to fetch the first agent's file.
- second=adb('shell','am','broadcast','-n',PKG+'/net.finleg.bridget.DebugSetupReceiver','-a','net.finleg.bridget.debug.SETUP','--es','agent','PlannedTestB')
+ second=adb('shell','am','broadcast','-n',PKG+'/cc.bridgit.app.DebugSetupReceiver','-a','cc.bridgit.app.debug.SETUP','--es','agent','PlannedTestB')
  code2=re.search(r'data="?(\d{6})',second)
  assert code2,'Second pairing window missing'
  key2=call('/pair',{'code':code2.group(1)})['key']
@@ -63,17 +63,17 @@ try:
  check('file access isolated between agents',lambda:call('/files/'+item['id'],key=key2,expected=404))
  check('file delete isolated between agents',lambda:call('/files/'+item['id'],key=key2,method='DELETE',expected=404))
  call('/files/'+item['id'],key=key,method='DELETE')
- adb('shell','am','broadcast','-n',PKG+'/net.finleg.bridget.DebugSetupReceiver','-a','net.finleg.bridget.debug.SETUP','--es','caps',name+'=phone')
+ adb('shell','am','broadcast','-n',PKG+'/cc.bridgit.app.DebugSetupReceiver','-a','cc.bridgit.app.debug.SETUP','--es','caps',name+'=phone')
  check('HTTP enforces changed per-agent grants',lambda:call('/files',key=key,expected=403))
  rpc=call('/mcp',{'jsonrpc':'2.0','id':2,'method':'tools/list','params':{}},key=key)
  check('MCP hides ungranted tools',lambda:None if not any(t['name']=='files_list' for t in rpc['result']['tools']) else (_ for _ in ()).throw(AssertionError('files tool visible')))
  rpc=call('/mcp',{'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'files_list','arguments':{}}},key=key)
  check('MCP refuses direct call to ungranted tool',lambda:None if rpc.get('error') or rpc.get('result',{}).get('isError') else (_ for _ in ()).throw(AssertionError('MCP call allowed')))
- adb('shell','am','broadcast','-n',PKG+'/net.finleg.bridget.DebugSetupReceiver','-a','net.finleg.bridget.debug.SETUP','--es','caps',name+'=phone,files,clipboard,screen_share','--ez','screen_share','true')
+ adb('shell','am','broadcast','-n',PKG+'/cc.bridgit.app.DebugSetupReceiver','-a','cc.bridgit.app.debug.SETUP','--es','caps',name+'=phone,files,clipboard,screen_share','--ez','screen_share','true')
  check('missing screen grant is actionable 403',lambda:call('/screen/share/capture',{},key=key,expected=403))
- adb('shell','am','broadcast','-n',PKG+'/net.finleg.bridget.DebugSetupReceiver','-a','net.finleg.bridget.debug.SETUP','--es','clipboard_decide',pending['id']+':deny')
+ adb('shell','am','broadcast','-n',PKG+'/cc.bridgit.app.DebugSetupReceiver','-a','cc.bridgit.app.debug.SETUP','--es','clipboard_decide',pending['id']+':deny')
  check('clipboard denial closes request',lambda:None if call('/clipboard/'+pending['id'],key=key)['status']=='denied' else (_ for _ in ()).throw(AssertionError('denial missing')))
  print('TOTAL',len(passed),'passed')
 finally:
- adb('shell','am','broadcast','-n',PKG+'/net.finleg.bridget.DebugSetupReceiver','-a','net.finleg.bridget.debug.SETUP','--es','remove','PlannedTestB')
- print(adb('shell','am','broadcast','-n',PKG+'/net.finleg.bridget.DebugSetupReceiver','-a','net.finleg.bridget.debug.SETUP','--es','remove',name,'--ez','phone','false','--ez','files','false','--ez','clipboard','false','--ez','sensors','false','--ez','screen_share','false','--ez','listener','false').strip())
+ adb('shell','am','broadcast','-n',PKG+'/cc.bridgit.app.DebugSetupReceiver','-a','cc.bridgit.app.debug.SETUP','--es','remove','PlannedTestB')
+ print(adb('shell','am','broadcast','-n',PKG+'/cc.bridgit.app.DebugSetupReceiver','-a','cc.bridgit.app.debug.SETUP','--es','remove',name,'--ez','phone','false','--ez','files','false','--ez','clipboard','false','--ez','sensors','false','--ez','screen_share','false','--ez','listener','false').strip())

@@ -7,7 +7,7 @@
     android:orientation="vertical">
 
     <!-- Top cards scroll on their own and never take more than half the screen (200 % font). -->
-    <net.finleg.bridget.ui.tour.TourMaxHeightScrollView
+    <cc.bridgit.app.ui.tour.TourMaxHeightScrollView
         android:id="@+id/top_scroll"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
@@ -37,7 +37,7 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <net.finleg.bridget.ui.common.AgentAvatarView
+                        <cc.bridgit.app.ui.common.AgentAvatarView
                             android:id="@+id/avatar"
                             android:layout_width="40dp"
                             android:layout_height="40dp"
@@ -198,7 +198,7 @@
                 android:paddingBottom="4dp"
                 android:text="@string/tour_history_header" />
         </LinearLayout>
-    </net.finleg.bridget.ui.tour.TourMaxHeightScrollView>
+    </cc.bridgit.app.ui.tour.TourMaxHeightScrollView>
 
     <FrameLayout
         android:layout_width="match_parent"

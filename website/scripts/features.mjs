@@ -55,7 +55,7 @@ export function parseCatalog(source) {
 
 export async function buildFeatures(root, out) {
   const repo = path.resolve(root, '..');
-  const source = await readFile(path.join(repo, 'app/src/main/java/net/finleg/bridget/ui/more/WhatCanData.kt'), 'utf8');
+  const source = await readFile(path.join(repo, 'app/src/main/java/cc/bridgit/app/ui/more/WhatCanData.kt'), 'utf8');
   const features = parseCatalog(source);
   const implemented = features.filter(f => f.stage === 'NOW').length;
   const pictures = path.join(repo, 'app/src/main/res/drawable-nodpi');

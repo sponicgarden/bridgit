@@ -60,7 +60,7 @@ Not needed: Read all notifications (the Muse app already does this)  [Show]
 | Camera, Microphone, Photos, Notifications | Android's permission pop-up | 1 | runtime permission request |
 | Location: precise, while in use | Android's pop-up: choose **Precise**, **While using the app** | 2 | `ACCESS_FINE_LOCATION` request |
 | Location: all the time (optional) | Bridgit's Location permission page; choose **Allow all the time** | 1 | `ACCESS_BACKGROUND_LOCATION` request (Android sends it to Settings) |
-| App usage | **Direct** to Bridgit's "Permit usage access" switch | 1 | `android.settings.USAGE_ACCESS_SETTINGS` + `package:net.finleg.bridget` → `AppUsageAccessSettingsActivity` |
+| App usage | **Direct** to Bridgit's "Permit usage access" switch | 1 | `android.settings.USAGE_ACCESS_SETTINGS` + `package:cc.bridgit.app` → `AppUsageAccessSettingsActivity` |
 | Do Not Disturb control | **Direct** to Bridgit's "Allow Do Not Disturb" switch, then **Allow** | 2 | `android.settings.NOTIFICATION_POLICY_ACCESS_DETAIL_SETTINGS` + package → `ZenAccessDetailSettingsActivity` (falls back to the list page `NOTIFICATION_POLICY_ACCESS_SETTINGS`) |
 | Modify system settings | **Direct** to Bridgit's "Allow modifying system settings" switch | 1 | `android.settings.action.MANAGE_WRITE_SETTINGS` + package → `AppWriteSettingsActivity` |
 | Run in background | Pop-up "Let app always run in background?", **Allow** | 1 | `android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` + package |

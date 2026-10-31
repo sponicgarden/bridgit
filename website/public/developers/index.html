@@ -5,7 +5,7 @@ POST /v1/mic/record
 GET  /v1/gallery/recent
 GET  /v1/gallery/photo/{id}
 GET  /v1/image/last
-GET  /v1/audit</code></pre><p>Authenticated requests use an Authorization: Bearer header. Audio duration is 1–120 seconds. Toggles start off. Any client that can make the required network calls can integrate; a chatbot without tools needs a connector.</p><h2>Proposed runtime contract</h2><pre><code>discover capabilities → propose workflow
+GET  /v1/audit</code></pre><p>Authenticated requests use an Authorization: Bearer header. Audio duration is 1–120 seconds. Toggles start off. Any client that can make the required network calls can integrate; a chatbot without tools needs a connector.</p><h2>First-run demo for agents</h2><p>Right after pairing, Bridgit tells the agent to offer a five-minute demo that runs from cards on the phone: flash the light, take a photo, ask about it and answer out loud, react to a wake word, then play rock paper scissors or guess how the owner feels. The owner taps Do it or Skip on each item. The script is a skill file any agent can read or install: <a href="/demo/SKILL.md">bridgit.cc/demo/SKILL.md</a>. Afterwards, <code>GET /v1/demo</code> on the phone builds the full menu from what is switched on.</p><h2>Proposed runtime contract</h2><pre><code>discover capabilities → propose workflow
 → validate scopes and destinations
 → owner approves on phone
 → local runtime executes

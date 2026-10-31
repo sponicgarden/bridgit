@@ -9,6 +9,8 @@
     </plurals>
 
     <string name="interactions_title">Interactions</string>
+    <!-- Subtabs (owner, 30 Oct 2026); the other one is nav_applets. -->
+    <string name="interactions_tab_inbox">Inbox</string>
     <string name="interactions_chip_all">All</string>
     <string name="interactions_chip_questions">Questions</string>
     <string name="interactions_chip_notices">Notices</string>
@@ -28,7 +30,7 @@
     <string name="interactions_status_seen">Seen</string>
     <string name="interactions_status_answered">Answered</string>
     <string name="interactions_status_closed">Closed</string>
-    <string name="interactions_status_expired">Expired</string>
+    <string name="interactions_status_expired">Missed</string>
     <string name="interactions_status_cancelled">Cancelled</string>
 
     <string name="interactions_expand">Expand</string>
@@ -47,7 +49,9 @@
     <!-- %1$s = button label, %2$s = time (14:03). -->
     <string name="interactions_you_answered">You answered %1$s · %2$s</string>
     <string name="interactions_you_answered_plain">You answered · %1$s</string>
-    <string name="interactions_expired_banner">This question expired. %1$s was told.</string>
+    <string name="interactions_expired_banner">This expired before you saw it. %1$s was told.</string>
+    <!-- An expired question can still be answered late; the agent gets the answer as a late one. -->
+    <string name="interactions_late_banner">%1$s stopped waiting for an answer. You can still answer, and %1$s gets it late.</string>
     <string name="interactions_cancelled_banner">%1$s cancelled this.</string>
     <string name="interactions_closed_banner">You closed this. %1$s was told.</string>
     <string name="interactions_not_found">This interaction is gone. Interactions are kept for 30 days after they close.</string>

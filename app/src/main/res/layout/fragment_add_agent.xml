@@ -516,6 +516,9 @@
                             android:visibility="gone" />
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
+
+                <!-- Limited or Maximum powers, chosen once the key is issued. -->
+                <include android:id="@+id/powers" layout="@layout/addagent_powers" />
             </LinearLayout>
         </FrameLayout>
     </androidx.core.widget.NestedScrollView>

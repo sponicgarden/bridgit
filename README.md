@@ -2,7 +2,7 @@
 
 Copyright 2026 Sponic Garden, Inc. Licensed under the [Apache License 2.0](LICENSE).
 
-**BRIDGIT Device Manager for Android** turns an Android phone (Android 14+)
+**BRIDGIT Device Manager for Android** turns an Android phone (Android 11+; Android 10 support is built but not yet device-tested)
 into a device your own AI agents can use: Claude, Grok, Codex or any agent that
 can make HTTP or MCP calls. With your OK, paired agents can take a photo, record
 a short clip, read the screen, send you questions and notices, and more (see
@@ -10,7 +10,7 @@ a short clip, read the screen, send you questions and notices, and more (see
 Tailscale network, each agent has its own key, every switch starts off and can
 only be changed on the phone, and every request is logged with the agent's name.
 
-Package `net.finleg.bridget`, version **1.6.0**. The design and requirements
+Package `cc.bridgit.app`, version **1.6.0**. The design and requirements
 live in [`docs/bridgit-spec-v2.md`](docs/bridgit-spec-v2.md). Public release
 work is tracked in [`docs/release-checklist.md`](docs/release-checklist.md).
 
@@ -225,7 +225,7 @@ certificate, uploads the APK and `latest.json` to the public R2 host (`bridget/`
 download and creates the GitHub release. Its settings live in `tools/publish.env` (gitignored; see
 `tools/publish.env.example`). `--dry-run` checks everything without uploading.
 
-Debug builds install alongside as `net.finleg.bridget.debug`, listen on port
+Debug builds install alongside as `cc.bridgit.app.debug`, listen on port
 8735, and include an ADB-only test hook (`DebugSetupReceiver`, protected by the `DUMP` permission
 only the ADB shell holds) that sets toggles and adds a test agent without
 tapping the screen. Release builds don't contain it.
@@ -279,6 +279,6 @@ from the prompts in `docs/whatcan-image-prompts.md`.
 
 The repository is https://github.com/sponicgarden/bridgit and the selected website domain is https://bridgit.cc. The public product name is **BRIDGIT Device Manager for Android**.
 
-Android package `net.finleg.bridget`, stored device preferences, `X-Bridget-*` headers, the `Bridget.respond` JavaScript bridge, pairing identifiers, updater object paths and historical release tags remain stable so installed apps and paired agents keep working. Use `tools/bridgit`; `tools/bridget` remains a compatibility entry point. Existing `BRIDGET_*` variables and `~/.config/bridget` configuration remain supported.
+The Android package is `cc.bridgit.app`. It replaced an earlier package id, so builds from before that change do not upgrade in place: uninstall the old app and pair agents again. `X-Bridget-*` headers, the `Bridget.respond` JavaScript bridge, pairing identifiers, updater object paths and historical release tags are unchanged. Use `tools/bridgit`; `tools/bridget` remains a compatibility entry point. Existing `BRIDGET_*` variables and `~/.config/bridget` configuration remain supported.
 
 New CLI configuration uses `~/.config/bridgit/env` and `BRIDGIT_KEY`, `BRIDGIT_HOST`, `BRIDGIT_PORT` (or `BRIDGIT_ENV` for an explicit config path). The old names remain accepted; new names take precedence.
